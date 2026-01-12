@@ -13,10 +13,10 @@ return new class extends Migration
     {
         Schema::create('history_mutation_stocks', function (Blueprint $table) {
             $table->ulid('id')->primary();
-            $table->foreignUlid('batch_id')->constrained('Batch')->onDelete('cascade');
+            $table->foreignUlid('batch_id')->constrained('batches')->onDelete('cascade');
             $table->string('type');
             $table->unsignedInteger('quantity_change');
-            $table->foreignUlid('user_id')->constrained('User')->onDelete('cascade');
+            $table->foreignUlid('user_id')->constrained('users')->onDelete('cascade');
             $table->timestamp('action_date');
             $table->string('description')->nullable();
             $table->timestamps();

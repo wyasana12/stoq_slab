@@ -15,8 +15,8 @@ return new class extends Migration
             $table->ulid('id')->primary();
             $table->string('sku');
             $table->string('name');
-            $table->foreignUlid('category_id')->constrained('Category')->onDelete('cascade');
-            $table->foreignUlid('unit_id')->constrained('Unit')->onDelete('cascade');
+            $table->foreignUlid('category_id')->constrained('categories')->onDelete('cascade');
+            $table->foreignUlid('unit_id')->constrained('units')->onDelete('cascade');
             $table->timestamps();
         });
     }

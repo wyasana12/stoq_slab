@@ -14,10 +14,10 @@ return new class extends Migration
         Schema::create('batches', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->string('batch_code');
-            $table->foreignUlid('product_id')->constrained('Product')->onDelete('cascade');
-            $table->foreignUlid('supplier_id')->constrained('Supplier')->onDelete('cascade');
-            $table->foreignUlid('warehouse_id')->constrained('Warehouse')->onDelete('cascade');
-            $table->foreignUlid('rack_warehouse_id')->constrained('RackWarehouse')->onDelete('cascade');
+            $table->foreignUlid('product_id')->constrained('products')->onDelete('cascade');
+            $table->foreignUlid('supplier_id')->constrained('suppliers')->onDelete('cascade');
+            $table->foreignUlid('warehouse_id')->constrained('warehouses')->onDelete('cascade');
+            $table->foreignUlid('rack_warehouse_id')->constrained('rack_warehouses')->onDelete('cascade');
             $table->unsignedInteger('quantity_initial');
             $table->unsignedInteger('quantity_current')->nullable();
             $table->decimal('price', 12, 2);
