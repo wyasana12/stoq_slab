@@ -13,30 +13,36 @@ return new class extends Migration
     {
         Schema::create('batches', function (Blueprint $table) {
             $table->ulid('id')->primary();
-            $table->string('batch_code');
+            $table->string('batch_code')->unique();
+
             $table->foreignUlid('product_id')->constrained('products')->onDelete('cascade');
             $table->foreignUlid('supplier_id')->constrained('suppliers')->onDelete('cascade');
             $table->foreignUlid('warehouse_id')->constrained('warehouses')->onDelete('cascade');
             $table->foreignUlid('rack_warehouse_id')->constrained('rack_warehouses')->onDelete('cascade');
+            $table->foreignUlid('detail_pre_order_id')->nullable()->constrained('detail_pre_orders')->onDelete('cascade')->nullOnDelete();
+
             $table->unsignedInteger('quantity_initial');
-            $table->unsignedInteger('quantity_current')->nullable();
+            $table->unsignedInteger('quantity_current');
+
             $table->decimal('price', 12, 2);
-            $table->timestamp('production_date');
-            $table->timestamp('expired_date');
-            $table->timestamp('inbound_date');
+
+            $table->timestamp('production_date')->nullable();
+            $table->timestamp('expired_date')->nullable();
+            $table->timestamp('inbound_date')->nullable();
+
             $table->string('condition')->nullable();
             $table->enum('status', [
                 'AVAILABLE',
-                'TRANSFER',
-                'DISTRIBUTION',
-                'BLOCK',
                 'QUARANTINED',
-                'RETURN',
                 'EXPIRED',
                 'DEPLETED',
-                ])->default('AVAILABLE');
-            $table->string('barcode');
+                'BLOCK',
+                'LOST',
+            ])->default('AVAILABLE');
+
+            $table->string('barcode')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

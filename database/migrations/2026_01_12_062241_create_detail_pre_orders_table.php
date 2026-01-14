@@ -14,11 +14,13 @@ return new class extends Migration
         Schema::create('detail_pre_orders', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->foreignUlid('product_id')->constrained('products')->onDelete('cascade');
-            $table->foreignUlid('pre_order_id')->constrained('pre_orders')->onDelete('cascade');
-            $table->unsignedInteger('quantity_initial');
-            $table->unsignedInteger('quantity_current')->nullable();
+            $table->foreignUlid('preorder_id')->constrained('pre_orders')->onDelete('cascade');
+            $table->unsignedInteger('quantity_ordered');
+            $table->unsignedInteger('quantity_received')->default(0);
             $table->decimal('price', 10, 2);
+            $table->decimal('subtotal', 10, 2);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
