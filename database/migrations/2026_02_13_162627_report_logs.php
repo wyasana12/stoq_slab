@@ -11,12 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('suppliers', function (Blueprint $table) {
+        Schema::create('report_logs', function (Blueprint $table) {
             $table->ulid('id')->primary();
-            $table->string('name')->unique();
-            $table->string('location')->nullable();
-            $table->string('no_phone')->unique()->nullable();
-            $table->string('email')->unique()->nullable();
+            $table->foreignUlid('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignUlid('warehouse_id')->constrained('warehouses')->cascadeOnDelete();
+            $table->string('file_type');
+            $table->string('exported_file');
+            $table->string('filters_used')->nullable();
             $table->timestamps();
         });
     }
@@ -26,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('suppliers');
+        //
     }
 };

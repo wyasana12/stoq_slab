@@ -11,13 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('detail_pre_orders', function (Blueprint $table) {
+        Schema::create('purchase_order_items', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->foreignUlid('product_id')->constrained('products')->onDelete('cascade');
-            $table->foreignUlid('preorder_id')->constrained('pre_orders')->onDelete('cascade');
+            $table->foreignUlid('purchase_id')->constrained('purchase_orders')->onDelete('cascade');
             $table->unsignedInteger('quantity_ordered');
             $table->unsignedInteger('quantity_received')->default(0);
-            $table->decimal('price', 10, 2);
+            $table->decimal('unit_price', 10, 2);
             $table->decimal('subtotal', 10, 2);
             $table->timestamps();
             $table->softDeletes();
