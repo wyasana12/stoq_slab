@@ -11,10 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('units', function (Blueprint $table) {
-            $table->ulid('id')->primary();
-            $table->string('name')->unique();
-            $table->timestamps();
+        Schema::table('batches', function (Blueprint $table) {
+            $table->foreignUlid('receiving_id')->constrained('product_receivings')->cascadeOnDelete()->after('batch_code');
         });
     }
 
@@ -23,6 +21,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('units');
+        //
     }
 };

@@ -11,17 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('pre_orders', function (Blueprint $table) {
+        Schema::create('purchase_orders', function (Blueprint $table) {
             $table->ulid('id')->primary();
-            $table->string('kode_po');
-            $table->foreignUlid('user_id')->constrained('users')->onDelete('cascade');
+            $table->string('po_code')->unique();
             $table->foreignUlid('supplier_id')->constrained('suppliers')->onDelete('cascade');
             $table->foreignUlid('warehouse_id')->constrained('warehouses')->onDelete('cascade');
-            $table->decimal('total_bill', 10, 2);
-            $table->enum('status', ['DRAFT', 'DIKIRIM', 'SELESAI', 'BATAL']);
+            $table->foreignUlid('created_by')->constrained('users')->onDelete('cascade');
+            $table->decimal('total_amount', 10, 2);
+            $table->enum('status', ['DRAFT', 'PENDING', 'APPROVED', 'COMPLETED', 'CANCELED'])->default('DRAFT');
             $table->timestamp('order_date');
-            $table->timestamp('target_order_date')->nullable();
+            $table->timestamp('approved_at')->nullable();
+            $table->text('notes')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
