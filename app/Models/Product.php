@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Product extends Model
@@ -27,5 +29,21 @@ class Product extends Model
 
     public function unit(): BelongsTo {
         return $this->belongsTo(Unit::class, 'unit_id');
+    }
+
+    public function purchaseOrder(): BelongsToMany {
+        return $this->belongsToMany(PurchaseOrder::class, 'purchase_order_items', 'product_id', 'purchase_id');
+    }
+
+    public function restock(): BelongsToMany {
+        return $this->belongsToMany(Restock::class, 'stock_restock_items', 'product_id', 'restock_id');
+    }
+
+    public function receiving(): BelongsToMany {
+        return $this->belongsToMany(ProductReceiving::class, 'product_receiving_items', 'product_id', 'receiving_id');
+    }
+
+    public function batch() : HasMany {
+        return $this->hasMany(Batch::class, 'product_id');
     }
 }

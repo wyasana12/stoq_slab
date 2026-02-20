@@ -6,9 +6,10 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class PreOrder extends Model
+class PurchaseOrder extends Model
 {
     use HasFactory, HasUlids, SoftDeletes;
 
@@ -33,5 +34,10 @@ class PreOrder extends Model
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class, 'warehouse_id');    
+    }
+
+    public function product(): BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'purchase_order_items', 'product_id', 'purchase_id');    
     }
 }

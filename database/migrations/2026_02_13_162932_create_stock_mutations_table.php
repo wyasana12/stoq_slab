@@ -18,7 +18,7 @@ return new class extends Migration
             $table->unsignedInteger('change_quantity');
             $table->unsignedInteger('before_quantity');
             $table->unsignedInteger('after_quantity');
-            $table->string('reference_type');
+            $table->enum('reference_type', ['DISTRIBUTION', 'TRANSFER', 'RESTOCK', 'RETURN', 'RECEIVE']);
             $table->string('reference_id');
             $table->string('notes')->nullable();
             $table->string('status')->nullable();

@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('stock_distributions', function (Blueprint $table) {
             $table->ulid('id')->primary();
-            $table->string('disctribution_code')->unique();
+            $table->string('distribution_code')->unique();
             $table->foreignUlid('warehouse_id')->constrained('warehouses')->cascadeOnDelete();
             $table->string('location');
             $table->date('dispatched_at')->nullable();
