@@ -32,12 +32,4 @@ class Batch extends Model
     public function warehouse(): BelongsTo {
         return $this->belongsTo(Warehouse::class, 'warehouse_id');        
     }
-
-    public function rack(): BelongsTo {
-        return $this->belongsTo(RackWarehouse::class, 'warehouse_id');
-    }
-
-    public function detailPreorder(): BelongsTo {
-        return $this->belongsTo(DetailPreOrder::class, 'detail_pre_order_id');        
-    }
 }

@@ -15,6 +15,7 @@ return new class extends Migration
             $table->ulid('id')->primary();
             $table->string('name')->unique();
             $table->string('location');
+            $table->string('phone_number')->unique();
             $table->timestamps();
         });
     }

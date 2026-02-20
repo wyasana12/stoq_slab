@@ -17,8 +17,8 @@ return new class extends Migration
             $table->foreignUlid('purchase_id')->constrained('purchase_orders')->cascadeOnDelete();
             $table->foreignUlid('warehouse_id')->constrained('warehouses')->cascadeOnDelete();
             $table->string('status');
-            $table->date('receiving_date');
-            $table->foreignUlid('receiving_by')->constrained('users')->cascadeOnDelete();
+            $table->date('receiving_date')->nullable();
+            $table->foreignUlid('receiving_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
     }

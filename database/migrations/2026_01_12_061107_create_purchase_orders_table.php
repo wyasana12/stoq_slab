@@ -18,8 +18,8 @@ return new class extends Migration
             $table->foreignUlid('warehouse_id')->constrained('warehouses')->onDelete('cascade');
             $table->foreignUlid('created_by')->constrained('users')->onDelete('cascade');
             $table->decimal('total_amount', 10, 2);
-            $table->enum('status', ['DRAFT', 'PENDING', 'APPROVED', 'COMPLETED', 'CANCELED'])->default('DRAFT');
-            $table->timestamp('order_date');
+            $table->enum('status', ['DRAFT', 'PENDING', 'APPROVED', 'DECLINED'])->default('DRAFT');
+            $table->timestamp('order_date')->nullable();
             $table->timestamp('approved_at')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
@@ -32,6 +32,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('pre_orders');
+        Schema::dropIfExists('purchase_orders');
     }
 };
