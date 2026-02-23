@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('rack_warehouses', function (Blueprint $table) {
             $table->ulid('id')->primary();
-            $table->string('rack_kode');
+            $table->string('rack_code')->unique();
             $table->foreignUlid('warehouse_id')->constrained('warehouses')->onDelete('cascade');
             $table->string('capacity')->nullable();
             $table->enum('status', ['AVAILABLE', 'FULL', 'INACTIVE', 'MAINTENANCE'])->nullable();

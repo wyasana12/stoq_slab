@@ -13,8 +13,9 @@ return new class extends Migration
     {
         Schema::create('warehouses', function (Blueprint $table) {
             $table->ulid('id')->primary();
-            $table->string('name');
+            $table->string('name')->unique();
             $table->string('location');
+            $table->string('phone_number')->unique();
             $table->timestamps();
         });
     }
