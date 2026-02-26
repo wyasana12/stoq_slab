@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('batches', function (Blueprint $table) {
-            $table->foreignUlid('receiving_id')->constrained('product_receivings')->cascadeOnDelete()->after('batch_code');
+            $table->foreignUlid('receiving_id')->nullable()->constrained('product_receivings')->nullOnDelete()->after('batch_code');
         });
     }
 
