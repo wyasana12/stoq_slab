@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 use function Illuminate\Support\now;
 
@@ -39,6 +40,7 @@ class TransferSeeder extends Seeder
             ]);
 
             DB::table('stock_transfer_items')->insert([
+                'id' => (string) Str::ulid(),
                 'transfer_id' => $transfer->id,
                 'batch_id' => $batch->id,
                 'requested_quantity' => $quantityTransfer,

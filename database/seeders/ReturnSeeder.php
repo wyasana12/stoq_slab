@@ -45,6 +45,7 @@ class ReturnSeeder extends Seeder
                 'before_quantity' => $before,
                 'after_quantity' => $batch->current_quantity,
                 'reference_type' => 'RETURN',
+                'reference_id' => $return->id,
                 'notes' => 'Return Barang Kode ' . $return->return_code,
                 'status' => 'SUCCESS',
             ]);
