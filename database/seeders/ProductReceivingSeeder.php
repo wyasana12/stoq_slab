@@ -8,6 +8,7 @@ use App\Models\PurchaseOrder;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 use function Illuminate\Support\now;
 
@@ -18,7 +19,7 @@ class ProductReceivingSeeder extends Seeder
      */
     public function run(): void
     {
-        $approvedPO = PurchaseOrder::with('item')->where('status', 'approved')->get();
+        $approvedPO = PurchaseOrder::with('items')->where('status', 'approved')->get();
 
         $statuses = [
             ReceiveStatus::PROCESS,
@@ -54,6 +55,7 @@ class ProductReceivingSeeder extends Seeder
                 }
 
                 DB::table('product_receiving_items')->insert([
+                    'id' => (string) Str::ulid(),
                     'product_id' => $item->product_id,
                     'receiving_id' => $receiving->id,
                     'quantity_accepted' => $qtyAccepted,

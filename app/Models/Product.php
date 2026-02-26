@@ -27,23 +27,28 @@ class Product extends Model
         return $this->belongsTo(Category::class, 'category_id');
     }
 
-    public function unit(): BelongsTo {
+    public function unit(): BelongsTo
+    {
         return $this->belongsTo(Unit::class, 'unit_id');
     }
 
-    public function purchaseOrder(): BelongsToMany {
-        return $this->belongsToMany(PurchaseOrder::class, 'purchase_order_items', 'product_id', 'purchase_id');
+    public function purchaseItem(): HasMany
+    {
+        return $this->hasMany(PurchaseOrderItem::class, 'product_id');
     }
 
-    public function restock(): BelongsToMany {
+    public function restock(): BelongsToMany
+    {
         return $this->belongsToMany(Restock::class, 'stock_restock_items', 'product_id', 'restock_id');
     }
 
-    public function receiving(): BelongsToMany {
-        return $this->belongsToMany(ProductReceiving::class, 'product_receiving_items', 'product_id', 'receiving_id');
+    public function receivingItem(): HasMany
+    {
+        return $this->hasMany(ProductReceivingItem::class, 'product_id', 'receiving_id');
     }
 
-    public function batch() : HasMany {
+    public function batch(): HasMany
+    {
         return $this->hasMany(Batch::class, 'product_id');
     }
 }
