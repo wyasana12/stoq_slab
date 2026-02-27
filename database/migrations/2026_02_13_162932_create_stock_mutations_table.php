@@ -15,7 +15,7 @@ return new class extends Migration
             $table->ulid('id')->primary();
             $table->foreignUlid('warehouse_id')->constrained('warehouses')->cascadeOnDelete();
             $table->foreignUlid('batch_id')->constrained('batches')->cascadeOnDelete();
-            $table->unsignedInteger('change_quantity');
+            $table->Integer('change_quantity');
             $table->unsignedInteger('before_quantity');
             $table->unsignedInteger('after_quantity');
             $table->enum('reference_type', ['DISTRIBUTION', 'TRANSFER', 'RESTOCK', 'RETURN', 'RECEIVE']);
@@ -23,6 +23,7 @@ return new class extends Migration
             $table->string('notes')->nullable();
             $table->string('status')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
