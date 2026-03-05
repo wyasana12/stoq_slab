@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 use function Illuminate\Support\now;
 
@@ -23,17 +24,17 @@ class PurchaseOrderSeeder extends Seeder
         $warehouses = Warehouse::all();
         $users = User::whereNotNull('warehouse_id')->get();
         $products = Product::all();
-        
+
         $statuses = ['DRAFT', 'PENDING', 'APPROVED', 'DECLINED'];
 
         foreach ($statuses as $s) {
-            for ($i = 1; $i >= 3; $i++) {
+            for ($i = 1; $i <= 3; $i++) {
                 $warehouse = $warehouses->random();
                 $supplier = $suppliers->random();
                 $user = $users->random();
 
                 $po = PurchaseOrder::create([
-                    'po_code' => "PO-".now()->format("Ymd")."-".rand(0001, 9999),
+                    'po_code' => "PO-" . now()->format("Ymd") . "-" . rand(0001, 9999),
                     'supplier_id' => $supplier->id,
                     'warehouse_id' => $warehouse->id,
                     'created_by' => $user->id,
@@ -53,8 +54,9 @@ class PurchaseOrderSeeder extends Seeder
                     $subtotal = $qty * $price;
 
                     DB::table('purchase_order_items')->insert([
+                        'id' => (string) Str::ulid(),
                         'product_id' => $r->id,
-                        'receiving_id' => $po->id,
+                        'purchase_id' => $po->id,
                         'quantity_ordered' => $qty,
                         'quantity_received' => ($s === 'APPROVED') ? $qty : 0,
                         'unit_price' => $price,

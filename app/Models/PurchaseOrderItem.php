@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Supplier extends Model
+class PurchaseOrderItem extends Model
 {
     use HasFactory, HasUlids;
 
@@ -16,15 +16,15 @@ class Supplier extends Model
     ];
 
     public $incrementing = false;
+    public $keyType = 'string';
 
-    protected $keyType = 'string';
-
-    public function category(): BelongsTo
+    public function product(): BelongsTo
     {
-        return $this->belongsTo(Category::class, 'category_id');
+        return $this->belongsTo(Product::class, 'product_id');    
     }
 
-    public function region(): BelongsTo {
-        return $this->belongsTo(Region::class, 'region_id');
+    public function purchase(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseOrder::class, 'purchase_id');    
     }
 }

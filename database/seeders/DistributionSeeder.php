@@ -8,6 +8,7 @@ use App\Models\StockMutations;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 use function Illuminate\Support\now;
 
@@ -37,6 +38,7 @@ class DistributionSeeder extends Seeder
 
             DB::table('stock_distribution_items')->insert(
                 [
+                    'id' => (string) Str::ulid(),
                     'distribution_id' => $dist->id,
                     'batch_id' => $batch->id,
                     'requested_quantity' => $quantityOut,

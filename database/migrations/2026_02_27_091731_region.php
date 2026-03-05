@@ -11,8 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('batches', function (Blueprint $table) {
-            $table->foreignUlid('receiving_id')->nullable()->constrained('product_receivings')->nullOnDelete()->after('batch_code');
+        Schema::create('region', function (Blueprint $table) {
+            $table->string('id')->primary();
+            $table->string('name');
         });
     }
 
@@ -21,6 +22,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        //
+        Schema::dropIfExists('region');
     }
 };
