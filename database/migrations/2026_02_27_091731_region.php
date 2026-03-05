@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('region', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->string('name');
+            $table->string('fullname')->nullable();
         });
     }
 

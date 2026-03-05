@@ -20,17 +20,19 @@ class TransferSeeder extends Seeder
      */
     public function run(): void
     {
-        $fromWarehouse = Warehouse::first();
-        $toWarehouse = Warehouse::skip(1)->first();
-        $batch = Batch::where('warehouse_id', $fromWarehouse->id)->where('current_quantity', '>', 10)->first();
+        $batch = Batch::where('current_quantity', '>', 5)->first();
         $user = User::first();
-    
-        if($batch && $toWarehouse)
-        {
+
+        if ($batch) {
+            $fromWarehouse = Warehouse::find($batch->warehouse_id);
+            $toWarehouse = Warehouse::where('id', '!=', $fromWarehouse->id)->first();
+        }
+        
+        if ($batch && $toWarehouse) {
             $quantityTransfer = rand(1, 10);
 
             $transfer = StockTransfers::create([
-                'transfer_code' => 'TF-'.now()->format("Ymd")."-".rand(0001, 9999),
+                'transfer_code' => 'TF-' . now()->format("Ymd") . "-" . rand(0001, 9999),
                 'from_warehouse_id' => $fromWarehouse->id,
                 'to_warehouse_id' => $toWarehouse->id,
                 'requested_by' => $user->id,
@@ -58,16 +60,16 @@ class TransferSeeder extends Seeder
                 'after_quantity' => $batch->current_quantity,
                 'reference_type' => 'TRANSFER',
                 'reference_id' => $transfer->id,
-                'notes' => 'Kirim Ke '.$toWarehouse->location,
+                'notes' => 'Kirim Ke ' . $toWarehouse->name,
                 'status' => 'SUCCESS',
             ]);
 
             $batchDestination = Batch::create([
-                'batch_code' => 'BTCH-'.now()->format('Ymd').'-'.rand(0001, 9999),
+                'batch_code' => 'BTCH-' . now()->format('Ymd') . '-' . rand(0001, 9999),
                 'product_id' => $batch->product_id,
                 'warehouse_id' => $toWarehouse->id,
                 'supplier_id' => $batch->supplier_id,
-                'rack_location' => rand(10,20),
+                'rack_location' => rand(10, 20),
                 'production_date' => $batch->production_date,
                 'expired_date' => $batch->expired_date,
                 'initial_quantity' => $quantityTransfer,
@@ -85,7 +87,7 @@ class TransferSeeder extends Seeder
                 'after_quantity' => $quantityTransfer,
                 'reference_type' => 'TRANSFER',
                 'reference_id' => $transfer->id,
-                'notes' => 'Terima Transfer Dari '.$fromWarehouse->location,
+                'notes' => 'Terima Transfer Dari ' . $fromWarehouse->name,
                 'status' => 'SUCCESS'
             ]);
         }
