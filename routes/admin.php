@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\RestockController;
 use App\Http\Controllers\DistributionController;
+use App\Http\Resources\StockMutationResource;
+use App\Models\StockMutations;
+
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('/warehouses')->group(function () {
@@ -18,3 +21,9 @@ Route::get('/distributions/{distribution}', [DistributionController::class, 'sho
 Route::post('/distributions', [DistributionController::class, 'store']);
 Route::put('/distributions/{distribution}', [DistributionController::class, 'update']);
 Route::delete('/distributions/{distribution}', [DistributionController::class, 'destroy']);
+
+Route::get('/mutations', function () {
+    return StockMutationResource::collection(
+        StockMutations::latest()->get()
+    );
+});
