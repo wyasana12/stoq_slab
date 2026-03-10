@@ -12,6 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
             __DIR__.'/../routes/auth.php',
             __DIR__.'/../routes/superadmin.php',
             __DIR__.'/../routes/mutation.php',
+            __DIR__.'/../routes/distribution.php',
             ],
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
