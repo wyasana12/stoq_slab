@@ -21,14 +21,9 @@ class StockDistributions extends Model
     public $incrementing = false;
     public $keyType = 'string';
 
-    public function warehouse(): HasMany
+    public function warehouse(): BelongsTo
     {
-        return $this->hasMany(Warehouse::class, 'warehouse_id');
-    }
-
-    public function confirm(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'confirmed_by');
+        return $this->belongsTo(Warehouse::class, 'warehouse_id');
     }
 
     public function request(): BelongsTo
@@ -36,8 +31,13 @@ class StockDistributions extends Model
         return $this->belongsTo(User::class, 'requested_by');
     }
 
-    public function batch(): BelongsToMany
+    public function confirmedBy(): BelongsTo
     {
-        return $this->belongsToMany(Batch::class, 'stock_distribution_items', 'batch_id', 'distribution_id');
+        return $this->belongsTo(User::class, 'confirmed_by');
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(StockDistributionItem::class, 'distribution_id');
     }
 }

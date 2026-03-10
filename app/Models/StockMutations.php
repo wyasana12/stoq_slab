@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Enums\MutationStatus;
 
 class StockMutations extends Model
 {
@@ -19,8 +20,40 @@ class StockMutations extends Model
     public $incrementing = false;
     public $keyType = 'string';
 
-    public function batch(): HasMany
+    public function batch()
     {
-        return $this->hasMany(Batch::class, 'batch_id');
+        return $this->belongsTo(Batch::class);
+
+    }
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
+
+    public static function record(
+        string $warehouseId,
+        string $batchId,
+        int $before,
+        int $change,
+        MutationStatus $status,
+        string $referenceId,
+        ?string $notes = null
+    ) {
+
+    $after = $before + $change;
+
+    if ($after < 0) {
+        throw new \Exception('Stock tidak mencukupi.');
+    }
+        return self::create([
+            'warehouse_id' => $warehouseId,
+            'batch_id' => $batchId,
+            'before_quantity' => $before,
+            'change_quantity' => $change,
+            'after_quantity' => $before + $change,
+            'status' => $status->value,
+            'reference_id' => $referenceId,
+            'notes' => $notes,
+        ]);
     }
 }
