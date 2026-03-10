@@ -9,10 +9,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Restock extends Model
+class Restockitem extends Model
 {
     use HasFactory, HasUlids, SoftDeletes;
 
+    protected $table = 'restock_items';
     protected $guarded = [
         'id'
     ];
@@ -20,23 +21,13 @@ class Restock extends Model
     public $incrementing = false;
     public $keyType = 'string';
 
-    public function item(): HasMany
+    public function restock(): BelongsTo
     {
-        return $this->hasMany(RestockItem::class, 'restock_id');
+        return $this->belongsTo(Restock::class . 'restock_id');
     }
 
-    public function confirm(): BelongsTo
+    public function product(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'confirmed_by');
-    }
-
-    public function request(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'requested_by');
-    }
-
-    public function warehouse(): BelongsTo
-    {
-        return $this->belongsTo(Warehouse::class, 'warehouse_id');
+        return $this->belongsTo(Product::class, 'product_id');
     }
 }
