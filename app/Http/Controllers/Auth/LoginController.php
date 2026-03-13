@@ -8,7 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
-class RegistedAndLoginController extends Controller
+class LoginController extends Controller
 {
     public function login(Request $request): JsonResponse
     {
