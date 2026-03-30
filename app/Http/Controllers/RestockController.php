@@ -70,7 +70,6 @@ class RestockController extends Controller
         ]);
     }
 
-    // jika butuh konfirmasi
     public function confirm(Restock $restock): JsonResponse
     {
         $this->repository->confirm($restock, Auth::id());
