@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\UserController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SupplierController;
@@ -9,6 +10,11 @@ use App\Http\Controllers\RestockController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('/superadmin')->name('superadmin.')->group(function () {
+    Route::get('/users', [UserController::class, 'index'])->name('user.index');
+    Route::post('/users/create', [UserController::class, 'store'])->name('user.create');
+    Route::get('/users/{user}', [UserController::class, 'show'])->name('user.show');
+    Route::put('/users/{user}', [UserController::class, 'update'])->name('user.update');
+
     Route::get('/products', [ProductController::class, 'index'])->name('product.index');
     Route::post('/products/create', [ProductController::class, 'store'])->name('product.create');
     Route::get('/products/{product}', [ProductController::class, 'show'])->name('product.show');
