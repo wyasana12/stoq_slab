@@ -21,6 +21,7 @@ Route::get('/distributions/{distribution}', [DistributionController::class, 'sho
 Route::post('/distributions', [DistributionController::class, 'store']);
 Route::put('/distributions/{distribution}', [DistributionController::class, 'update']);
 Route::delete('/distributions/{distribution}', [DistributionController::class, 'destroy']);
+Route::patch('/distributions/{distribution}/status', [DistributionController::class, 'updateStatus']);
 
 Route::get('/mutations', function () {
     return StockMutationResource::collection(
