@@ -17,23 +17,14 @@ enum ReturnStatus: string
             self::REJECTED,
             self::COMPLETED,
             self::CANCELLED,
-        ]);
+        ],true);
     }
 
-    public function canTransition(self $newStatus)
+    public function canTransition(self $newStatus): bool
     {
         return match ($this) {
-            self::REQUESTED => in_array($newStatus, [
-                self::APPROVED,
-                self::REJECTED,
-                self::RETURNING,
-                self::COMPLETED,
-                self::CANCELLED,
-            ]),
-            self::APPROVED => in_array($newStatus, [
-                self::RETURNING,
-                self::COMPLETED,
-            ]),
+            self::REQUESTED => in_array($newStatus, [self::APPROVED, self::REJECTED], true),
+            default => false,
         };
     }
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\WarehouseController;
+use App\Http\Controllers\ReturnController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('/superadmin')->name('superadmin.')->group(function () {
@@ -41,4 +42,13 @@ Route::prefix('/superadmin')->name('superadmin.')->group(function () {
     Route::get('/warehouses/{warehouse}', [WarehouseController::class, 'show'])->name('warehouse.show');
     Route::put('/warehouses/{warehouse}', [WarehouseController::class, 'update'])->name('warehouse.update');
     Route::delete('/warehouses/{warehouse}', [WarehouseController::class, 'destroy'])->name('warehouse.delete');
+
+    Route::get('/returns', [ReturnController::class, 'index'])->name('return.index');
+    Route::post('/returns', [ReturnController::class, 'store'])->name('return.create');
+    Route::get('/returns/{stockReturn}', [ReturnController::class, 'show'])->name('return.show');
+    Route::put('/returns/{stockReturn}', [ReturnController::class, 'update'])->name('return.update');
+    Route::delete('/returns/{stockReturn}', [ReturnController::class, 'destroy'])->name('return.delete');
+    Route::patch('/returns/{stockReturn}/confirm', [ReturnController::class, 'confirm'])->name('return.confirm');
 });
+
+    

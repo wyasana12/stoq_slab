@@ -2,12 +2,13 @@
 
 namespace Database\Seeders;
 
+use App\Enums\ReturnStatus;
 use App\Models\Batch;
-use App\Models\StockMutation;
-use App\Models\StockMutations;
 use App\Models\StockReturns;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 use function Illuminate\Support\now;
 
@@ -18,38 +19,46 @@ class ReturnSeeder extends Seeder
      */
     public function run(): void
     {
-        $batch = Batch::where('current_quantity', '>', 10)->first();
-        $user = User::whereNotNull('warehouse_id')->first();
+        $batch = Batch::query()
+            ->where('current_quantity', '>', 10)
+            ->first();
 
-        if ($batch) {
-            $quantityReturn = rand(1, 9);
-
-            $return = StockReturns::create([
-                'return_code' => 'RT-' . now()->format('Ymd') . '-' . rand(0001, 9999),
-                'warehouse_id' => $batch->warehouse_id,
-                'batch_id' => $batch->id,
-                'requested_quantity' => $quantityReturn,
-                'approved_quantity' => $quantityReturn,
-                'requested_by' => $user->id,
-                'confirmed_by' => $user->id,
-                'notes' => null,
-                'status' => 'SUCCESS',
-            ]);
-
-            $before = $batch->current_quantity;
-            $batch->decrement('current_quantity', $quantityReturn);
-
-            StockMutations::create([
-                'warehouse_id' => $batch->warehouse_id,
-                'batch_id' => $batch->id,
-                'change_quantity' => $quantityReturn,
-                'before_quantity' => $before,
-                'after_quantity' => $batch->current_quantity,
-                'reference_type' => 'RETURN',
-                'reference_id' => $return->id,
-                'notes' => 'Return Barang Kode ' . $return->return_code,
-                'status' => 'SUCCESS',
-            ]);
+        if (! $batch) {
+            $this->command?->warn('ReturnSeeder skip: batch dengan current_quantity > 10 tidak ditemukan.');
+            return;
         }
+
+        $warehouse = Warehouse::query()->find($batch->warehouse_id);
+
+        if (! $warehouse) {
+            $this->command?->warn('ReturnSeeder skip: warehouse dari batch tidak ditemukan.');
+            return;
+        }
+
+        $user = User::query()
+            ->where('warehouse_id', $warehouse->id)
+            ->first();
+
+        if (! $user) {
+            $this->command?->warn('ReturnSeeder skip: user dengan warehouse_id yang sama tidak ditemukan.');
+            return;
+        }
+
+        $requestedQty = rand(1, 9);
+
+        $stockReturn = StockReturns::create([
+            'return_code' => 'RT-' . now()->format('Ymd') . '-' . Str::upper(Str::random(4)),
+            'warehouse_id' => $warehouse->id,
+            'batch_id' => $batch->id,
+            'requested_quantity' => $requestedQty,
+            'approved_quantity' => 0,
+            'reason' => 'damaged',
+            'requested_by' => $user->id,
+            'confirmed_by' => null,
+            'notes' => 'Seeder sample return for CRUD test',
+            'status' => ReturnStatus::REQUESTED->value,
+        ]);
+
+        $this->command?->info('ReturnSeeder success. return_id=' . $stockReturn->id);
     }
 }
