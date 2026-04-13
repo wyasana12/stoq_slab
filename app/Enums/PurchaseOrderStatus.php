@@ -8,6 +8,7 @@ enum PurchaseOrderStatus: string
     case SUBMITTED = 'submitted';
     case APPROVED = 'approved';
     case REJECTED = 'rejected';
+    case ORDERED = 'ordered';
     case CLOSED = 'closed';
     case CANCELLED = 'cancelled';
 
@@ -22,23 +23,29 @@ enum PurchaseOrderStatus: string
 
     public function canTransition(self $newStatus)
     {
+        if($this->isFinal()) {
+            return false;
+        }
+
         return match ($this) {
             self::DRAFT => in_array($newStatus, [
                 self::SUBMITTED,
-                self::APPROVED,
-                self::REJECTED,
-                self::CLOSED,
                 self::CANCELLED,
             ]),
             self::SUBMITTED => in_array($newStatus, [
                 self::APPROVED,
                 self::REJECTED,
-                self::CLOSED,
                 self::CANCELLED,
             ]),
             self::APPROVED => in_array($newStatus, [
+                self::ORDERED,
+                self::CANCELLED,
+            ]),
+            self::ORDERED => in_array($newStatus, [
                 self::CLOSED
             ]),
+
+            default => false,
         };
     }
 }
