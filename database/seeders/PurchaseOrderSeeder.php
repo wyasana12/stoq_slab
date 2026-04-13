@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\PurchaseOrderStatus;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
@@ -25,7 +26,7 @@ class PurchaseOrderSeeder extends Seeder
         $users = User::whereNotNull('warehouse_id')->get();
         $products = Product::all();
 
-        $statuses = ['DRAFT', 'PENDING', 'APPROVED', 'DECLINED'];
+        $statuses = PurchaseOrderStatus::cases();
 
         foreach ($statuses as $s) {
             for ($i = 1; $i <= 3; $i++) {

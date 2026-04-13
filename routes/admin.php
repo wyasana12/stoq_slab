@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\RestockController;
 use App\Http\Controllers\DistributionController;
+use App\Http\Controllers\SuperAdmin\ProductReceivingController;
 use App\Http\Resources\StockMutationResource;
 use App\Models\StockMutations;
 
@@ -26,4 +27,11 @@ Route::get('/mutations', function () {
     return StockMutationResource::collection(
         StockMutations::latest()->get()
     );
+});
+
+Route::prefix('/admin')->middleware('auth:sanctum')->name('admin.')->group(function () {
+    Route::prefix('/receives')->name('receive.')->group(function () {
+        Route::get('', [ProductReceivingController::class, 'index'])->name('index');
+        Route::get('/{receive}', [ProductReceivingController::class, 'show'])->name('show');
+    });
 });
