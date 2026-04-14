@@ -80,7 +80,8 @@ public function index(Request $request): JsonResponse
             'message' => 'Request return berhasil dibuat.',
             'data' => $stockReturn,
         ], 201);
-    }    public function update(UpdateStockReturnRequest $request, StockReturns $stockReturn): JsonResponse
+    }    
+    public function update(UpdateStockReturnRequest $request, StockReturns $stockReturn): JsonResponse
     {
         if ($stockReturn->status !== ReturnStatus::REQUESTED->value) {
             return response()->json([

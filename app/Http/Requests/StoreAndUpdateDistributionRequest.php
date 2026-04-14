@@ -33,6 +33,7 @@ class StoreAndUpdateDistributionRequest extends FormRequest
             'items.*.batch_id'      => 'required_with:items|exists:batches,id',
             'items.*.requested_quantity' => 'required_with:items|integer|min:1',
             'items.*.approved_quantity' => 'nullable|integer|min:0',
+            'status' => 'nullable|string|in:draft,waiting-approval',
         ];
     }
 
@@ -45,6 +46,7 @@ class StoreAndUpdateDistributionRequest extends FormRequest
             'items.required' => 'List item distribusi wajib diisi.',
             'items.*.batch_id.exists' => 'Batch yang dipilih tidak valid.',
             'items.*.requested_quantity.min' => 'Jumlah yang diminta harus minimal 1 untuk setiap item.',
+            'status.in' => 'Status distribusi tidak valid.',
         ];
     }
 }

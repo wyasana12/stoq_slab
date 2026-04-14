@@ -28,10 +28,14 @@ class DistributionRepository
         return DB::transaction(function () use ($data) {
             $requestedBy = $data['requested_by'] ?? Auth::id();
 
-            if (! $requestedBy) {
-                throw new InvalidArgumentException('requested_by wajib diisi.');
-            }
+            $status = DistributionStatus::DRAFT->value;
 
+            if (! empty($data['submit_for_approval'])) {
+                $status = DistributionStatus::WAITING_APPROVAL->value;
+            } elseif (($data['status'] ?? null) === DistributionStatus::WAITING_APPROVAL->value) {
+                $status = DistributionStatus::WAITING_APPROVAL->value;
+            }
+            
             $distribution = StockDistributions::create([
                 'distribution_code' => 'DIST-' . now()->format('Ymd') . '-' . rand(1000, 9999),
                 'warehouse_id' => $data['warehouse_id'],
@@ -40,7 +44,7 @@ class DistributionRepository
                 'requested_by' => $requestedBy,
                 'confirmed_by' => $data['confirmed_by'] ?? null,
                 'notes' => $data['notes'] ?? null,
-                'status' => DistributionStatus::DRAFT->value,
+                'status' => $status,
             ]);
 
             foreach ($data['items'] as $item) {
@@ -51,11 +55,6 @@ class DistributionRepository
                     'approved_quantity' => $item['approved_quantity'] ?? 0,
                 ]);
             }
-
-           // $staffUsers = User::role(RoleName::Staff->value)->get();
-           // foreach ($staffUsers as $staff) {
-             //   $staff->notify(new DistributionCreatedNotification($distribution));
-          //  }
 
             return $distribution->load('items.batch');
         });
