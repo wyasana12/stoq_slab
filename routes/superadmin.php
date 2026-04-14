@@ -3,13 +3,14 @@
 use App\Http\Controllers\Auth\UserController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\SuperAdmin\PurchaseOrderController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\RestockController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('/superadmin')->name('superadmin.')->group(function () {
+Route::prefix('/superadmin')->name('superadmin.')->middleware('auth:sanctum')->group(function () {
     Route::get('/users', [UserController::class, 'index'])->name('user.index');
     Route::post('/users/create', [UserController::class, 'store'])->name('user.create');
     Route::get('/users/{user}', [UserController::class, 'show'])->name('user.show');
@@ -44,4 +45,15 @@ Route::prefix('/superadmin')->name('superadmin.')->group(function () {
     Route::delete('/warehouses/{warehouse}', [WarehouseController::class, 'destroy'])->name('warehouse.delete');
 
     Route::post('restocks/{restock}/confirm', [RestockController::class, 'confirm'])->name('restock.confirm');
+    Route::prefix('/purchases')->name('purchaseorder.')->group(function () {
+        Route::get('', [PurchaseOrderController::class, 'index'])->name('index');
+        Route::get('/trashed', [PurchaseOrderController::class, 'trashed'])->name('trash');
+        Route::post('/request', [PurchaseOrderController::class, 'request'])->name('create');
+        Route::get('/{purchase}', [PurchaseOrderController::class, 'show'])->name('show');
+        Route::put('/{purchase}/update', [PurchaseOrderController::class, 'update'])->name('update');
+        Route::patch('/{purchase}/status', [PurchaseOrderController::class, 'status'])->name('status');
+        Route::delete('/{purchase}/soft', [PurchaseOrderController::class, 'destroy'])->name('destroy');
+        Route::patch('/{purchase}/restore', [PurchaseOrderController::class, 'restore'])->name('restore')->withTrashed();
+        Route::delete('/{purchase}/force', [PurchaseOrderController::class, 'forceDestroy'])->name('force')->withTrashed();
+    });
 });

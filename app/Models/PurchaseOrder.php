@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PurchaseOrderStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -17,13 +18,19 @@ class PurchaseOrder extends Model
         'id'
     ];
 
+    protected $casts = [
+        'approved_at' => 'datetime',
+        'order_date' => 'datetime',
+        'status' => PurchaseOrderStatus::class,
+    ];
+
     public $incrementing = false;
 
     protected $keyType = 'string';
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id');    
+        return $this->belongsTo(User::class, 'created_by');    
     }
 
     public function supplier(): BelongsTo

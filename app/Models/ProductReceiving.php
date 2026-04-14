@@ -16,6 +16,10 @@ class ProductReceiving extends Model
         'id',
     ];
 
+    protected $casts = [
+        'receiving_date' => 'datetime'
+    ];
+
     public $incrementing = false;
     public $keyType = 'string';
 
@@ -31,11 +35,16 @@ class ProductReceiving extends Model
 
     public function items(): HasMany
     {
-        return $this->hasMany(ProductReceivingItem::class, 'receiving_id', 'product_id');
+        return $this->hasMany(ProductReceivingItem::class, 'receiving_id');
     }
 
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class, 'warehouse_id');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'receiving_by');
     }
 }

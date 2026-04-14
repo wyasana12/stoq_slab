@@ -46,11 +46,11 @@ class RoleController extends Controller
     public function show(Role $role): JsonResponse
     {
         $role->load('permissions');
-        
+
         return response()->json([
             'success' => true,
             'data' => $role
-        ])    ;
+        ]);
     }
 
     public function update(Request $request, Role $role): JsonResponse
