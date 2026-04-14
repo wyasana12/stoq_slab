@@ -18,11 +18,13 @@ return new class extends Migration
             $table->foreignUlid('batch_id')->constrained('batches')->cascadeOnDelete();
             $table->unsignedInteger('requested_quantity');
             $table->unsignedInteger('approved_quantity')->default(0);
+            $table->string('reason')->nullable();
             $table->foreignUlid('requested_by')->constrained('users')->cascadeOnDelete();
             $table->foreignUlid('confirmed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->string('notes')->nullable();
             $table->string('status');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

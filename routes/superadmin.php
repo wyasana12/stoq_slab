@@ -57,3 +57,4 @@ Route::prefix('/superadmin')->name('superadmin.')->middleware('auth:sanctum')->g
         Route::delete('/{purchase}/force', [PurchaseOrderController::class, 'forceDestroy'])->name('force')->withTrashed();
     });
 });
+

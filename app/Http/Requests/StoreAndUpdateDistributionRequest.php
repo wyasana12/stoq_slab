@@ -21,15 +21,19 @@ class StoreAndUpdateDistributionRequest extends FormRequest
      */
     public function rules(): array
     {
+        $isCreate = $this->isMethod('post');
         return [
-            'warehouse_id'          => 'required|exists:warehouses,id',
-            'location'              => 'required|string|max:255',
-            'requested_by'          => 'nullable|exists:users,id',
+            'warehouse_id'          => ($isCreate ? 'required' : 'sometimes') . '|exists:warehouses,id',
+            'location'              => ($isCreate ? 'required' : 'sometimes') . '|string|max:255',
+            'requested_by'          => ($isCreate ? 'required' : 'sometimes') . '|exists:users,id',
             'confirmed_by'          => 'nullable|exists:users,id',
+            'notes'                 => 'nullable|string|max:255',
 
-            'items'                 => 'required|array|min:1',
-            'items.*.batch_id'      => 'required|exists:batches,id',
-            'items.*.requested_quantity' => 'required|integer|min:1',
+            'items'                 => ($isCreate ? 'required' : 'sometimes') . '|array|min:1',
+            'items.*.batch_id'      => 'required_with:items|exists:batches,id',
+            'items.*.requested_quantity' => 'required_with:items|integer|min:1',
+            'items.*.approved_quantity' => 'nullable|integer|min:0',
+            'status' => 'nullable|string|in:draft,waiting-approval',
         ];
     }
 
@@ -38,9 +42,11 @@ class StoreAndUpdateDistributionRequest extends FormRequest
         return [
             'warehouse_id.required' => 'Warehouse wajib diisi.',
             'location.required' => 'Location disribusi wajib diisi.',
+            'requested_by.required' => 'Requested wajib diisi.',
             'items.required' => 'List item distribusi wajib diisi.',
             'items.*.batch_id.exists' => 'Batch yang dipilih tidak valid.',
             'items.*.requested_quantity.min' => 'Jumlah yang diminta harus minimal 1 untuk setiap item.',
+            'status.in' => 'Status distribusi tidak valid.',
         ];
     }
 }
