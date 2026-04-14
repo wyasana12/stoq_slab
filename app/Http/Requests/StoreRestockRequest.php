@@ -21,8 +21,6 @@ class StoreRestockRequest extends FormRequest
             'products.*.id' => ['required', 'exists:products,id'],
             'products.*.qty' => ['required', 'integer', 'min:1'],
 
-            'priority'      => ['required', 'in:normal,high,urgent'],
-            'reason'        => ['required', 'string', 'min:10'],
             'notes'        => ['nullable', 'string'],
         ];
     }

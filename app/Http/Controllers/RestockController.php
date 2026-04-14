@@ -32,8 +32,6 @@ class RestockController extends Controller
         $restock = $this->repository->create(array_merge($data, [
             'status' => 'PENDING',
             'notes'  => $data['notes'] ?? null,
-            'priority' => $data['priority'] ?? null,
-            'reason'   => $data['reason'] ?? null,
         ]));
 
         return response()->json([
