@@ -7,6 +7,7 @@ use App\Http\Controllers\SuperAdmin\PurchaseOrderController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\WarehouseController;
+use App\Http\Controllers\RestockController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('/superadmin')->name('superadmin.')->middleware('auth:sanctum')->group(function () {
@@ -43,6 +44,7 @@ Route::prefix('/superadmin')->name('superadmin.')->middleware('auth:sanctum')->g
     Route::put('/warehouses/{warehouse}', [WarehouseController::class, 'update'])->name('warehouse.update');
     Route::delete('/warehouses/{warehouse}', [WarehouseController::class, 'destroy'])->name('warehouse.delete');
 
+    Route::post('restocks/{restock}/confirm', [RestockController::class, 'confirm'])->name('restock.confirm');
     Route::prefix('/purchases')->name('purchaseorder.')->group(function () {
         Route::get('', [PurchaseOrderController::class, 'index'])->name('index');
         Route::get('/trashed', [PurchaseOrderController::class, 'trashed'])->name('trash');
