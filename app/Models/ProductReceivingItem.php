@@ -23,7 +23,7 @@ class ProductReceivingItem extends Model
         return $this->belongsTo(ProductReceiving::class, 'receiving_id');    
     }
 
-    public function product(): BelongsTo
+    public function products(): BelongsTo
     {
         return $this->belongsTo(Product::class, 'product_id');    
     }

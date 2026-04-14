@@ -16,13 +16,12 @@ Route::prefix('/warehouses')->group(function () {
     Route::post('restocks/{restock}/confirm', [RestockController::class, 'confirm']);
 });
 
-Route::name('distribution.')->group(function () {
-    Route::get('/distributions', [DistributionController::class, 'index'])->name('index');
-    Route::get('/distributions/{distribution}', [DistributionController::class, 'show'])->name('show');
-    Route::post('/distributions', [DistributionController::class, 'store'])->name('store');
-    Route::put('/distributions/{distribution}', [DistributionController::class, 'update'])->name('update');
-    Route::delete('/distributions/{distribution}', [DistributionController::class, 'destroy'])->name('destroy');
-});
+    Route::get('/distributions', [DistributionController::class, 'index']);
+    Route::get('/distributions/{distribution}', [DistributionController::class, 'show']);
+    Route::post('/distributions', [DistributionController::class, 'store']);
+    Route::put('/distributions/{distribution}', [DistributionController::class, 'update']);
+    Route::delete('/distributions/{distribution}', [DistributionController::class, 'destroy']);
+    Route::patch('/distributions/{distribution}/status', [DistributionController::class, 'updateStatus']);
 
 Route::get('/mutations', function () {
     return StockMutationResource::collection(
