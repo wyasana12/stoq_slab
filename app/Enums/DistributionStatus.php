@@ -28,14 +28,31 @@ enum DistributionStatus: string
         return match ($this) {
             self::DRAFT => in_array($newStatus, [
                 self::WAITING_APPROVAL,
+                self::CANCELED,
+            ], true),
+            self::WAITING_APPROVAL => in_array($newStatus, [
                 self::APPROVED,
                 self::REJECTED,
-                self::PREPARING,
-                self::SHIPPED,
-                self::DELIVERED,
-                self::COMPLETED,
                 self::CANCELED,
-            ]),
-        }    ;
+            ], true),
+            self::APPROVED => in_array($newStatus, [
+                self::PREPARING,
+                self::CANCELED,
+            ], true),
+            self::REJECTED => false,
+            self::PREPARING => in_array($newStatus, [
+                self::SHIPPED,
+                self::CANCELED,
+            ], true),
+            self::SHIPPED => in_array($newStatus, [
+                self::DELIVERED,
+                self::CANCELED,
+            ], true),
+            self::DELIVERED => in_array($newStatus, [
+                self::COMPLETED,
+            ], true),
+            self::COMPLETED => false,
+            self::CANCELED => false,
+        };
     }
 }

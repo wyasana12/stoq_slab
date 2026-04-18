@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\RestockStatus;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Enum;
 
 class StoreRestockRequest extends FormRequest
 {
@@ -21,8 +23,7 @@ class StoreRestockRequest extends FormRequest
             'products.*.id' => ['required', 'exists:products,id'],
             'products.*.qty' => ['required', 'integer', 'min:1'],
 
-            'priority'      => ['required', 'in:normal,high,urgent'],
-            'reason'        => ['required', 'string', 'min:10'],
+            'status'       => ['nullable', new Enum(RestockStatus::class)],
             'notes'        => ['nullable', 'string'],
         ];
     }

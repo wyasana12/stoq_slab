@@ -23,25 +23,24 @@ class RestockSeeder extends Seeder
         $user = User::where('warehouse_id', $warehouse->id)->first();
         $products = Product::limit(2)->get();
 
-        if($warehouse && $user)
-            {
-                $restock = Restock::create([
-                    'restock_code' => 'RC-'.now()->format('Ymd').'-'.rand(0001, 9999),
-                    'warehouse_id' => $warehouse->id,
-                    'requested_by' => $user->id,
-                    'confirmed_by' => $user->id,
-                    'status' => 'SUCCESS',
-                    'notes' => null,
-                ]);
+        if ($warehouse && $user) {
+            $restock = Restock::create([
+                'restock_code' => 'RC-' . now()->format('Ymd') . '-' . rand(0001, 9999),
+                'warehouse_id' => $warehouse->id,
+                'requested_by' => $user->id,
+                'confirmed_by' => $user->id,
+                'status' => 'restocked',
+                'notes' => null,
+            ]);
 
-                foreach ($products as $product) {
-                    DB::table('restock_items')->insert([
-                        'id' => (string) Str::ulid(),
-                        'restock_id' => $restock->id,
-                        'product_id' => $product->id,
-                        'requested_quantity' => rand(20, 50),
-                    ]);
-                }
+            foreach ($products as $product) {
+                DB::table('restock_items')->insert([
+                    'id' => (string) Str::ulid(),
+                    'restock_id' => $restock->id,
+                    'product_id' => $product->id,
+                    'requested_quantity' => rand(20, 50),
+                ]);
             }
+        }
     }
 }

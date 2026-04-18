@@ -3,168 +3,190 @@
 namespace App\Repositories;
 
 use App\Enums\DistributionStatus;
+use App\Enums\RoleName;
 use App\Models\Batch;
 use App\Models\StockDistributions;
 use App\Models\StockDistributionItem;
 use App\Models\StockMutations;
+use App\Models\User;
+use App\Notifications\DistributionCreatedNotification;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class DistributionRepository
 {
     public function getAllDistributions(): Collection
     {
-        return StockDistributions::with('items.batch')->get();
+        return StockDistributions::with(['items.batch', 'warehouse', 'request', 'confirmedBy'])->get();
     }
 
     public function createDistribution(array $data): StockDistributions
     {
         return DB::transaction(function () use ($data) {
+            $requestedBy = $data['requested_by'] ?? Auth::id();
+
+            $status = DistributionStatus::DRAFT->value;
+
+            if (! empty($data['submit_for_approval'])) {
+                $status = DistributionStatus::WAITING_APPROVAL->value;
+            } elseif (($data['status'] ?? null) === DistributionStatus::WAITING_APPROVAL->value) {
+                $status = DistributionStatus::WAITING_APPROVAL->value;
+            }
+            
             $distribution = StockDistributions::create([
-                'distribution_code' => "DIST-" . now()->format('Ymd') . "-" . rand(1000, 9999),
-                'warehouse_id'      => $data['warehouse_id'],
-                'location'          => $data['location'],
-                'dispatched_at'     => now(),
-                'requested_by'      => $data['requested_by'] ?? null,
-                'confirmed_by'      => $data['confirmed_by'] ?? null,
-                'notes'             => $data['notes'] ?? null,
-                'status'            => DistributionStatus::COMPLETED->value,
+                'distribution_code' => 'DIST-' . now()->format('Ymd') . '-' . rand(1000, 9999),
+                'warehouse_id' => $data['warehouse_id'],
+                'location' => $data['location'],
+                'dispatched_at' => null,
+                'requested_by' => $requestedBy,
+                'confirmed_by' => $data['confirmed_by'] ?? null,
+                'notes' => $data['notes'] ?? null,
+                'status' => $status,
             ]);
 
             foreach ($data['items'] as $item) {
                 StockDistributionItem::create([
-                    'distribution_id'     => $distribution->id,
-                    'batch_id'            => $item['batch_id'],
-                    'requested_quantity'  => $item['requested_quantity'],
-                    'approved_quantity'   => $item['requested_quantity'],
-                ]);
-
-                $batch = Batch::findOrFail($item['batch_id']);
-                $before = $batch->current_quantity;
-                $batch->decrement('current_quantity', $item['requested_quantity']);
-
-                StockMutations::create([
-                    'warehouse_id'     => $batch->warehouse_id,
-                    'batch_id'         => $batch->id,
-                    'change_quantity'  => $item['requested_quantity'],
-                    'before_quantity'  => $before,
-                    'after_quantity'   => $batch->current_quantity,
-                    'reference_type'   => 'DISTRIBUTION',
-                    'reference_id'     => $distribution->id,
-                    'notes'            => 'Barang masuk ke ' . $distribution->location,
+                    'distribution_id' => $distribution->id,
+                    'batch_id' => $item['batch_id'],
+                    'requested_quantity' => $item['requested_quantity'],
+                    'approved_quantity' => $item['approved_quantity'] ?? 0,
                 ]);
             }
 
-            return $distribution;
+            return $distribution->load('items.batch');
         });
     }
 
     public function updateDistribution(StockDistributions $distribution, array $data): StockDistributions
     {
         return DB::transaction(function () use ($distribution, $data) {
-            // Update field dasar distribusi
+            if (! in_array($distribution->status, [
+                DistributionStatus::DRAFT->value,
+                DistributionStatus::WAITING_APPROVAL->value,
+            ], true)) {
+                throw new InvalidArgumentException('Distribusi hanya dapat diubah saat draft atau waiting approval.');
+            }
+
             $distribution->update([
                 'warehouse_id' => $data['warehouse_id'] ?? $distribution->warehouse_id,
-                'location'     => $data['location'] ?? $distribution->location,
+                'location' => $data['location'] ?? $distribution->location,
                 'requested_by' => $data['requested_by'] ?? $distribution->requested_by,
                 'confirmed_by' => $data['confirmed_by'] ?? $distribution->confirmed_by,
-                'notes'        => $data['notes'] ?? $distribution->notes,
+                'notes' => $data['notes'] ?? $distribution->notes,
             ]);
 
-            // Jika ada items yang diupdate
             if (isset($data['items']) && is_array($data['items'])) {
-                // Hapus item lama dan revert mutasi stok
-                foreach ($distribution->items as $oldItem) {
-                    $batch = $oldItem->batch;
-                    $before = $batch->current_quantity;
-
-                    // Kembalikan stok ke state sebelum distribusi
-                    $batch->increment('current_quantity', $oldItem->approved_quantity);
-
-                    // Catat revert mutasi
-                    StockMutations::create([
-                        'warehouse_id'   => $batch->warehouse_id,
-                        'batch_id'       => $batch->id,
-                        'change_quantity' => -$oldItem->approved_quantity,
-                        'before_quantity' => $before,
-                        'after_quantity'  => $batch->current_quantity,
-                        'reference_type' => 'DISTRIBUTION_REVERT',
-                        'reference_id'   => $distribution->id,
-                        'notes'          => 'Batal distribusi ke ' . $distribution->location,
-                    ]);
-
-                    $oldItem->delete();
-                }
-
-                // Buat item baru
-                foreach ($data['items'] as $item) {
-                    StockDistributionItem::create([
-                        'distribution_id'     => $distribution->id,
-                        'batch_id'            => $item['batch_id'],
-                        'requested_quantity'  => $item['requested_quantity'],
-                        'approved_quantity'   => $item['requested_quantity'],
-                    ]);
-
-                    $batch = Batch::findOrFail($item['batch_id']);
-                    $before = $batch->current_quantity;
-                    $batch->decrement('current_quantity', $item['requested_quantity']);
-
-                    StockMutations::create([
-                        'warehouse_id'     => $batch->warehouse_id,
-                        'batch_id'         => $batch->id,
-                        'change_quantity'  => $item['requested_quantity'],
-                        'before_quantity'  => $before,
-                        'after_quantity'   => $batch->current_quantity,
-                        'reference_type'   => 'DISTRIBUTION',
-                        'reference_id'     => $distribution->id,
-                        'notes'            => 'Barang masuk ke ' . $distribution->location,
-                    ]);
-                }
-            }
-
-            return $distribution->refresh();
-        });
-    }
-    public function deleteDistribution(StockDistributions $distribution): bool
-    {
-        return DB::transaction(
-            function () use ($distribution) {
-                // Cegah penghapusan jika distribusi sudah final
-                if ($distribution->status && in_array($distribution->status, [
-                    DistributionStatus::DELIVERED->value,
-                    DistributionStatus::COMPLETED->value,
-                ])) {
-                    return false;
-                }
-
-                // Revert semua mutasi stok
-                foreach ($distribution->items as $item) {
-                    $batch = $item->batch;
-                    $before = $batch->current_quantity;
-
-                    // Kembalikan stok
-                    $batch->increment('current_quantity', $item->approved_quantity);
-
-                    // Catat revert
-                    StockMutations::create([
-                        'warehouse_id'    => $batch->warehouse_id,
-                        'batch_id'        => $batch->id,
-                        'change_quantity' => -$item->approved_quantity,
-                        'before_quantity' => $before,
-                        'after_quantity'  => $batch->current_quantity,
-                        'reference_type'  => 'DISTRIBUTION_DELETED',
-                        'reference_id'    => $distribution->id,
-                        'notes'           => 'Distribusi dihapus, stok dikembalikan',
-                    ]);
-                }
-
-                // Hapus item terlebih dahulu (karena ada FK)
                 $distribution->items()->delete();
 
-                // Hapus distribusi
-                return $distribution->delete();
+                foreach ($data['items'] as $item) {
+                    StockDistributionItem::create([
+                        'distribution_id' => $distribution->id,
+                        'batch_id' => $item['batch_id'],
+                        'requested_quantity' => $item['requested_quantity'],
+                        'approved_quantity' => $item['approved_quantity'] ?? 0,
+                    ]);
+                }
             }
-        );
+
+            return $distribution->refresh()->load('items.batch');
+        });
     }
 
+    public function updateStatus(
+        StockDistributions $distribution,
+        DistributionStatus $newStatus,
+        ?string $confirmedBy = null,
+        ?string $notes = null
+    ): StockDistributions {
+        return DB::transaction(function () use ($distribution, $newStatus, $confirmedBy, $notes) {
+            $currentStatus = DistributionStatus::tryFrom($distribution->status);
+
+            if (! $currentStatus) {
+                throw new InvalidArgumentException('Status distribusi saat ini tidak valid.');
+            }
+
+            if (! $currentStatus->canTransition($newStatus)) {
+                throw new InvalidArgumentException(
+                    "Transisi status {$currentStatus->value} ke {$newStatus->value} tidak diizinkan."
+                );
+            }
+
+            if ($newStatus === DistributionStatus::COMPLETED) {
+                $this->applyStockMutation($distribution);
+            }
+
+            $distribution->status = $newStatus->value;
+
+            if ($confirmedBy) {
+                $distribution->confirmed_by = $confirmedBy;
+            }
+
+            if ($notes !== null) {
+                $distribution->notes = $notes;
+            }
+
+            if ($newStatus === DistributionStatus::SHIPPED && ! $distribution->dispatched_at) {
+                $distribution->dispatched_at = now();
+            }
+
+            $distribution->save();
+
+            return $distribution->refresh()->load('items.batch');
+        });
+    }
+
+    public function deleteDistribution(StockDistributions $distribution): bool
+    {
+        return DB::transaction(function () use ($distribution) {
+            if (! in_array($distribution->status, [
+                DistributionStatus::DRAFT->value,
+                DistributionStatus::WAITING_APPROVAL->value,
+                DistributionStatus::REJECTED->value,
+                DistributionStatus::CANCELED->value,
+            ], true)) {
+                return false;
+            }
+
+            $distribution->items()->delete();
+
+            return $distribution->delete();
+        });
+    }
+
+    private function applyStockMutation(StockDistributions $distribution): void
+    {
+        $distribution->loadMissing('items.batch');
+
+        foreach ($distribution->items as $item) {
+            $batch = $item->batch;
+
+            if (! $batch) {
+                throw new ModelNotFoundException('Batch tidak ditemukan untuk item distribusi.');
+            }
+
+            $quantity = $item->approved_quantity > 0 ? $item->approved_quantity : $item->requested_quantity;
+
+            if ($batch->current_quantity < $quantity) {
+                throw new InvalidArgumentException('Stok batch tidak cukup untuk menyelesaikan distribusi.');
+            }
+
+            $before = $batch->current_quantity;
+            $batch->decrement('current_quantity', $quantity);
+
+            StockMutations::create([
+                'warehouse_id' => $batch->warehouse_id,
+                'batch_id' => $batch->id,
+                'change_quantity' => $quantity,
+                'before_quantity' => $before,
+                'after_quantity' => $batch->current_quantity,
+                'reference_type' => 'DISTRIBUTION',
+                'reference_id' => $distribution->id,
+                'notes' => 'Distribusi selesai ke ' . $distribution->location,
+                'status' => 'SUCCESS',
+            ]);
+        }
+    }
 }

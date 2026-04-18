@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Casts\RestockStatusCast;
+use App\Enums\RestockStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,6 +17,10 @@ class Restock extends Model
 
     protected $guarded = [
         'id'
+    ];
+
+    protected $casts = [
+        'status' => RestockStatusCast::class,
     ];
 
     public $incrementing = false;
