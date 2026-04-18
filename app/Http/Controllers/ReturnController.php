@@ -18,8 +18,7 @@ use function Illuminate\Support\now;
 
 class ReturnController extends Controller
 {
-
-public function index(Request $request): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $returns = StockReturns::query()
             ->with(['warehouse', 'batch', 'request', 'confirm'])
@@ -41,6 +40,7 @@ public function index(Request $request): JsonResponse
             'data' => $stockReturn,
         ]);
     }
+
     public function store(StoreStockReturnRequest $request): JsonResponse
     {
         $requestedBy = $request->input('requested_by');
@@ -80,7 +80,8 @@ public function index(Request $request): JsonResponse
             'message' => 'Request return berhasil dibuat.',
             'data' => $stockReturn,
         ], 201);
-    }    
+    }
+
     public function update(UpdateStockReturnRequest $request, StockReturns $stockReturn): JsonResponse
     {
         if ($stockReturn->status !== ReturnStatus::REQUESTED->value) {
@@ -125,7 +126,6 @@ public function index(Request $request): JsonResponse
             'message' => 'Data return berhasil dihapus.',
         ]);
     }
-
 
     public function confirm(ConfirmStockReturnRequest $request, StockReturns $stockReturn): JsonResponse
     {

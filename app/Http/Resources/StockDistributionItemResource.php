@@ -9,7 +9,8 @@ class StockDistributionItemResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'batch_id'           => $this->batch_id,
+            'batch_id'           => $this->batch?->batch_code,
+            'product'             => $this->batch?->product?->name,
             'requested_quantity' => $this->requested_quantity,
             'approved_quantity'  => $this->approved_quantity,
         ];

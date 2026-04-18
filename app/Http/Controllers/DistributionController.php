@@ -47,7 +47,7 @@ class DistributionController extends Controller
 
     public function show(StockDistributions $distribution): JsonResponse
     {
-        $distribution->load('items.batch');
+        $distribution->load('items.batch', 'warehouse', 'request', 'confirmedBy');
 
         return response()->json([
             'success' => true,

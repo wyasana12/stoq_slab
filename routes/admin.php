@@ -7,7 +7,7 @@ use App\Models\StockMutations;
 
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('/warehouses')->group(function () {
+Route::prefix('/admin')->group(function () {
     Route::get('restocks', [RestockController::class, 'index']);
     Route::post('restocks', [RestockController::class, 'store']);
     Route::get('restocks/{restock}', [RestockController::class, 'show']);
@@ -21,7 +21,6 @@ Route::prefix('/warehouses')->group(function () {
     Route::post('/distributions', [DistributionController::class, 'store']);
     Route::put('/distributions/{distribution}', [DistributionController::class, 'update']);
     Route::delete('/distributions/{distribution}', [DistributionController::class, 'destroy']);
-    Route::patch('/distributions/{distribution}/status', [DistributionController::class, 'updateStatus']);
 
 Route::get('/mutations', function () {
     return StockMutationResource::collection(
