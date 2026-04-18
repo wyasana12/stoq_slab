@@ -15,7 +15,7 @@ class RestockResource extends JsonResource
             'warehouse'    => $this->warehouse->name ?? null,
             'requested_by' => $this->request->name ?? null,
             'confirmed_by' => $this->confirm?->name,
-            'status'       => $this->status,
+            'status'       => $this->status instanceof \App\Enums\RestockStatus ? $this->status->value : $this->status,
             'notes'        => $this->notes,
             'products' => $this->item->map(function ($item) {
                 return [

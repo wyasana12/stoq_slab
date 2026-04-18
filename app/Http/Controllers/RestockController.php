@@ -30,7 +30,6 @@ class RestockController extends Controller
         $data = $request->validated();
 
         $restock = $this->repository->create(array_merge($data, [
-            'status' => 'PENDING',
             'notes'  => $data['notes'] ?? null,
         ]));
 
@@ -51,7 +50,15 @@ class RestockController extends Controller
 
     public function update(StoreRestockRequest $request, Restock $restock): JsonResponse
     {
-        $restock = $this->repository->update($restock, $request->validated());
+        try {
+            $restock = $this->repository->update($restock, $request->validated());
+        } catch (\InvalidArgumentException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Restock updated',
@@ -65,15 +72,6 @@ class RestockController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Restock deleted',
-        ]);
-    }
-
-    public function confirm(Restock $restock): JsonResponse
-    {
-        $this->repository->confirm($restock, Auth::id());
-        return response()->json([
-            'success' => true,
-            'message' => 'Restock confirmed',
         ]);
     }
 }
