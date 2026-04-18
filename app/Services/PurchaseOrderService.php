@@ -157,7 +157,7 @@ class PurchaseOrderService
         $isFinal = $purchase->status->isFinal();
 
         if (!($isDraft || !$isFinal)) {
-            throw new InvalidArgumentException("The deletion rejected. The purchase order must have a DRAFT status or FINAL Transition");
+            throw new InvalidArgumentException("The deletion rejected. The purchase order must have a DRAFT status or FINAL Transition.");
         }
 
         $this->purchaseOrderRepository->softDelete($purchase);

@@ -28,4 +28,12 @@ class UpdateStatusPurchaseOrderRequest extends FormRequest
             'notes' => ['nullable', 'string', 'max:255'],
         ];
     }
+
+    public function messages()
+    {
+        return [
+            'status.required' => 'Purchase order status is required',
+            'notes.max' => 'Purchase order notes must be less than 250.',
+        ];
+    }
 }

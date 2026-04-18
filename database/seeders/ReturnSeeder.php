@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Batch;
-use App\Models\StockMutation;
 use App\Models\StockMutations;
 use App\Models\StockReturns;
 use App\Models\User;

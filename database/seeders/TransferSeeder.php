@@ -68,7 +68,6 @@ class TransferSeeder extends Seeder
                 'batch_code' => 'BTCH-' . now()->format('Ymd') . '-' . rand(0001, 9999),
                 'product_id' => $batch->product_id,
                 'warehouse_id' => $toWarehouse->id,
-                'supplier_id' => $batch->supplier_id,
                 'rack_location' => rand(10, 20),
                 'production_date' => $batch->production_date,
                 'expired_date' => $batch->expired_date,
