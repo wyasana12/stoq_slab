@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\RegionController;
 use App\Http\Controllers\SuperAdmin\MasterData\CategoryController;
 use App\Http\Controllers\SuperAdmin\MasterData\ProductController;
 use App\Http\Controllers\SuperAdmin\MasterData\WarehouseController;
@@ -12,6 +13,13 @@ use Illuminate\Support\Facades\Route;
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
+
+Route::prefix('/regions')->group(function () {
+    Route::get('/provinces', [RegionController::class, 'provinces']);
+    Route::get('/regencies/{provinceId}', [RegionController::class, 'regencies']);
+    Route::get('/districts/{regencyId}', [RegionController::class, 'districts']);
+    Route::get('/villages/{districtId}', [RegionController::class, 'villages']);
+});
 
 Route::prefix('/warehouses')->middleware('auth:sanctum')->name('warehouse.')->group(function () {
     Route::get('', [WarehouseController::class, 'index'])->name('index');

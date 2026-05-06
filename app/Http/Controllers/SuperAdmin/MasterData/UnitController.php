@@ -3,8 +3,7 @@
 namespace App\Http\Controllers\SuperAdmin\MasterData;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Unit\StoreUnitRequest;
-use App\Http\Requests\Unit\UpdateUnitRequest;
+use App\Http\Requests\Unit\StoreAndUpdateUnitRequest;
 use App\Http\Resources\CategoryResource;
 use App\Http\Resources\UnitResource;
 use App\Models\Unit;
@@ -32,7 +31,7 @@ class UnitController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreUnitRequest $request): JsonResponse
+    public function store(StoreAndUpdateUnitRequest $request): JsonResponse
     {
         $unit = $this->repository->createUnit($request->validated());
 
@@ -46,7 +45,7 @@ class UnitController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateUnitRequest $request, Unit $unit): JsonResponse
+    public function update(StoreAndUpdateUnitRequest $request, Unit $unit): JsonResponse
     {
         $unit = $this->repository->updateUnit($unit, $request->validated());
 

@@ -30,10 +30,17 @@ class PurchaseOrderService
 
     public function createRequestPurchaseOrder(array $data, string $userId): PurchaseOrder
     {
-        $productIds = collect($data['items'])->pluck('product_id')->toArray();
+        $productIds = collect($data['items'])->pluck('product_id');
+
+        if ($productIds->duplicates()->isNotEmpty()) {
+            throw new \InvalidArgumentException(
+                'Duplicate products are not allowed in a single purchase order.'
+            );
+        }
+
         $supplierCatalog = DB::table('product_supplier_items')
             ->where('supplier_id', $data['supplier_id'])
-            ->where('product_id', $productIds)
+            ->whereIn('product_id', $productIds)
             ->get()
             ->keyBy('product_id');
 
@@ -49,7 +56,7 @@ class PurchaseOrderService
                     throw new InvalidArgumentException("One or more selected products are not supplied by the chosen supplier.");
                 }
 
-                $moq = $supplierCatalog['product_id']->min_order_quantity;
+                $moq = $supplierCatalog[$productId]->min_order_quantity;
                 if ($qtyOrdered < $moq) {
                     throw new InvalidArgumentException("The order quantity for a product is below the required Minimum order quantity $moq");
                 }
@@ -69,7 +76,10 @@ class PurchaseOrderService
                 ? PurchaseOrderStatus::from($data['status'])
                 : PurchaseOrderStatus::DRAFT;
 
-            $poCode = 'PO-' . now()->format('Ymd') . '-' . strtolower(Str::random(8));
+            $warehouse = DB::table('warehouses')->where('id', $data['warehouse_id'])->first();
+            $warehouseCode = $warehouse ? strtoupper($warehouse->warehouse_code) : 'WHS';
+
+            $poCode = 'PO-' . $warehouseCode . '-' . strtoupper(Str::random(6));
 
             $purchase = $this->purchaseOrderRepository->createRequest([
                 'po_code' => $poCode,
@@ -95,7 +105,14 @@ class PurchaseOrderService
             throw new \InvalidArgumentException("Update request failed, only status draft can only updated.");
         }
 
-        $productIds = collect($data['items'])->pluck('product_id')->toArray();
+        $productIds = collect($data['items'])->pluck('product_id');
+
+        if ($productIds->duplicates()->isNotEmpty()) {
+            throw new \InvalidArgumentException(
+                'Duplicate products are not allowed in a single purchase order.'
+            );
+        }
+
         $supplierCatalog = DB::table('product_supplier_items')
             ->where('supplier_id', $data['supplier_id'])
             ->where('product_id', $productIds)
@@ -116,7 +133,7 @@ class PurchaseOrderService
                     throw new InvalidArgumentException("One or more selected products are not supplied by the chosen supplier.");
                 }
 
-                $moq = $supplierCatalog['product_id']->min_order_quantity;
+                $moq = $supplierCatalog[$productId]->min_order_quantity;
                 if ($qtyOrdered < $moq) {
                     throw new InvalidArgumentException("The order quantity for a product is below the required Minimum order quantity $moq");
                 }

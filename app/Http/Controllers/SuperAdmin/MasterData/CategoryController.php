@@ -8,7 +8,6 @@ use App\Http\Resources\CategoryResource;
 use App\Models\Category;
 use App\Repositories\CategoryRepository;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
@@ -19,15 +18,13 @@ class CategoryController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request): JsonResponse
+    public function index(): JsonResponse
     {
-        $perPage = $request->query('per_page', 10);
-        $page = $request->query('page', 1);
-        $categories = $this->repository->getAllCategories($perPage);
+        $categories = $this->repository->getAllCategories();
 
         return response()->json([
             'success' => true,
-            'data' => CategoryResource::collection($categories)->response()->getData(true),
+            'data' => CategoryResource::collection($categories),
         ], 200);
     }
 

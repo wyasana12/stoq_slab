@@ -19,13 +19,14 @@ class WarehouseController extends Controller
     {
         $perPage = $request->query('per_page', 10);
         $page = $request->query('page', 1);
-        $query = Warehouse::select('id', 'name', 'contact_person', 'phone_number', 'email', 'status');
+        $query = Warehouse::select('id', 'name', 'contact_person', 'phone_number', 'email', 'status', 'warehouse_code');
 
         if ($request->filled('search')) {
             $search = $request->search;
 
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%");
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('warehouse_code', 'like', "%{$search}%");
             });
         }
 

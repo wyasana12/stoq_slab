@@ -34,6 +34,7 @@ class ProductDetailResource extends JsonResource
                     'name' => $item->supplier->name,
                     'unit_price' => $item->unit_price,
                     'min_order_quantity' => $item->min_order_quantity,
+                    'lead_time_days' => $item->lead_time_days,
                     'return_limit_days' => $item->return_limit_days,
                     'is_preferred' => $item->is_preferred,
                 ];

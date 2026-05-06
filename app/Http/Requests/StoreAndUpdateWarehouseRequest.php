@@ -25,6 +25,7 @@ class StoreAndUpdateWarehouseRequest extends FormRequest
         $warehouseId = $this->route('warehouse')?->id;
 
         return [
+            'warehouse_code' => ['required', 'string', Rule::unique('warehouses', 'warehouse_code')->ignore($warehouseId)],
             'name' => ['required', 'string', Rule::unique('warehouses', 'name')->ignore($warehouseId)],
             'contact_person' => ['required', 'string', Rule::unique('warehouses', 'contact_person')->ignore($warehouseId)],
             'phone_number' => ['required', 'string', Rule::unique('warehouses', 'phone_number')->ignore($warehouseId), 'regex:/^\+?[0-9]{7,15}$/'],
@@ -39,6 +40,9 @@ class StoreAndUpdateWarehouseRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'warehouse_code.required' => 'Warehouse code is required.',
+            'warehouse_code.unique' => 'Warehouse code has already been taken.',
+            
             'name.required' => 'Warehouse name is required.',
             'name.unique' => 'This warehouse name has already been taken.',
 
@@ -51,7 +55,7 @@ class StoreAndUpdateWarehouseRequest extends FormRequest
 
             'email.unique' => 'Warehouse email has already been taken.',
             
-            'regoin_id.required' => 'Region is required.',
+            'region_id.required' => 'Region is required.',
             'region_id.exists' => 'This selected region is invalid.',
             
             'street.required' => 'Warehouse street is required.',

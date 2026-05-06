@@ -9,9 +9,9 @@ class ProductRepository
 {
     public function getAllPaginated(array $filters, int $perPage = 10)
     {
-       $query = ProductSupplierItem::with([
-            'product.category:id,name', 
-            'product.unit:id,symbol', 
+        $query = ProductSupplierItem::with([
+            'product.category:id,name',
+            'product.unit:id,symbol',
             'supplier:id,name'
         ]);
 
@@ -19,7 +19,7 @@ class ProductRepository
             $search = $filters['search'];
             $query->whereHas('product', function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('sku', 'like', "%{$search}%");
+                    ->orWhere('sku', 'like', "%{$search}%");
             });
         }
 
@@ -72,6 +72,7 @@ class ProductRepository
 
     public function softDelete(Product $product): void
     {
+        $product->productItems()->delete();
         $product->delete();
     }
 

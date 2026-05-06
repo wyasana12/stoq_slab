@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('warehouses', function (Blueprint $table) {
             $table->ulid('id')->primary();
-            $table->string('warehouse_code');
+            $table->string('warehouse_code')->unique();
             $table->string('name')->unique();
             $table->string('contact_person')->unique();
             $table->string('phone_number')->unique();
