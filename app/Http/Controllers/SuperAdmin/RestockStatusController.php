@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\UpdateRestockStatusRequest;
+use App\Http\Requests\Restock\UpdateRestockStatusRequest;
 use App\Http\Resources\RestockResource;
 use App\Models\Restock;
 use Illuminate\Http\JsonResponse;

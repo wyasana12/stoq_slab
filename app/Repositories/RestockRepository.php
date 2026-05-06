@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Enums\RestockStatus;
 use App\Models\Restock;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -12,7 +13,13 @@ class RestockRepository
 {
     public function getAll(): Collection
     {
-        return Restock::with('item.product', 'warehouse', 'request', 'confirm')->get();
+        $query = Restock::with('item.product', 'warehouse', 'request', 'confirm');
+
+        if ($warehouseId = Auth::user()?->warehouse_id) {
+            $query->where('warehouse_id', $warehouseId);
+        }
+
+        return $query->get();
     }
 
     public function create(array $data): Restock
