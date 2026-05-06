@@ -115,7 +115,7 @@ class PurchaseOrderService
 
         $supplierCatalog = DB::table('product_supplier_items')
             ->where('supplier_id', $data['supplier_id'])
-            ->where('product_id', $productIds)
+            ->whereIn('product_id', $productIds)
             ->get()
             ->keyBy('product_id');
 
