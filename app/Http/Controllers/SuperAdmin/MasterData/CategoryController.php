@@ -1,12 +1,14 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\SuperAdmin\MasterData;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreAndUpdateCategoryRequest;
 use App\Http\Resources\CategoryResource;
 use App\Models\Category;
 use App\Repositories\CategoryRepository;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
@@ -17,14 +19,16 @@ class CategoryController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $categories = $this->repository->getAllCategories();
+        $perPage = $request->query('per_page', 10);
+        $page = $request->query('page', 1);
+        $categories = $this->repository->getAllCategories($perPage);
 
         return response()->json([
             'success' => true,
-            'data' => CategoryResource::collection($categories)
-        ]);
+            'data' => CategoryResource::collection($categories)->response()->getData(true),
+        ], 200);
     }
 
     /**

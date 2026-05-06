@@ -14,15 +14,15 @@ return new class extends Migration
         Schema::create('suppliers', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->string('name')->unique();
-            $table->string('contact_person')->unique();
+            $table->string('contact_person');
             $table->string('phone_number')->unique();
             $table->string('email')->unique()->nullable();
-            $table->foreignUlid('category_id')->constrained('categories')->cascadeOnDelete();
             $table->string('region_id');
             $table->string('street');
             $table->string('postal_code');
             $table->boolean('status');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

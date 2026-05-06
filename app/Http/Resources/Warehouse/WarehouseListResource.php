@@ -19,6 +19,9 @@ class WarehouseListResource extends JsonResource
             'name' => $this->name,
             'contact_person' => $this->contact_person,
             'phone_number' => $this->phone_number,
+            'email' => $this->email,
+            'street' => $this->street,
+            'postal_code' => $this->postal_code,
             'status' => $this->status,
         ];
     }

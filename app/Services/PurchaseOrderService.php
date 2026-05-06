@@ -30,13 +30,31 @@ class PurchaseOrderService
 
     public function createRequestPurchaseOrder(array $data, string $userId): PurchaseOrder
     {
-        return DB::transaction(function () use ($data, $userId) {
+        $productIds = collect($data['items'])->pluck('product_id')->toArray();
+        $supplierCatalog = DB::table('product_supplier_items')
+            ->where('supplier_id', $data['supplier_id'])
+            ->where('product_id', $productIds)
+            ->get()
+            ->keyBy('product_id');
+
+        return DB::transaction(function () use ($data, $userId, $supplierCatalog) {
             $totalAmount = 0;
             $processedItems = [];
 
             foreach ($data['items'] as $i) {
-                $subTotal = $i['quantity_ordered'] * $i['unit_price'];
+                $productId = $i['product_id'];
+                $qtyOrdered = $i['quantity_ordered'];
 
+                if (!$supplierCatalog->has($productId)) {
+                    throw new InvalidArgumentException("One or more selected products are not supplied by the chosen supplier.");
+                }
+
+                $moq = $supplierCatalog['product_id']->min_order_quantity;
+                if ($qtyOrdered < $moq) {
+                    throw new InvalidArgumentException("The order quantity for a product is below the required Minimum order quantity $moq");
+                }
+
+                $subTotal = $i['quantity_ordered'] * $i['unit_price'];
                 $totalAmount += $subTotal;
 
                 $processedItems[] = [
@@ -77,13 +95,32 @@ class PurchaseOrderService
             throw new \InvalidArgumentException("Update request failed, only status draft can only updated.");
         }
 
-        return DB::transaction(function () use ($purchase, $data) {
+        $productIds = collect($data['items'])->pluck('product_id')->toArray();
+        $supplierCatalog = DB::table('product_supplier_items')
+            ->where('supplier_id', $data['supplier_id'])
+            ->where('product_id', $productIds)
+            ->get()
+            ->keyBy('product_id');
+
+        return DB::transaction(function () use ($purchase, $data, $supplierCatalog) {
             $this->purchaseOrderRepository->deleteItems($purchase);
 
             $totalAmount = 0;
             $processedItems = [];
 
             foreach ($data['items'] as $i) {
+                $productId = $i['product_id'];
+                $qtyOrdered = $i['quantity_ordered'];
+
+                if (!$supplierCatalog->has($productId)) {
+                    throw new InvalidArgumentException("One or more selected products are not supplied by the chosen supplier.");
+                }
+
+                $moq = $supplierCatalog['product_id']->min_order_quantity;
+                if ($qtyOrdered < $moq) {
+                    throw new InvalidArgumentException("The order quantity for a product is below the required Minimum order quantity $moq");
+                }
+
                 $subTotal = $i['quantity_ordered'] * $i['unit_price'];
 
                 $totalAmount += $subTotal;
@@ -185,6 +222,6 @@ class PurchaseOrderService
 
     public function getTrashedPurchaseOrder(int $perPage, string $userId)
     {
-        return $this->purchaseOrderRepository->getTrashedPaginated($perPage, $userId);    
+        return $this->purchaseOrderRepository->getTrashedPaginated($perPage, $userId);
     }
 }

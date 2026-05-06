@@ -32,7 +32,12 @@ class Product extends Model
         return $this->belongsTo(Unit::class, 'unit_id');
     }
 
-    public function purchaseItem(): HasMany
+    public function productItems(): HasMany
+    {
+        return $this->hasMany(ProductSupplierItem::class, 'product_id');    
+    }
+
+    public function purchaseItems(): HasMany
     {
         return $this->hasMany(PurchaseOrderItem::class, 'product_id');
     }
@@ -42,7 +47,7 @@ class Product extends Model
         return $this->belongsToMany(Restock::class, 'stock_restock_items', 'product_id', 'restock_id');
     }
 
-    public function receivingItem(): HasMany
+    public function receivingItems(): HasMany
     {
         return $this->hasMany(ProductReceivingItem::class, 'product_id', 'receiving_id');
     }

@@ -3,13 +3,13 @@
 namespace App\Repositories;
 
 use App\Models\Category;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class CategoryRepository
 {
-    public function getAllCategories(): Collection
+    public function getAllCategories(int $perPage = 10): LengthAwarePaginator
     {
-        return Category::select('id', 'name')->get();
+        return Category::select('id', 'name')->paginate($perPage);
     }
 
     public function createCategory(array $data): Category

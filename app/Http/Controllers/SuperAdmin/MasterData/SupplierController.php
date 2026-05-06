@@ -1,25 +1,47 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\SuperAdmin\MasterData;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreAndUpdateSupplierRequest;
 use App\Http\Resources\Supplier\SupplierDetailResource;
 use App\Http\Resources\Supplier\SupplierListResource;
 use App\Models\Supplier;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class SupplierController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index():JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $suppliers = Supplier::select('id', 'name', 'contact_person', 'phone_number', 'status')->paginate(10);
+        $perPage = $request->query('per_page', 10);
+        $page = $request->query('page', 1);
+        $query = Supplier::with('category:id,name')->select('id', 'name', 'contact_person', 'phone_number', 'status', 'email', 'category_id');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->has('status')) {
+            $query->where('status', (bool) $request->status);
+        }
+
+        if ($request->has('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        $suppliers = $query->paginate(10);
 
         return response()->json([
             'success' => true,
-            'data' => SupplierListResource::collection($suppliers),
+            'data' => SupplierListResource::collection($suppliers)->response()->getData(true),
         ]);
     }
 
@@ -78,6 +100,19 @@ class SupplierController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Supplier deleted successful.',
+        ]);
+    }
+
+    public function getProductBySupplier(Supplier $supplier): JsonResponse
+    {
+        $products = $supplier->products()->withPivot([
+            'unit_price',
+            'min_order_quantity',
+        ])    ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $products
         ]);
     }
 }
