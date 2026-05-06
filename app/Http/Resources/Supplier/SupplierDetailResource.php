@@ -17,14 +17,11 @@ class SupplierDetailResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'supplier_code' => $this->supplier_code,
             'name' => $this->name,
             'contact_person' => $this->contact_person,
             'phone_number' => $this->phone_number,
             'email' => $this->email,
-            'category' => [
-                'id' => $this->category?->id,
-                'name' => $this->category?->id,
-            ],
             'region' => [
                 'id' => $this->region_id,
                 'full_address' => Region::getAddress($this->region_id),

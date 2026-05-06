@@ -16,14 +16,11 @@ class SupplierListResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'supplier_code' => $this->supplier_code,
             'name' => $this->name,
             'contact_person' => $this->contact_person,
             'phone_number' => $this->phone_number,
             'email' => $this->email,
-            'category' => [
-                'id' => $this->category->id,
-                'name' => $this->category->name,
-            ],
             'status' => $this->status,
         ];
     }
