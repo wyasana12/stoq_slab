@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\RoleController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [LoginController::class, 'login'])->name('login');
+Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 Route::prefix('/superadmin/auth')->name('superadmin.auth.')->group(function () {
     Route::get('/roles', [RoleController::class, 'index'])->name('role.index');

@@ -35,7 +35,6 @@ class ProductReceivingSeeder extends Seeder
             $receiving = ProductReceiving::create([
                 'receiving_code' => "RCV-".now()->format('Ymd')."-".rand(0001, 9999),
                 'purchase_id' => $po->id,
-                'warehouse_id' => $po->warehouse_id,
                 'status' => $currentStatus->value,
                 'receiving_date' => now(),
                 'receiving_by' => $staff->id,

@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Enums\ReturnStatus;
 use App\Models\Batch;
+use App\Models\StockMutations;
 use App\Models\StockReturns;
 use App\Models\User;
 use App\Models\Warehouse;

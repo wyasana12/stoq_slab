@@ -17,7 +17,6 @@ return new class extends Migration
 
             $table->foreignUlid('product_id')->constrained('products')->onDelete('cascade');
             $table->foreignUlid('warehouse_id')->constrained('warehouses')->onDelete('cascade');
-            $table->foreignUlid('supplier_id')->constrained('suppliers')->onDelete('cascade');
             $table->string('rack_location')->nullable();
 
             $table->date('production_date');
@@ -31,7 +30,6 @@ return new class extends Migration
             $table->string('barcode')->nullable();
                 
             $table->timestamps();
-            $table->softDeletes();
         });
     }
 

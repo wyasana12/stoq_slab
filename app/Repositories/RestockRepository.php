@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Enums\RestockStatus;
 use App\Models\Restock;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +21,9 @@ class RestockRepository
             'restock_code' => 'RC-' . now()->format('Ymd') . '-' . rand(1, 9999),
             'warehouse_id' => $data['warehouse_id'],
             'requested_by' => $data['requested_by'],
-            'status'       => $data['status'] ?? 'PENDING',
+            'status'       => isset($data['status'])
+                ? RestockStatus::fromValue($data['status'])->value
+                : RestockStatus::REQUESTED->value,
             'notes'        => $data['notes'] ?? null,
         ]);
 
@@ -37,13 +40,28 @@ class RestockRepository
 
     public function update(Restock $restock, array $data): Restock
     {
+        if (isset($data['status'])) {
+            $currentStatus = RestockStatus::fromValue($restock->status instanceof RestockStatus ? $restock->status->value : $restock->status);
+            $newStatus = RestockStatus::fromValue($data['status']);
+
+            if (! $currentStatus->canTransition($newStatus)) {
+                throw new \InvalidArgumentException(
+                    "Cannot update restock status from {$currentStatus->value} to {$newStatus->value}."
+                );
+            }
+
+            $data['status'] = $newStatus->value;
+        }
+
         $restock->update($data);
 
         if (isset($data['products'])) {
-            $restock->product()->syncWithPivotValues(
-                collect($data['products'])->pluck('qty', 'id')->toArray(),
-                ['requested_quantity' => DB::raw('values(requested_quantity)')]
-            );
+            foreach ($data['products'] as $item) {
+                $restock->item()->updateOrCreate(
+                    ['product_id' => $item['id']],
+                    ['requested_quantity' => $item['qty']]
+                );
+            }
         }
 
         return $restock->refresh();
@@ -56,11 +74,20 @@ class RestockRepository
 
     public function confirm(Restock $restock, string $userId): Restock
     {
+        $currentStatus = RestockStatus::fromValue($restock->status instanceof RestockStatus ? $restock->status->value : $restock->status);
+        $nextStatus = RestockStatus::RESTOCKED;
+
+        if (! $currentStatus->canTransition($nextStatus)) {
+            throw new \InvalidArgumentException(
+                "Cannot confirm restock because status {$currentStatus->value} cannot transition to {$nextStatus->value}."
+            );
+        }
+
         $restock->update([
             'confirmed_by' => $userId,
-            'status' => 'RESTOCKED'
+            'status' => $nextStatus->value,
         ]);
-        // bisa juga buat mutasi stok di sini
+
         return $restock;
     }
 }

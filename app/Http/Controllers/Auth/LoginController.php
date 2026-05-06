@@ -47,4 +47,18 @@ class LoginController extends Controller
             ]
         ], 200);
     }
+
+    public function logout(Request $request): JsonResponse
+    {
+        $token = $request->user()?->currentAccessToken();
+
+        if ($token) {
+            $token->delete();
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Logout Successfully.',
+        ], 200);
+    }
 }

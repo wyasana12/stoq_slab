@@ -19,6 +19,7 @@ class ReturnConfirmController extends Controller
     public function updateStatus(ConfirmStockReturnRequest $request, StockReturns $stockReturn): JsonResponse
     {
         try {
+            $userId = request()->user()->id;
             $status = ReturnStatus::from($request->validated('status'));
 
             $stockReturn = $this->repository->updateStatus(
@@ -27,7 +28,7 @@ class ReturnConfirmController extends Controller
                 $request->validated('approved_quantity')
                     ? (int) $request->validated('approved_quantity')
                     : null,
-                $request->validated('confirmed_by'),
+                $userId,
                 $request->validated('notes')
             );
         } catch (InvalidArgumentException $exception) {

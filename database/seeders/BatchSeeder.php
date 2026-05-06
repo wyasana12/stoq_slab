@@ -26,8 +26,7 @@ class BatchSeeder extends Seeder
                 $batch = Batch::create([
                     'batch_code' => "BTCH-" . now()->format("Ymd") . "-" . rand(0001, 9999),
                     'product_id' => $item->product_id,
-                    'warehouse_id' => $receiving->warehouse_id,
-                    'supplier_id' => $purchase->supplier_id,
+                    'warehouse_id' => $purchase->warehouse_id,
                     'receiving_id' => $item->receiving_id,
                     'rack_location' => (string) rand(00, 99),
                     'production_date' => now()->subMonths(2),

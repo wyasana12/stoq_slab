@@ -18,8 +18,8 @@ class ReceiveListResource extends JsonResource
             'id' => $this->id,
             'receiving_code' => $this->receiving_code,
             'warehouse' => [
-                'id' => $this->warehouse->id ?? 'N/A',
-                'name' => $this->warehouse->name ?? 'N/A',
+                'id' => $this->purchase->warehouse->id ?? 'N/A',
+                'name' => $this->purchase->warehouse->name ?? 'N/A',
             ] ,
             'purchase' => [
                 'id' => $this->purchase->id ?? 'N/A',

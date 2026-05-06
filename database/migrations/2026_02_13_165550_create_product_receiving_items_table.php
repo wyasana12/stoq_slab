@@ -15,8 +15,8 @@ return new class extends Migration
             $table->ulid('id')->primary();
             $table->foreignUlid('product_id')->constrained('products')->cascadeOnDelete();
             $table->foreignUlid('receiving_id')->constrained('product_receivings')->cascadeOnDelete();
-            $table->decimal('quantity_accepted', 10, 2);
-            $table->decimal('quantity_rejected', 10, 2)->default(0);
+            $table->unsignedInteger('quantity_accepted');
+            $table->unsignedInteger('quantity_rejected')->default(0);
             $table->string('notes')->nullable();
             $table->timestamps();
         });

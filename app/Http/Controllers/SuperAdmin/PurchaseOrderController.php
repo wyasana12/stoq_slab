@@ -92,8 +92,7 @@ class PurchaseOrderController extends Controller
         } catch (\InvalidArgumentException $err) {
             return response()->json([
                 'success' => false,
-                'messages' => 'Update request purchase order denied.',
-                'error' => $err->getMessage(),
+                'messages' => $err->getMessage(),
             ], 422);
         } catch (\Exception $err) {
             return response()->json([
@@ -120,8 +119,7 @@ class PurchaseOrderController extends Controller
         } catch (\InvalidArgumentException $err) {
             return response()->json([
                 'success' => false,
-                'messages' => 'Update status purchase order denied.',
-                'error' => $err->getMessage(),
+                'messages' => $err->getMessage(),
             ], 422);
         } catch (\Exception $err) {
             return response()->json([
@@ -145,8 +143,7 @@ class PurchaseOrderController extends Controller
         } catch (AuthorizationException $err) {
             return response()->json([
                 'success' => false,
-                'messages' => 'Access Denied.',
-                'error' => $err->getMessage(),
+                'messages' => $err->getMessage(),
             ], 403);
         } catch (\Exception $err) {
             return response()->json([
@@ -202,7 +199,7 @@ class PurchaseOrderController extends Controller
             ], 200);
         } catch (\Exception $err) {
             return response()->json([
-                'success' => true,
+                'success' => false,
                 'messages' => 'Failed to retreive trashed purchase orders.',
                 'error' => $err->getMessage()
             ], 500);

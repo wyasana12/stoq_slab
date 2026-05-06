@@ -23,7 +23,20 @@ enum ReturnStatus: string
     public function canTransition(self $newStatus): bool
     {
         return match ($this) {
-            self::REQUESTED => in_array($newStatus, [self::APPROVED, self::REJECTED], true),
+            self::REQUESTED => in_array($newStatus, [
+                self::REJECTED,
+                self::APPROVED,
+            ], true),
+
+            self::APPROVED => in_array($newStatus, [
+                self::RETURNING,
+                self::CANCELLED,
+            ], true),
+
+            self::RETURNING => in_array($newStatus, [
+                self::COMPLETED,
+            ], true),
+
             default => false,
         };
     }

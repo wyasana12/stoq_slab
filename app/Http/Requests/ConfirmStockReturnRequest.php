@@ -29,7 +29,6 @@ class ConfirmStockReturnRequest extends FormRequest
                 'min:1',
                 'required_if:status,' . ReturnStatus::APPROVED->value,
             ],
-            'confirmed_by' => ['required', 'integer', 'exists:users,id'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
     }
