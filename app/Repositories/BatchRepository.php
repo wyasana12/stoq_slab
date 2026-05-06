@@ -8,8 +8,8 @@ class BatchRepository
 {
     public function getAllPaginated(int $perPage = 10)
     {
-        return Batch::with(['product:id,name'])
-            ->select(['id', 'batch_code', 'product_id', 'current_quantity', 'price', 'expired_date', 'created_at', 'updated_at'])
+        return Batch::with(['product:id,name', 'warehouse:id,name'])
+            ->select(['id', 'batch_code', 'product_id', 'warehouse_id','current_quantity', 'price', 'expired_date', 'created_at', 'updated_at'])
             ->latest()
             ->paginate($perPage);
     }

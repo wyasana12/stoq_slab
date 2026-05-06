@@ -30,7 +30,7 @@ class CreateRequestPurchaseOrderRequest extends FormRequest
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'exists:products,id'],
             'items.*.quantity_ordered' => ['required', 'integer', 'min:1'],
-            'items.*.unit_price' => ['required', 'numeric'],
+            'items.*.unit_price' => ['required', 'numeric', 'min:0'],
 
             'status' => ['nullable', Rule::in([PurchaseOrderStatus::DRAFT->value, PurchaseOrderStatus::SUBMITTED->value])],
         ];
@@ -57,6 +57,7 @@ class CreateRequestPurchaseOrderRequest extends FormRequest
 
             'items.*.unit_price.required' => 'Unit price product is required.',
             'items.*.unit_price.numeric' => 'Unit price product must be a valid number.',
+            'items.*.unit_price.min' => 'Unit price product cannot be less than 1.',
 
             'status.in' => 'This selected status is invalid for request.',
         ];

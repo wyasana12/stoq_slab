@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             UnitSeeder::class,
             SupplierSeeder::class,
             ProductSeeder::class,
+            ProductSupplierSeeder::class,
             PurchaseOrderSeeder::class,
             ProductReceivingSeeder::class,
             BatchSeeder::class,

@@ -5,7 +5,7 @@ namespace App\Http\Resources\Product;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class ProductDetailResource extends JsonResource
+class ProductTrashResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
