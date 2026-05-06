@@ -1,34 +1,14 @@
 <?php
 
 use App\Http\Controllers\Admin\BatchController;
-use App\Http\Controllers\RestockController;
+use App\Http\Controllers\Admin\RestockController;
+use App\Http\Controllers\Admin\TransferController;
 use App\Http\Controllers\DistributionController;
 use App\Http\Resources\StockMutationResource;
 use App\Models\StockMutations;
+use App\Http\Controllers\SuperAdmin\ProductReceivingController;
 
 use Illuminate\Support\Facades\Route;
-
-Route::prefix('/warehouses')->group(function () {
-    Route::get('restocks', [RestockController::class, 'index']);
-    Route::post('restocks', [RestockController::class, 'store']);
-    Route::get('restocks/{restock}', [RestockController::class, 'show']);
-    Route::put('restocks/{restock}', [RestockController::class, 'update']);
-    Route::delete('restocks/{restock}', [RestockController::class, 'destroy']);
-    Route::post('restocks/{restock}/confirm', [RestockController::class, 'confirm']);
-});
-
-    Route::get('/distributions', [DistributionController::class, 'index']);
-    Route::get('/distributions/{distribution}', [DistributionController::class, 'show']);
-    Route::post('/distributions', [DistributionController::class, 'store']);
-    Route::put('/distributions/{distribution}', [DistributionController::class, 'update']);
-    Route::delete('/distributions/{distribution}', [DistributionController::class, 'destroy']);
-    Route::patch('/distributions/{distribution}/status', [DistributionController::class, 'updateStatus']);
-
-Route::get('/mutations', function () {
-    return StockMutationResource::collection(
-        StockMutations::latest()->get()
-    );
-});
 
 Route::prefix('/admin')->middleware('auth:sanctum')->name('admin.')->group(function () {
     Route::prefix('/receives')->name('receive.')->group(function () {
@@ -44,5 +24,34 @@ Route::prefix('/admin')->middleware('auth:sanctum')->name('admin.')->group(funct
     Route::prefix('/batches')->name('batch.')->group(function () {
         Route::get('', [BatchController::class, 'index'])->name('index');
         Route::get('/{batch}', [BatchController::class, 'show'])->name('show');
+    });
+
+    Route::prefix('/restocks')->group(function () {
+        Route::get('', [RestockController::class, 'index']);
+        Route::post('', [RestockController::class, 'store']);
+        Route::get('/{restock}', [RestockController::class, 'show']);
+        Route::put('/{restock}', [RestockController::class, 'update']);
+        Route::delete('/{restock}', [RestockController::class, 'destroy']);
+    });
+
+    Route::get('/distributions', [DistributionController::class, 'index']);
+    Route::get('/distributions/{distribution}', [DistributionController::class, 'show']);
+    Route::post('/distributions', [DistributionController::class, 'store']);
+    Route::put('/distributions/{distribution}', [DistributionController::class, 'update']);
+    Route::delete('/distributions/{distribution}', [DistributionController::class, 'destroy']);
+    Route::patch('/distributions/{distribution}/status', [DistributionController::class, 'updateStatus']);
+
+    Route::prefix('/transfers')->group(function () {
+        Route::get('', [TransferController::class, 'index']);
+        Route::post('', [TransferController::class, 'store']);
+        Route::get('/{transfer}', [TransferController::class, 'show']);
+        Route::put('/{transfer}', [TransferController::class, 'update']);
+        Route::delete('/{transfer}', [TransferController::class, 'destroy']);
+    });
+
+    Route::get('/mutations', function () {
+        return StockMutationResource::collection(
+            StockMutations::latest()->get()
+        );
     });
 });

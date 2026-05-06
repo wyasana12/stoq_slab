@@ -8,6 +8,7 @@ use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\SuperAdmin\RestockStatusController;
+use App\Http\Controllers\SuperAdmin\TransferStatusController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('/superadmin')->name('superadmin.')->middleware('auth:sanctum')->group(function () {
@@ -55,7 +56,10 @@ Route::prefix('/superadmin')->name('superadmin.')->middleware('auth:sanctum')->g
         Route::patch('/{purchase}/restore', [PurchaseOrderController::class, 'restore'])->name('restore')->withTrashed();
         Route::delete('/{purchase}/force', [PurchaseOrderController::class, 'forceDestroy'])->name('force')->withTrashed();
     });
+
     Route::patch('restocks/{restock}/status', [RestockStatusController::class, 'patch'])->name('restock.status.patch');
     Route::get('restocks/{restock}/status/allowed', [RestockStatusController::class, 'allowedTransitions'])->name('restock.status.allowed');
-});
 
+    Route::patch('transfers/{transfer}/status', [TransferStatusController::class, 'patch'])->name('transfer.status.patch');
+    Route::get('transfers/{transfer}/status/allowed', [TransferStatusController::class, 'allowedTransitions'])->name('transfer.status.allowed');
+});
