@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
-use App\Http\Requests\StoreRestockRequest;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Restock\StoreRestockRequest;
 use App\Http\Resources\RestockResource;
 use App\Models\Restock;
 use App\Repositories\RestockRepository;

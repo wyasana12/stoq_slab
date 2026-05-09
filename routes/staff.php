@@ -6,10 +6,12 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('/staff')->middleware('auth:sanctum')->name('staff.')->group(function () {
 
-    Route::prefix('/distributions')->name('distribution.')->group(function () {
-        Route::patch('/{distribution}/confirm', [DistributionStatusController::class, 'updateStatus'])
-            ->name('confirm');
-    });
+Route::prefix('/distributions')->name('distribution.')->group(function () {
+    Route::patch('/{distribution}/confirm', [DistributionStatusController::class, 'updateStatus'])
+        ->name('confirm');
+    Route::patch('/{distribution}/status', [DistributionStatusController::class, 'updateStatus'])
+        ->name('status');
+});
 
     Route::prefix('/returns')->name('return.')->group(function () {
         Route::get('/', [ReturnController::class, 'index'])->name('index');
@@ -18,4 +20,5 @@ Route::prefix('/staff')->middleware('auth:sanctum')->name('staff.')->group(funct
         Route::put('/{stockReturn}', [ReturnController::class, 'update'])->name('update');
         Route::delete('/{stockReturn}', [ReturnController::class, 'destroy'])->name('destroy');
     });
+
 });

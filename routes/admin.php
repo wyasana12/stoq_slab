@@ -1,11 +1,12 @@
 <?php
 
 use App\Http\Controllers\Admin\BatchController;
-use App\Http\Controllers\RestockController;
+use App\Http\Controllers\Admin\RestockController;
+use App\Http\Controllers\Admin\TransferController;
 use App\Http\Controllers\DistributionController;
 use App\Http\Resources\StockMutationResource;
 use App\Models\StockMutations;
-use App\Http\Controllers\Admin\ProductReceivingController;
+use App\Http\Controllers\SuperAdmin\ProductReceivingController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -37,7 +38,6 @@ Route::prefix('/admin')->middleware('auth:sanctum')->name('admin.')->group(funct
         Route::get('/{restock}', [RestockController::class, 'show']);
         Route::put('/{restock}', [RestockController::class, 'update']);
         Route::delete('/{restock}', [RestockController::class, 'destroy']);
-        Route::post('/{restock}/confirm', [RestockController::class, 'confirm']);
     });
 
     Route::get('/distributions', [DistributionController::class, 'index']);
@@ -45,4 +45,19 @@ Route::prefix('/admin')->middleware('auth:sanctum')->name('admin.')->group(funct
     Route::post('/distributions', [DistributionController::class, 'store']);
     Route::put('/distributions/{distribution}', [DistributionController::class, 'update']);
     Route::delete('/distributions/{distribution}', [DistributionController::class, 'destroy']);
+    Route::patch('/distributions/{distribution}/status', [DistributionController::class, 'updateStatus']);
+
+    Route::prefix('/transfers')->group(function () {
+        Route::get('', [TransferController::class, 'index']);
+        Route::post('', [TransferController::class, 'store']);
+        Route::get('/{transfer}', [TransferController::class, 'show']);
+        Route::put('/{transfer}', [TransferController::class, 'update']);
+        Route::delete('/{transfer}', [TransferController::class, 'destroy']);
+    });
+
+    Route::get('/mutations', function () {
+        return StockMutationResource::collection(
+            StockMutations::latest()->get()
+        );
+    });
 });
