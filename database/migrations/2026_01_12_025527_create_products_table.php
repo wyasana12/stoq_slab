@@ -17,8 +17,6 @@ return new class extends Migration
             $table->string('name');
             $table->foreignUlid('category_id')->constrained('categories')->onDelete('cascade');
             $table->foreignUlid('unit_id')->constrained('units')->onDelete('cascade');
-            $table->integer('min_quantity')->nullable();
-            $table->integer('return_limit_days')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

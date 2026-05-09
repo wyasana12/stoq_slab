@@ -82,7 +82,7 @@ class PurchaseOrderRepository
 
     public function getById(PurchaseOrder $purchase): PurchaseOrder
     {
-        return $purchase->load(['warehouse', 'supplier', 'items', 'user']);
+        return $purchase->load(['warehouse', 'supplier', 'items.product', 'user']);
     }
 
     public function softDelete(PurchaseOrder $purchase): void

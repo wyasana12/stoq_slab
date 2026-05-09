@@ -3,63 +3,81 @@
 namespace Database\Seeders;
 
 use App\Enums\PurchaseOrderStatus;
-use App\Models\Product;
+use App\Models\ProductSupplierItem;
 use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderItem;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-
-use function Illuminate\Support\now;
 
 class PurchaseOrderSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $suppliers = Supplier::all();
         $warehouses = Warehouse::all();
         $users = User::whereNotNull('warehouse_id')->get();
-        $products = Product::all();
+        $productSupplierItems = ProductSupplierItem::all();
+
+        if ($suppliers->isEmpty() || $warehouses->isEmpty() || $users->isEmpty() || $productSupplierItems->isEmpty()) {
+            $this->command->error('Master data is incomplete. Please seed suppliers, warehouses, users, and product-supplier items first.');
+            return;
+        }
 
         $statuses = PurchaseOrderStatus::cases();
 
-        foreach ($statuses as $s) {
+        foreach ($statuses as $status) {
             for ($i = 1; $i <= 3; $i++) {
+
                 $warehouse = $warehouses->random();
                 $supplier = $suppliers->random();
                 $user = $users->random();
 
+                $availableItems = $productSupplierItems
+                    ->where('supplier_id', $supplier->id)
+                    ->unique('product_id')
+                    ->values();
+
+                if ($availableItems->isEmpty()) {
+                    continue;
+                }
+
                 $po = PurchaseOrder::create([
-                    'po_code' => "PO-" . now()->format("Ymd") . "-" . rand(0001, 9999),
+                    'po_code' => "PO-" . now()->format("Ymd") . "-" . rand(1000, 9999),
                     'supplier_id' => $supplier->id,
                     'warehouse_id' => $warehouse->id,
                     'created_by' => $user->id,
                     'total_amount' => 0,
-                    'status' => $s,
+                    'status' => $status,
                     'order_date' => now()->subDays(rand(1, 10)),
-                    'approved_at' => ($s === 'APPROVED') ? now() : null,
+                    'approved_at' => ($status->name === 'APPROVED') ? now() : null,
                     'notes' => null,
                 ]);
 
                 $totalAmount = 0;
-                $randProduct = $products->random(rand(2, 4));
 
-                foreach ($randProduct as $r) {
-                    $qty = rand(30, 50);
-                    $price = rand(10000, 50000);
+                $randItemsCount = min(rand(1, 4), $availableItems->count());
+
+                $randProductSuppliers = $availableItems->shuffle()->take($randItemsCount);
+
+                foreach ($randProductSuppliers as $psItem) {
+
+                    $qty = rand(
+                        $psItem->min_order_quantity ?? 1,
+                        ($psItem->min_order_quantity ?? 1) + 20
+                    );
+
+                    $price = $psItem->unit_price ?? rand(10000, 50000);
                     $subtotal = $qty * $price;
 
-                    DB::table('purchase_order_items')->insert([
-                        'id' => (string) Str::ulid(),
-                        'product_id' => $r->id,
+                    PurchaseOrderItem::create([
+                        'id' => Str::ulid(),
                         'purchase_id' => $po->id,
+                        'product_id' => $psItem->product_id,
                         'quantity_ordered' => $qty,
-                        'quantity_received' => ($s === 'APPROVED') ? $qty : 0,
+                        'quantity_received' => ($status->name === 'APPROVED') ? $qty : 0,
                         'unit_price' => $price,
                         'subtotal' => $subtotal,
                     ]);
@@ -67,8 +85,10 @@ class PurchaseOrderSeeder extends Seeder
                     $totalAmount += $subtotal;
                 }
 
-                $po->updated(['total_amount' => $totalAmount]);
+                $po->update(['total_amount' => $totalAmount]);
             }
         }
+
+        $this->command->info('Purchase Order seeder executed successfully!');
     }
 }

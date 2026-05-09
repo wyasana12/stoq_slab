@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Staff;
 
 use App\Enums\DistributionStatus;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\UpdateDistributionStatusRequest;
+use App\Http\Requests\Distribution\UpdateDistributionStatusRequest;
 use App\Http\Resources\DistributionResource;
 use App\Models\StockDistributions;
 use App\Repositories\DistributionRepository;

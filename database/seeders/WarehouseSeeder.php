@@ -15,6 +15,7 @@ class WarehouseSeeder extends Seeder
     {
         $warehouses = [
             [
+                'warehouse_code' => 'Test1',
                 'name' => 'PT Warehouse A',
                 'contact_person' => 'Andi Pratama',
                 'phone_number' => '+628111111111',
@@ -24,6 +25,7 @@ class WarehouseSeeder extends Seeder
                 'status' => true,
             ],
             [
+                'warehouse_code' => 'Test2',
                 'name' => 'PT Warehouse B',
                 'contact_person' => 'Budi Santoso',
                 'phone_number' => '+628222222222',
@@ -33,6 +35,7 @@ class WarehouseSeeder extends Seeder
                 'status' => true,
             ],
             [
+                'warehouse_code' => 'Test3',
                 'name' => 'PT Warehouse C',
                 'contact_person' => 'Citra Lestari',
                 'phone_number' => '+628333333333',

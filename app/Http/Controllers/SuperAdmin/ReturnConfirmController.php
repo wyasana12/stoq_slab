@@ -2,34 +2,29 @@
 
 namespace App\Http\Controllers\SuperAdmin;
 
-use App\Enums\ReturnStatus;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\ConfirmStockReturnRequest;
+use App\Http\Requests\Return\ConfirmStockReturnRequest;
 use App\Models\StockReturns;
-use App\Repositories\ReturnRepository;
+use App\Services\ReturnService;
 use Illuminate\Http\JsonResponse;
 use InvalidArgumentException;
 
 class ReturnConfirmController extends Controller
 {
-    public function __construct(
-        protected ReturnRepository $repository
-    ) {}
+    protected ReturnService $returnService;
+
+    public function __construct(ReturnService $returnService)
+    {
+        $this->returnService = $returnService;
+    }
 
     public function updateStatus(ConfirmStockReturnRequest $request, StockReturns $stockReturn): JsonResponse
     {
         try {
-            $userId = request()->user()->id;
-            $status = ReturnStatus::from($request->validated('status'));
-
-            $stockReturn = $this->repository->updateStatus(
+            $stockReturn = $this->returnService->confirmReturn(
                 $stockReturn,
-                $status,
-                $request->validated('approved_quantity')
-                    ? (int) $request->validated('approved_quantity')
-                    : null,
-                $userId,
-                $request->validated('notes')
+                $request->validated(),
+                $request->user()->id
             );
         } catch (InvalidArgumentException $exception) {
             return response()->json([

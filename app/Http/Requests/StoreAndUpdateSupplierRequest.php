@@ -25,11 +25,11 @@ class StoreAndUpdateSupplierRequest extends FormRequest
         $supplierId = $this->route('supplier')?->id;
 
         return [
+            'supplier_code' => ['required', 'string', Rule::unique('suppliers', 'supplier_code')->ignore($supplierId)],
             'name' => ['required', 'string', Rule::unique('suppliers', 'name')->ignore($supplierId)],
             'contact_person' => ['required', 'string', Rule::unique('suppliers', 'contact_person')->ignore($supplierId)],
             'phone_number' => ['required', 'string', Rule::unique('suppliers', 'phone_number')->ignore($supplierId), 'regex:/^\+?[0-9]{7,15}$/'],
             'email' => ['nullable', 'email', Rule::unique('suppliers', 'email')->ignore($supplierId)],
-            'category_id' => ['required', 'exists:categories,id'],
             'region_id' => ['required', 'exists:region,id'],
             'street' => ['required', 'string', 'min:5'],
             'postal_code' => ['required', 'string', 'min:5'],
@@ -40,6 +40,9 @@ class StoreAndUpdateSupplierRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'supplier_code.required' => 'Supplier code is required.',
+            'supplier_code.unique' => 'Supplier code has already been taken.',
+
             'name.required' => 'Supplier name is required.',
             'name.unique' => 'This supplier name has already been taken.',
 
@@ -51,12 +54,6 @@ class StoreAndUpdateSupplierRequest extends FormRequest
 
             'email.unique' => 'This supplier email has already been taken.',
 
-            'category_id.required' => 'Category is required.',
-            'category_id.exists' => 'This selected category is invalid.',
-
-            'region_id.required' => 'Region is required.',
-            'region_id.exists' => 'This selected region is invalid.',
-            
             'street.required' => 'Supplier street is required.',
             'street.min' => 'Supplier location must be at least 5 characters.',
 

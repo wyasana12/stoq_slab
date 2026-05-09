@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Return;
 
 use App\Enums\ReturnStatus;
 use Illuminate\Foundation\Http\FormRequest;

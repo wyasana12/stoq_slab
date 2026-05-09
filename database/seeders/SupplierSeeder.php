@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Category;
 use App\Models\Region;
 use App\Models\Supplier;
 use Illuminate\Database\Seeder;
@@ -13,6 +12,7 @@ class SupplierSeeder extends Seeder
     {
         $suppliers = [
             [
+                'supplier_code' => 'Test A',
                 'name' => 'PT Supplier A',
                 'contact_person' => 'Andi Pratama',
                 'phone_number' => '+628111111111',
@@ -22,6 +22,7 @@ class SupplierSeeder extends Seeder
                 'status' => true,
             ],
             [
+                'supplier_code' => 'Test B',
                 'name' => 'PT Supplier B',
                 'contact_person' => 'Budi Santoso',
                 'phone_number' => '+628222222222',
@@ -31,6 +32,7 @@ class SupplierSeeder extends Seeder
                 'status' => true,
             ],
             [
+                'supplier_code' => 'Test C',
                 'name' => 'PT Supplier C',
                 'contact_person' => 'Citra Lestari',
                 'phone_number' => '+628333333333',
@@ -43,11 +45,9 @@ class SupplierSeeder extends Seeder
 
         foreach ($suppliers as $s) {
             $region = Region::inRandomOrder()->first();
-            $category = Category::inRandomOrder()->first();
 
             Supplier::create([
                 ...$s,
-                'category_id' => $category->id,
                 'region_id' => $region->id,
             ]);
         }

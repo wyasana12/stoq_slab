@@ -6,12 +6,56 @@ use App\Enums\ReturnStatus;
 use App\Models\Batch;
 use App\Models\StockMutations;
 use App\Models\StockReturns;
+use App\Enums\MutationStatus;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 class ReturnRepository
 {
+    public function createReturn(array $data): StockReturns
+    {
+        return DB::transaction(function () use ($data) {
+            return StockReturns::create([
+                'return_code' => $data['return_code'] ?? 'RT-' . now()->format('Ymd') . '-' . Str::upper(Str::random(4)),
+                'warehouse_id' => $data['warehouse_id'],
+                'batch_id' => $data['batch_id'],
+                'requested_quantity' => $data['requested_quantity'],
+                'approved_quantity' => $data['approved_quantity'] ?? 0,
+                'reason' => $data['reason'],
+                'requested_by' => $data['requested_by'],
+                'confirmed_by' => $data['confirmed_by'] ?? null,
+                'notes' => $data['notes'] ?? null,
+                'status' => $data['status'] ?? ReturnStatus::REQUESTED->value,
+            ]);
+        });
+    }
+
+    public function updateReturn(StockReturns $stockReturn, array $data): StockReturns
+    {
+        if ($stockReturn->status !== ReturnStatus::REQUESTED->value) {
+            throw new InvalidArgumentException('Return yang sudah dikonfirmasi tidak bisa diubah.');
+        }
+
+        $stockReturn->update([
+            'requested_quantity' => $data['requested_quantity'],
+            'reason' => $data['reason'],
+            'notes' => $data['notes'] ?? $stockReturn->notes,
+        ]);
+
+        return $stockReturn->refresh();
+    }
+
+    public function deleteReturn(StockReturns $stockReturn): void
+    {
+        if ($stockReturn->status !== ReturnStatus::REQUESTED->value) {
+            throw new InvalidArgumentException('Return yang sudah dikonfirmasi tidak bisa dihapus.');
+        }
+
+        $stockReturn->delete();
+    }
+
     public function updateStatus(
         StockReturns $stockReturn,
         ReturnStatus $newStatus,
@@ -60,17 +104,16 @@ class ReturnRepository
                     'notes' => $notes ?? $stockReturn->notes,
                 ]);
 
-                StockMutations::create([
-                    'warehouse_id' => $batch->warehouse_id,
-                    'batch_id' => $batch->id,
-                    'change_quantity' => $approvedQuantity,
-                    'before_quantity' => $before,
-                    'after_quantity' => $batch->current_quantity,
-                    'reference_type' => 'RETURN',
-                    'reference_id' => $stockReturn->id,
-                    'notes' => 'Approve return ' . $stockReturn->return_code,
-                    'status' => 'SUCCESS',
-                ]);
+                StockMutations::record(
+                    $batch->warehouse_id,
+                    $batch->id,
+                    $before,
+                    $approvedQuantity,
+                    MutationStatus::RETURN_COMPLETED,
+                    'RETURN',
+                    $stockReturn->id,
+                    'Approve return ' . $stockReturn->return_code
+                );
             } else {
                 $stockReturn->update([
                     'approved_quantity' => 0,

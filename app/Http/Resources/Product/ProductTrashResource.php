@@ -5,7 +5,7 @@ namespace App\Http\Resources\Product;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class ProductDetailResource extends JsonResource
+class ProductTrashResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -34,7 +34,6 @@ class ProductDetailResource extends JsonResource
                     'name' => $item->supplier->name,
                     'unit_price' => $item->unit_price,
                     'min_order_quantity' => $item->min_order_quantity,
-                    'lead_time_days' => $item->lead_time_days,
                     'return_limit_days' => $item->return_limit_days,
                     'is_preferred' => $item->is_preferred,
                 ];

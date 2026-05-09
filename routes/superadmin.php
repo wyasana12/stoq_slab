@@ -1,12 +1,12 @@
 <?php
 
 use App\Http\Controllers\Auth\UserController;
-use App\Http\Controllers\CategoryController;
-use App\Http\Controllers\ProductController;
+use App\Http\Controllers\SuperAdmin\MasterData\CategoryController;
+use App\Http\Controllers\SuperAdmin\MasterData\ProductController;
 use App\Http\Controllers\SuperAdmin\PurchaseOrderController;
-use App\Http\Controllers\SupplierController;
-use App\Http\Controllers\UnitController;
-use App\Http\Controllers\WarehouseController;
+use App\Http\Controllers\SuperAdmin\MasterData\SupplierController;
+use App\Http\Controllers\SuperAdmin\MasterData\UnitController;
+use App\Http\Controllers\SuperAdmin\MasterData\WarehouseController;
 use App\Http\Controllers\SuperAdmin\ReturnConfirmController;
 use App\Http\Controllers\SuperAdmin\RestockStatusController;
 use App\Http\Controllers\SuperAdmin\TransferStatusController;

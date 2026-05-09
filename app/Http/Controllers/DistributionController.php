@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\DistributionStatus;
-use App\Http\Requests\StoreAndUpdateDistributionRequest;
-use App\Http\Requests\UpdateDistributionStatusRequest;
+use App\Http\Requests\Distribution\StoreAndUpdateDistributionRequest;
+use App\Http\Requests\Distribution\UpdateDistributionStatusRequest;
 use App\Http\Resources\DistributionResource;
 use App\Models\StockDistributions;
 use App\Repositories\DistributionRepository;

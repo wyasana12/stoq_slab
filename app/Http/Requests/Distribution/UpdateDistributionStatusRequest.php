@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Distribution;
 
 use App\Enums\DistributionStatus;
 use Illuminate\Foundation\Http\FormRequest;

@@ -10,6 +10,7 @@ use App\Models\StockDistributionItem;
 use App\Models\StockMutations;
 use App\Models\User;
 use App\Notifications\DistributionCreatedNotification;
+use App\Enums\MutationStatus;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Auth;
@@ -176,17 +177,16 @@ class DistributionRepository
             $before = $batch->current_quantity;
             $batch->decrement('current_quantity', $quantity);
 
-            StockMutations::create([
-                'warehouse_id' => $batch->warehouse_id,
-                'batch_id' => $batch->id,
-                'change_quantity' => $quantity,
-                'before_quantity' => $before,
-                'after_quantity' => $batch->current_quantity,
-                'reference_type' => 'DISTRIBUTION',
-                'reference_id' => $distribution->id,
-                'notes' => 'Distribusi selesai ke ' . $distribution->location,
-                'status' => 'SUCCESS',
-            ]);
+            StockMutations::record(
+                $batch->warehouse_id,
+                $batch->id,
+                $before,
+                $quantity,
+                MutationStatus::DISTRIBUTION_COMPLETED,
+                'DISTRIBUTION',
+                $distribution->id,
+                'Distribusi selesai ke ' . $distribution->location
+            );
         }
     }
 }

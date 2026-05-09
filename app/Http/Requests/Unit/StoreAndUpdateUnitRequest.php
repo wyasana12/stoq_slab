@@ -3,8 +3,9 @@
 namespace App\Http\Requests\Unit;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
-class StoreUnitRequest extends FormRequest
+class StoreAndUpdateUnitRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -21,9 +22,10 @@ class StoreUnitRequest extends FormRequest
      */
     public function rules(): array
     {
+        $unitId = $this->route('unit')?->id;
         return [
-            'name' => ['required', 'string', 'unique:units,name'],
-            'symbol' => ['required', 'string', 'unique:units,symbol'],
+            'name' => ['required', 'string', Rule::unique('units', 'name')->ignore($unitId)],
+            'symbol' => ['required', 'string', Rule::unique('units', 'symbol')->ignore($unitId)],
         ];
     }
 

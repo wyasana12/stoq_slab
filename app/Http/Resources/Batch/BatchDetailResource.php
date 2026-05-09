@@ -36,7 +36,7 @@ class BatchDetailResource extends JsonResource
                 'id' => $this->receive?->purchase?->supplier?->id ?? 'N/A',
                 'name' => $this->receive?->purchase?->supplier?->name ?? 'N/A'
             ],
-            'barcode' => $this->barcode ?? 'N/A',
+            'barcode' => $this->barcode ? asset('storage/' . $this->barcode) : 'N/A',
         ];
     }
 }

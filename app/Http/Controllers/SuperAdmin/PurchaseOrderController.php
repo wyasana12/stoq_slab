@@ -3,8 +3,7 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\PurchaseOrder\CreateRequestPurchaseOrderRequest;
-use App\Http\Requests\PurchaseOrder\UpdatePurchaseOrderRequest;
+use App\Http\Requests\PurchaseOrder\CreateAndUpdateRequestPurchaseOrderRequest;
 use App\Http\Requests\PurchaseOrder\UpdateStatusPurchaseOrderRequest;
 use App\Http\Resources\PurchaseOrder\PurchaseOrderDetailResource;
 use App\Http\Resources\PurchaseOrder\PurchaseOrderListResource;
@@ -52,7 +51,7 @@ class PurchaseOrderController extends Controller
         }
     }
 
-    public function request(CreateRequestPurchaseOrderRequest $request): JsonResponse
+    public function request(CreateAndUpdateRequestPurchaseOrderRequest $request): JsonResponse
     {
         try {
             $userId = $request->user()->id;
@@ -73,7 +72,7 @@ class PurchaseOrderController extends Controller
         }
     }
 
-    public function update(UpdatePurchaseOrderRequest $request, PurchaseOrder $purchase): JsonResponse
+    public function update(CreateAndUpdateRequestPurchaseOrderRequest $request, PurchaseOrder $purchase): JsonResponse
     {
         try {
             $userId = $request->user()->id;

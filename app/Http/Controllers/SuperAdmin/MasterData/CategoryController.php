@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\SuperAdmin\MasterData;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreAndUpdateCategoryRequest;
 use App\Http\Resources\CategoryResource;
 use App\Models\Category;
@@ -23,8 +24,8 @@ class CategoryController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => CategoryResource::collection($categories)
-        ]);
+            'data' => CategoryResource::collection($categories),
+        ], 200);
     }
 
     /**
