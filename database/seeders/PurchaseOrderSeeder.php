@@ -3,16 +3,13 @@
 namespace Database\Seeders;
 
 use App\Enums\PurchaseOrderStatus;
-use App\Models\Product;
+use App\Models\ProductSupplierItem;
 use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderItem; // Pastikan Model ini di-import
 use App\Models\Supplier;
 use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
-
-use function Illuminate\Support\now;
 
 class PurchaseOrderSeeder extends Seeder
 {
@@ -24,42 +21,61 @@ class PurchaseOrderSeeder extends Seeder
         $suppliers = Supplier::all();
         $warehouses = Warehouse::all();
         $users = User::whereNotNull('warehouse_id')->get();
-        $products = Product::all();
+        $productSupplierItems = ProductSupplierItem::all();
+
+        // Validasi: Pastikan data master sudah ada sebelum menjalankan seeder PO
+        if ($suppliers->isEmpty() || $warehouses->isEmpty() || $users->isEmpty() || $productSupplierItems->isEmpty()) {
+            $this->command->error('Data master (Supplier, Warehouse, User, atau ProductSupplier) belum lengkap. Silakan jalankan seeder master terlebih dahulu.');
+            return;
+        }
 
         $statuses = PurchaseOrderStatus::cases();
 
-        foreach ($statuses as $s) {
+        foreach ($statuses as $status) {
             for ($i = 1; $i <= 3; $i++) {
                 $warehouse = $warehouses->random();
                 $supplier = $suppliers->random();
                 $user = $users->random();
 
+                // Filter barang yang hanya disuplai oleh supplier terpilih
+                $availableItems = $productSupplierItems->where('supplier_id', $supplier->id);
+
+                // Jika supplier ini belum punya produk, lewati dan cari kombinasi lain
+                if ($availableItems->isEmpty()) {
+                    continue; 
+                }
+
+                // Buat Induk Purchase Order
                 $po = PurchaseOrder::create([
-                    'po_code' => "PO-" . now()->format("Ymd") . "-" . rand(0001, 9999),
+                    'po_code' => "PO-" . now()->format("Ymd") . "-" . rand(1000, 9999),
                     'supplier_id' => $supplier->id,
                     'warehouse_id' => $warehouse->id,
                     'created_by' => $user->id,
                     'total_amount' => 0,
-                    'status' => $s,
+                    'status' => $status, 
                     'order_date' => now()->subDays(rand(1, 10)),
-                    'approved_at' => ($s === 'APPROVED') ? now() : null,
+                    'approved_at' => ($status->name === 'APPROVED') ? now() : null,
                     'notes' => null,
                 ]);
 
                 $totalAmount = 0;
-                $randProduct = $products->random(rand(2, 4));
+                
+                // Ambil jumlah acak (maksimal 4 barang), tapi jangan melebihi stok jenis barang milik supplier
+                $randItemsCount = min(rand(1, 4), $availableItems->count());
+                $randProductSuppliers = $availableItems->random($randItemsCount);
 
-                foreach ($randProduct as $r) {
+                foreach ($randProductSuppliers as $psItem) {
                     $qty = rand(30, 50);
-                    $price = rand(10000, 50000);
+                    $price = $psItem->unit_price ?? rand(10000, 50000); // Ambil harga asli dari tabel perantara jika ada
                     $subtotal = $qty * $price;
 
-                    DB::table('purchase_order_items')->insert([
-                        'id' => (string) Str::ulid(),
-                        'product_id' => $r->id,
+                    // Menggunakan ELOQUENT alih-alih DB::table()->insert()
+                    // ULID dan Timestamps akan digenerate otomatis oleh Model
+                    PurchaseOrderItem::create([
                         'purchase_id' => $po->id,
+                        'product_supplier_id' => $psItem->id,
                         'quantity_ordered' => $qty,
-                        'quantity_received' => ($s === 'APPROVED') ? $qty : 0,
+                        'quantity_received' => ($status->name === 'APPROVED') ? $qty : 0,
                         'unit_price' => $price,
                         'subtotal' => $subtotal,
                     ]);
@@ -67,8 +83,11 @@ class PurchaseOrderSeeder extends Seeder
                     $totalAmount += $subtotal;
                 }
 
-                $po->updated(['total_amount' => $totalAmount]);
+                // Update total amount PO menggunakan method update()
+                $po->update(['total_amount' => $totalAmount]); 
             }
         }
+        
+        $this->command->info('Seeder Purchase Order berhasil dijalankan!');
     }
 }

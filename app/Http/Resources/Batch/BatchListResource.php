@@ -24,6 +24,10 @@ class BatchListResource extends JsonResource
                 'price' => $this->price,
                 'expired_date' => $this->expired_date?->format('l, d F Y') ?? 'N/A',
             ],
+            'warehouse' => [
+                'id' => $this->warehouse?->id ?? 'N/A',
+                'name' => $this->warehouse?->name ?? 'N/A',
+            ],
             'created_at' => $this->created_at?->format('l, d F Y') ?? 'N/A',
             'updated_at' => $this->updated_at?->format('l, d F Y') ?? 'N/A'
         ];

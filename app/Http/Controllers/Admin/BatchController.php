@@ -55,4 +55,23 @@ class BatchController extends Controller
             ], 500);
         }
     }
+
+    public function generate(Batch $batch): JsonResponse
+    {
+        try {
+            $updateBatch = $this->batchService->generateBarcode($batch);
+
+            return response()->json([
+                'success' => true,
+                'messages' => 'QR Code generated successful.',
+                'data' => new BatchDetailResource($updateBatch),
+            ], 200);
+        } catch (\Exception $err) {
+            return response()->json([
+                'success' => false,
+                'messages' => 'Failed to generated qr code.',
+                'error' => $err->getMessage(),
+            ], 500);
+        }    
+    }
 }

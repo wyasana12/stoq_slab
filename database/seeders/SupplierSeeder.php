@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Category;
 use App\Models\Region;
 use App\Models\Supplier;
 use Illuminate\Database\Seeder;
@@ -43,11 +42,9 @@ class SupplierSeeder extends Seeder
 
         foreach ($suppliers as $s) {
             $region = Region::inRandomOrder()->first();
-            $category = Category::inRandomOrder()->first();
 
             Supplier::create([
                 ...$s,
-                'category_id' => $category->id,
                 'region_id' => $region->id,
             ]);
         }

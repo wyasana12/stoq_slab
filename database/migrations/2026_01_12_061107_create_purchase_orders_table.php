@@ -17,9 +17,10 @@ return new class extends Migration
             $table->foreignUlid('supplier_id')->constrained('suppliers')->onDelete('cascade');
             $table->foreignUlid('warehouse_id')->constrained('warehouses')->onDelete('cascade');
             $table->foreignUlid('created_by')->constrained('users')->onDelete('cascade');
-            $table->decimal('total_amount', 10, 2);
+            $table->decimal('total_amount', 12, 2)->default(0);
             $table->string('status');
             $table->timestamp('order_date')->nullable();
+            $table->timestamp('expected_date')->nullable();
             $table->timestamp('approved_at')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();

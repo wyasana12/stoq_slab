@@ -7,7 +7,6 @@ use App\Http\Controllers\DistributionController;
 use App\Http\Resources\StockMutationResource;
 use App\Models\StockMutations;
 use App\Http\Controllers\SuperAdmin\ProductReceivingController;
-
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('/admin')->middleware('auth:sanctum')->name('admin.')->group(function () {
@@ -24,6 +23,7 @@ Route::prefix('/admin')->middleware('auth:sanctum')->name('admin.')->group(funct
     Route::prefix('/batches')->name('batch.')->group(function () {
         Route::get('', [BatchController::class, 'index'])->name('index');
         Route::get('/{batch}', [BatchController::class, 'show'])->name('show');
+        Route::post('/{batch}/generate', [BatchController::class, 'generate'])->name('generate');
     });
 
     Route::prefix('/restocks')->group(function () {
