@@ -46,7 +46,8 @@ Route::prefix('/admin')->middleware('auth:sanctum')->name('admin.')->group(funct
     Route::post('/distributions', [DistributionController::class, 'store']);
     Route::put('/distributions/{distribution}', [DistributionController::class, 'update']);
     Route::delete('/distributions/{distribution}', [DistributionController::class, 'destroy']);
-    Route::patch('/distributions/{distribution}/status', [DistributionController::class, 'updateStatus']);
+    Route::patch('/distributions/{distribution}/status', [DistributionController::class, 'updateStatus'])->name('distribution.status');
+    
 
     Route::prefix('/transfers')->group(function () {
         Route::get('', [TransferController::class, 'index']);

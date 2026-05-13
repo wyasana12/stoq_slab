@@ -47,6 +47,7 @@ Route::prefix('/superadmin')->name('superadmin.')->middleware('auth:sanctum')->g
     Route::delete('/warehouses/{warehouse}', [WarehouseController::class, 'destroy'])->name('warehouse.delete');
     
     Route::patch('/returns/{stockReturn}/confirm', [ReturnConfirmController::class, 'updateStatus'])->name('return.confirm');
+    Route::get('returns/{stockReturn}/status/allowed', [ReturnConfirmController::class, 'allowedTransitions'])->name('return.status.allowed');
 
     Route::prefix('/purchases')->name('purchaseorder.')->group(function () {
     Route::get('', [PurchaseOrderController::class, 'index'])->name('index');

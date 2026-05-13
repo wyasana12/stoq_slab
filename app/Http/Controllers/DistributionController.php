@@ -86,7 +86,8 @@ class DistributionController extends Controller
                 $distribution,
                 $status,
                 $request->validated('confirmed_by'),
-                $request->validated('notes')
+                $request->validated('notes'),
+                $request->validated('items')
             );
         } catch (InvalidArgumentException $exception) {
             return response()->json([

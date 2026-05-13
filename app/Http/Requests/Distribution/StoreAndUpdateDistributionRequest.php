@@ -32,7 +32,6 @@ class StoreAndUpdateDistributionRequest extends FormRequest
             'items'                 => ($isCreate ? 'required' : 'sometimes') . '|array|min:1',
             'items.*.batch_id'      => 'required_with:items|exists:batches,id',
             'items.*.requested_quantity' => 'required_with:items|integer|min:1',
-            'items.*.approved_quantity' => 'nullable|integer|min:0',
             'status' => 'nullable|string|in:draft,waiting-approval',
         ];
     }

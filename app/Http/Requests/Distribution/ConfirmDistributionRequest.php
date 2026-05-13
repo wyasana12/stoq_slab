@@ -6,7 +6,7 @@ use App\Enums\DistributionStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class UpdateDistributionStatusRequest extends FormRequest
+class ConfirmDistributionRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -19,14 +19,17 @@ class UpdateDistributionStatusRequest extends FormRequest
             'status' => [
                 'required',
                 'string',
-                Rule::in(array_column(DistributionStatus::cases(), 'value')),
+                Rule::in([
+                    DistributionStatus::APPROVED->value,
+                    DistributionStatus::REJECTED->value,
+                ]),
             ],
-            'confirmed_by' => 'nullable|exists:users,id',
-            'notes' => 'nullable|string|max:255',
+            'confirmed_by' => ['required', 'exists:users,id'],
+            'notes' => ['nullable', 'string', 'max:255'],
 
             'items' => 'required_if:status,' . DistributionStatus::APPROVED->value . '|array|min:1',
             'items.*.id' => 'required_with:items|exists:stock_distribution_items,id',
-            'items.*.approved_quantity' => 'required_if:status,' . DistributionStatus::APPROVED->value . '|integer|min:1',
+            'items.*.approved_quantity' => 'required_if:status,' . DistributionStatus::APPROVED->value . '|integer|min:0',
         ];
     }
 }

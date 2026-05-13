@@ -100,9 +100,10 @@ class DistributionRepository
         StockDistributions $distribution,
         DistributionStatus $newStatus,
         ?string $confirmedBy = null,
-        ?string $notes = null
+        ?string $notes = null,
+        ?array $items = null
     ): StockDistributions {
-        return DB::transaction(function () use ($distribution, $newStatus, $confirmedBy, $notes) {
+        return DB::transaction(function () use ($distribution, $newStatus, $confirmedBy, $notes, $items) {
             $currentStatus = DistributionStatus::tryFrom($distribution->status);
 
             if (! $currentStatus) {
@@ -115,11 +116,34 @@ class DistributionRepository
                 );
             }
 
-            if ($newStatus === DistributionStatus::COMPLETED) {
-                $this->applyStockMutation($distribution);
-            }
+            if ($newStatus === DistributionStatus::APPROVED) {
+                if (! is_array($items) || count($items) === 0) {
+                    throw new InvalidArgumentException('Approved quantities harus diisi saat approve distribusi.');
+                }
 
-            $distribution->status = $newStatus->value;
+                $distributionItems = $distribution->items()->get()->keyBy('id');
+
+                foreach ($items as $item) {
+                    if (! isset($item['id']) || ! isset($item['approved_quantity'])) {
+                        throw new InvalidArgumentException('Item approved quantity tidak valid.');
+                    }
+
+                    $distributionItem = $distributionItems[$item['id']] ?? null;
+                    if (! $distributionItem) {
+                        throw new InvalidArgumentException("Item distribusi tidak valid: {$item['id']}.");
+                    }
+
+                    $approvedQuantity = (int) $item['approved_quantity'];
+
+                    if ($approvedQuantity > $distributionItem->requested_quantity) {
+                        throw new InvalidArgumentException('Approved quantity tidak boleh lebih besar dari requested quantity.');
+                    }
+
+                    $distributionItem->update([
+                        'approved_quantity' => $approvedQuantity,
+                    ]);
+                }
+            }
 
             if ($confirmedBy) {
                 $distribution->confirmed_by = $confirmedBy;
@@ -133,6 +157,7 @@ class DistributionRepository
                 $distribution->dispatched_at = now();
             }
 
+            $distribution->status = $newStatus->value;
             $distribution->save();
 
             return $distribution->refresh()->load('items.batch');
