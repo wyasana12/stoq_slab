@@ -17,6 +17,8 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasUlids, HasRoles, HasApiTokens;
 
+    protected string $guard_name = 'sanctum';
+
     protected $keyType = 'string';
     public $incrementing = false;
     /**

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\BatchController;
 use App\Http\Controllers\Auth\PermissionController;
 use App\Http\Controllers\Auth\RoleController;
 use App\Http\Controllers\Auth\UserController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\SuperAdmin\MasterData\ProductController;
 use App\Http\Controllers\SuperAdmin\MasterData\WarehouseController;
 use App\Http\Controllers\SuperAdmin\MasterData\SupplierController;
 use App\Http\Controllers\SuperAdmin\MasterData\UnitController;
+use App\Http\Controllers\SuperAdmin\ProductReceivingController;
 use App\Http\Controllers\SuperAdmin\PurchaseOrderController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -27,6 +29,7 @@ Route::prefix('/permissions')->middleware(['auth:sanctum', 'role:super-admin'])-
 Route::prefix('/roles')->middleware(['auth:sanctum', 'role:super-admin'])->name('role.')->group(function () {
     Route::get('', [RoleController::class, 'index'])->middleware('permission:view_role')->name('index');
     Route::post('/create', [RoleController::class, 'store'])->middleware('permission:create_role')->name('create');
+    Route::get('/{role}', [RoleController::class, 'show'])->middleware('permission:view_role');
     Route::put('/{role}', [RoleController::class, 'update'])->middleware('permission:edit_role')->name('update');
     Route::delete('/{role}', [RoleController::class, 'destroy'])->middleware('permission:delete_role')->name('delete');
     Route::post('/{role}/permissions', [RoleController::class, 'assignPermissions'])->middleware('permission:assign_permissions')->name('assignPermissions');
@@ -35,6 +38,7 @@ Route::prefix('/roles')->middleware(['auth:sanctum', 'role:super-admin'])->name(
 Route::prefix('/users')->middleware(['auth:sanctum', 'role:super-admin'])->name('user.')->group(function () {
     Route::get('', [UserController::class, 'index'])->middleware('permission:view_user')->name('index');
     Route::post('/create', [UserController::class, 'store'])->middleware('permission:create_user')->name('create');
+    Route::get('/{user}', [UserController::class, 'show'])->middleware('permission:view_user');
     Route::put('/{user}', [UserController::class, 'update'])->middleware('permission:edit_user')->name('update');
 });
 
@@ -97,4 +101,20 @@ Route::prefix('/purchases')->middleware('auth:sanctum')->name('purchase.')->grou
     Route::delete('/{purchase}/soft', [PurchaseOrderController::class, 'destroy'])->middleware('permission:delete_purchase')->name('destroy');
     Route::patch('/{purchase}/restore', [PurchaseOrderController::class, 'restore'])->middleware('permission:restore_purchase')->name('restore')->withTrashed();
     Route::delete('/{purchase}/force', [PurchaseOrderController::class, 'forceDestroy'])->middleware('permission:delete_purchase')->name('force')->withTrashed();
+});
+
+Route::prefix('/receives')->middleware('auth:sanctum')->name('receive.')->group(function () {
+    Route::get('', [ProductReceivingController::class, 'index'])->middleware('permission:view_receive')->name('index');
+    Route::get('/trashed', [ProductReceivingController::class, 'trashed'])->middleware('permission:restore_receive')->name('trashed');
+    Route::get('/{receive}', [ProductReceivingController::class, 'show'])->middleware('permission:view_receive')->name('show');
+    Route::patch('/{receive}/update', [ProductReceivingController::class, 'updateItemsAndStatus'])->middleware('permission:edit_receive')->name('update');
+    Route::delete('/{receive}/soft', [ProductReceivingController::class, 'destroy'])->middleware('permission:delete_receive')->name('destroy');
+    Route::patch('/{receive}/restore', [ProductReceivingController::class, 'restore'])->name('restore')->middleware('permission:restore_receive')->withTrashed();
+    Route::delete('/{receive}/force', [ProductReceivingController::class, 'forceDestroy'])->name('force')->middleware('permission:delete_receive')->withTrashed();
+});
+
+Route::prefix('/batches')->middleware('auth:sanctum')->name('batch.')->group(function () {
+    Route::get('', [BatchController::class, 'index'])->middleware('permission:view_batch')->name('index');
+    Route::get('/{batch}', [BatchController::class, 'show'])->middleware('permission:view_batch')->name('show');
+    Route::post('/{batch}/generate', [BatchController::class, 'generate'])->middleware('permission:generate_barcode')->name('generate');
 });
