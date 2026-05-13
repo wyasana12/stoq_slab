@@ -17,43 +17,211 @@ class Roleseeder extends Seeder
     {
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        $permissions = [
-            // Permissions
-            'view_permission', 'create_permission', 'edit_permission', 'delete_permission',
-            
-            // Roles
-            'view_role', 'create_role', 'edit_role', 'delete_role', 'assign_permissions',
-            
-            // Users
-            'view_user', 'create_user', 'edit_user',
-            
-            // Warehouses
-            'view_warehouse', 'create_warehouse', 'edit_warehouse', 'delete_warehouse',
-            
-            // Suppliers
-            'view_supplier', 'create_supplier', 'edit_supplier', 'delete_supplier',
-            
-            // Categories
-            'view_category', 'create_category', 'edit_category', 'delete_category',
-            
-            // Units
-            'view_unit', 'create_unit', 'edit_unit', 'delete_unit',
-            
-            // Products
-            'view_products', 'create_products', 'edit_products', 'delete_products', 'restore_products',
-            
-            // Purchases
-            'view_purchase', 'create_purchase', 'edit_purchase', 'delete_purchase', 'restore_purchase', 'confirm_purchase',
+        $menu = [
+            'menu_dashboard',
+            'menu_permission',
+            'menu_role',
+            'menu_user',
+            'menu_warehouse',
+            'menu_supplier',
+            'menu_category',
+            'menu_unit',
+            'menu_product',
+            'menu_purchase',
+            'menu_receive',
+            'menu_batch',
+            'menu_return',
+            'menu_restock',
+            'menu_distribution',
+            'menu_transfer',
+            'menu_analyst',
+            'menu_barcode',
+            'menu_confirm_return',
+            'menu_confirm_restock',
+            'menu_confirm_transfer',
+            'menu_confirm_purchase',
+            'menu_confirm_receive',
         ];
 
+        $superadmin = [
+            'menu_dashboard',
+            'menu_permission',
+            'menu_role',
+            'menu_user',
+            'menu_warehouse',
+            'menu_supplier',
+            'menu_category',
+            'menu_unit',
+            'menu_product',
+            'menu_purchase',
+            'menu_analyst',
+            'menu_confirm_return',
+            'menu_confirm_restock',
+            'menu_confirm_transfer',
+            'menu_confirm_purchase',
+            'menu_confirm_receive',
+
+            // Permissions
+            'view_permission',
+            'create_permission',
+            'edit_permission',
+            'delete_permission',
+
+            // Roles
+            'view_role',
+            'create_role',
+            'edit_role',
+            'delete_role',
+            'assign_permissions',
+
+            // Users
+            'view_user',
+            'create_user',
+            'edit_user',
+
+            // Warehouses
+            'view_warehouse',
+            'create_warehouse',
+            'edit_warehouse',
+            'delete_warehouse',
+
+            // Suppliers
+            'view_supplier',
+            'create_supplier',
+            'edit_supplier',
+            'delete_supplier',
+
+            // Categories
+            'view_category',
+            'create_category',
+            'edit_category',
+            'delete_category',
+
+            // Units
+            'view_unit',
+            'create_unit',
+            'edit_unit',
+            'delete_unit',
+
+            // Products
+            'view_products',
+            'create_products',
+            'edit_products',
+            'delete_products',
+            'restore_products',
+
+            // Purchases
+            'view_purchase',
+            'create_purchase',
+            'edit_purchase',
+            'delete_purchase',
+            'restore_purchase',
+            'confirm_purchase',
+
+            'confirm_restock',
+            'confirm_distribution',
+            'confirm_transfer',
+            'confirm_return',
+        ];
+
+        $admin = [
+            'menu_dashboard',
+            'menu_receive',
+            'menu_batch',
+            'menu_return',
+            'menu_restock',
+            'menu_distribution',
+            'menu_transfer',
+            'menu_analyst',
+
+            // Restocks
+            'view_restock',
+            'create_restock',
+            'edit_restock',
+            'delete_restock',
+
+            // Distributions
+            'view_distribution',
+            'create_distribution',
+            'edit_distribution',
+            'delete_distribution',
+
+            // Transfers
+            'view_transfer',
+            'create_transfer',
+            'edit_transfer',
+            'delete_transfer',
+
+            // Receives
+            'view_receive',
+            'create_receive',
+            'edit_receive',
+            'delete_receive',
+            'restore_receive',
+
+            // Batches
+            'view_batch',
+            'generate_barcode',
+
+            'view_product',
+            'view_warehouse',
+        ];
+
+        $user = [
+            'menu_dashboard',
+            'menu_batch',
+            'menu_return',
+            'menu_distribution',
+
+            'view_warehouse',
+            'view_product',
+
+            // Batches
+            'view_batch',
+            'edit_batch',
+            'scan_barcode',
+
+            // Distributions
+            'view_distribution',
+            'edit_distribution',
+            'confirm_distribution',
+
+            'view_return',
+            'create_return',
+            'edit_return',
+            'delete_return',
+        ];
+
+        $permissions = array_unique(array_merge(
+            $menu,
+            $superadmin,
+            $admin,
+            $user,
+        ));
+
         foreach ($permissions as $permission) {
-            Permission::firstOrCreate(['name' => $permission]);
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'sanctum']);
         }
 
-        $superadminRole = Role::firstOrCreate(['name' => RoleName::SuperAdmin->value]);
-        $adminRole = Role::firstOrCreate(['name' => RoleName::Admin->value]);
-        $staffRole = Role::firstOrCreate(['name' => RoleName::Staff->value]);
+        $superadminRole = Role::firstOrCreate([
+            'name' => RoleName::SuperAdmin->value,
+            'guard_name' => 'sanctum',
+        ]);
 
-        $superadminRole->syncPermissions($permissions);
+        $adminRole = Role::firstOrCreate([
+            'name' => RoleName::Admin->value,
+            'guard_name' => 'sanctum',
+        ]);
+
+        $staffRole = Role::firstOrCreate([
+            'name' => RoleName::Staff->value,
+            'guard_name' => 'sanctum',
+        ]);
+
+        $superadminRole->syncPermissions($superadmin);
+
+        $adminRole->syncPermissions($admin);
+
+        $staffRole->syncPermissions($user);
     }
 }
