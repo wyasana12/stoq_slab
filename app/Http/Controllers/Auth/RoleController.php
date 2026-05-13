@@ -13,7 +13,7 @@ class RoleController extends Controller
 {
     public function index(): JsonResponse
     {
-        $roles = Role::all();
+        $roles = Role::with('permissions')->get();
 
         return response()->json([
             'success' => true,
@@ -39,16 +39,6 @@ class RoleController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Role created successful.',
-            'data' => $role
-        ]);
-    }
-
-    public function show(Role $role): JsonResponse
-    {
-        $role->load('permissions');
-
-        return response()->json([
-            'success' => true,
             'data' => $role
         ]);
     }
