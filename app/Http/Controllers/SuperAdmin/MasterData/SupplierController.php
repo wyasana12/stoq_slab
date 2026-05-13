@@ -19,7 +19,7 @@ class SupplierController extends Controller
     {
         $perPage = $request->query('per_page', 10);
         $page = $request->query('page', 1);
-        $query = Supplier::with('category:id,name')->select('id', 'name', 'contact_person', 'phone_number', 'status', 'email', 'category_id');
+        $query = Supplier::select('id', 'name', 'contact_person', 'phone_number', 'status', 'email', 'supplier_code');
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -31,10 +31,6 @@ class SupplierController extends Controller
 
         if ($request->has('status')) {
             $query->where('status', (bool) $request->status);
-        }
-
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->category_id);
         }
 
         $suppliers = $query->paginate(10);
@@ -52,7 +48,7 @@ class SupplierController extends Controller
     {
         $supplier = Supplier::create($request->validated());
 
-        $supplier->load(['category', 'region']);
+        $supplier->load('region');
 
         return response()->json([
             'success' => true,
@@ -66,7 +62,7 @@ class SupplierController extends Controller
      */
     public function show(Supplier $supplier): JsonResponse
     {
-        $supplier->load(['category', 'region']);
+        $supplier->load('region');
 
         return response()->json([
             'success' => true,
@@ -81,7 +77,7 @@ class SupplierController extends Controller
     {
         $supplier->update($request->validated());
 
-        $supplier->load(['category', 'region']);
+        $supplier->load('region');
 
         return response()->json([
             'success' => true,
@@ -105,10 +101,10 @@ class SupplierController extends Controller
 
     public function getProductBySupplier(Supplier $supplier): JsonResponse
     {
-        $products = $supplier->products()->withPivot([
-            'unit_price',
-            'min_order_quantity',
-        ])    ->get();
+        $products = $supplier->products()
+            ->select('products.id', 'products.sku', 'products.name', 'products.category_id', 'products.unit_id')
+            ->with(['category:id,name', 'unit:id,name,symbol'])
+            ->get();
 
         return response()->json([
             'success' => true,

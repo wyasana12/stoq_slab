@@ -12,6 +12,7 @@ class SupplierSeeder extends Seeder
     {
         $suppliers = [
             [
+                'supplier_code' => 'Test A',
                 'name' => 'PT Supplier A',
                 'contact_person' => 'Andi Pratama',
                 'phone_number' => '+628111111111',
@@ -21,6 +22,7 @@ class SupplierSeeder extends Seeder
                 'status' => true,
             ],
             [
+                'supplier_code' => 'Test B',
                 'name' => 'PT Supplier B',
                 'contact_person' => 'Budi Santoso',
                 'phone_number' => '+628222222222',
@@ -30,6 +32,7 @@ class SupplierSeeder extends Seeder
                 'status' => true,
             ],
             [
+                'supplier_code' => 'Test C',
                 'name' => 'PT Supplier C',
                 'contact_person' => 'Citra Lestari',
                 'phone_number' => '+628333333333',

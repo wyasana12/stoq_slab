@@ -17,6 +17,10 @@ class PurchaseOrderListResource extends JsonResource
         return [
             'id' => $this->id,
             'po_code' => $this->po_code,
+            'supplier' => [
+                'id' => $this->supplier?->id ?? 'N/A',
+                'name' => $this->supplier?->name ?? 'N/A',
+            ],
             'warehouse' => [
                 'id' => $this->warehouse->id ?? 'N/A',
                 'name' => $this->warehouse->name ?? 'N/A',

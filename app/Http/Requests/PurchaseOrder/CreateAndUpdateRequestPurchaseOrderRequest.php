@@ -3,10 +3,11 @@
 namespace App\Http\Requests\PurchaseOrder;
 
 use App\Enums\PurchaseOrderStatus;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class CreateRequestPurchaseOrderRequest extends FormRequest
+class CreateAndUpdateRequestPurchaseOrderRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -61,5 +62,21 @@ class CreateRequestPurchaseOrderRequest extends FormRequest
 
             'status.in' => 'This selected status is invalid for request.',
         ];
+    }
+
+    public function withValidator(Validator $validator)
+    {
+        $validator->after(function ($validator) {
+            $items = $this->input('items', []);
+
+            $productIds = collect($items)->pluck('product_id');
+
+            if ($productIds->duplicates()->isNotEmpty()) {
+                $validator->errors()->add(
+                    'items',
+                    'Duplicate products are not allowed in a single purchase order.'
+                );
+            }
+        });
     }
 }
