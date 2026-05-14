@@ -6,6 +6,7 @@ use App\Models\Batch;
 use App\Models\StockDistributions;
 use App\Models\StockMutations;
 use App\Models\User;
+use App\Enums\MutationStatus;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -58,7 +59,7 @@ class DistributionSeeder extends Seeder
                 'reference_type' => 'DISTRIBUTION',
                 'reference_id' => $dist->id,
                 'notes' => 'Barang masuk ke '.$dist->location,
-                'status' => 'SUCCESS'
+                'status' => MutationStatus::DISTRIBUTION_COMPLETED->value,
             ]);
         }
     }

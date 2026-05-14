@@ -7,6 +7,7 @@ use App\Http\Controllers\SuperAdmin\MasterData\WarehouseController;
 use App\Http\Controllers\SuperAdmin\MasterData\SupplierController;
 use App\Http\Controllers\SuperAdmin\MasterData\UnitController;
 use App\Http\Controllers\SuperAdmin\PurchaseOrderController;
+use App\Http\Controllers\DssController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -73,4 +74,9 @@ Route::prefix('/purchases')->middleware('auth:sanctum')->name('purchase.')->grou
     Route::delete('/{purchase}/soft', [PurchaseOrderController::class, 'destroy'])->name('destroy');
     Route::patch('/{purchase}/restore', [PurchaseOrderController::class, 'restore'])->name('restore')->withTrashed();
     Route::delete('/{purchase}/force', [PurchaseOrderController::class, 'forceDestroy'])->name('force')->withTrashed();
+});
+
+Route::prefix('/dss')->middleware('auth:sanctum')->name('dss.')->group(function () {
+    Route::get('/analysis', [DssController::class, 'analysis'])->name('dss.analysis');
+    Route::get('/recommendations', [DssController::class, 'recommendations'])->name('dss.recommendations');
 });
