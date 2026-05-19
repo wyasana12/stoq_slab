@@ -3,54 +3,56 @@
 namespace Database\Seeders;
 
 use App\Enums\ReturnStatus;
-use App\Models\Batch;
-use App\Models\StockMutations;
 use App\Models\StockReturns;
 use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
-
-use function Illuminate\Support\now;
+use Illuminate\Support\Facades\DB;
 
 class ReturnSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        $batch = Batch::query()
-            ->where('current_quantity', '>', 10)
+        $receivingItem = DB::table('product_receiving_items')
+            ->where('quantity_accepted', '>', 5)
             ->first();
 
-        if (! $batch) {
-            $this->command?->warn('ReturnSeeder skip: batch dengan current_quantity > 10 tidak ditemukan.');
+        if (! $receivingItem) {
+            $this->command?->warn('ReturnSeeder skip: data product_receiving_items dengan quantity_accepted > 5 tidak ditemukan.');
             return;
         }
 
-        $warehouse = Warehouse::query()->find($batch->warehouse_id);
+        $receiving = DB::table('product_receivings')
+            ->where('id', $receivingItem->receiving_id)
+            ->first();
+
+        if (! $receiving) {
+            $this->command?->warn('ReturnSeeder skip: data induk product_receivings tidak ditemukan.');
+            return;
+        }
+
+        $warehouse = Warehouse::query()->first();
 
         if (! $warehouse) {
-            $this->command?->warn('ReturnSeeder skip: warehouse dari batch tidak ditemukan.');
+            $this->command?->warn('ReturnSeeder skip: Tidak ada data warehouse tersedia di database.');
             return;
         }
 
-        $user = User::query()
-            ->where('warehouse_id', $warehouse->id)
-            ->first();
+        $user = User::query()->first();
 
         if (! $user) {
-            $this->command?->warn('ReturnSeeder skip: user dengan warehouse_id yang sama tidak ditemukan.');
+            $this->command?->warn('ReturnSeeder skip: Tidak ada data user tersedia untuk mengisi requested_by.');
             return;
         }
 
-        $requestedQty = rand(1, 9);
+        $requestedQty = rand(1, min(3, $receivingItem->quantity_accepted));
 
         $stockReturn = StockReturns::create([
             'return_code' => 'RT-' . now()->format('Ymd') . '-' . Str::upper(Str::random(4)),
+            'receiving_id' => $receiving->id,
+            'product_id' => $receivingItem->product_id,
             'warehouse_id' => $warehouse->id,
-            'batch_id' => $batch->id,
             'requested_quantity' => $requestedQty,
             'approved_quantity' => 0,
             'reason' => 'damaged',

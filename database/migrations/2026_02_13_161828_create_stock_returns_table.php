@@ -14,8 +14,9 @@ return new class extends Migration
         Schema::create('stock_returns', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->string('return_code')->unique();
+            $table->foreignUlid('receiving_id')->constrained('product_receivings')->cascadeOnDelete();
+            $table->foreignUlid('product_id')->constrained('products')->cascadeOnDelete();
             $table->foreignUlid('warehouse_id')->constrained('warehouses')->cascadeOnDelete();
-            $table->foreignUlid('batch_id')->constrained('batches')->cascadeOnDelete();
             $table->unsignedInteger('requested_quantity');
             $table->unsignedInteger('approved_quantity')->default(0);
             $table->string('reason')->nullable();

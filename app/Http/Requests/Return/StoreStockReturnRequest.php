@@ -15,11 +15,12 @@ class StoreStockReturnRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'batch_id' => ['required', 'string', 'exists:batches,id'],
+            'receiving_id' => ['required', 'string', 'exists:product_receivings,id'],
+            'product_id' => ['required', 'string', 'exists:products,id'],
+            'warehouse_id' => ['required', 'string', 'exists:warehouses,id'],
             'requested_quantity' => ['required', 'integer', 'min:1'],
             'reason' => ['required', Rule::in(['damaged', 'expired', 'mismatch_po'])],
             'notes' => ['nullable', 'string', 'max:1000'],
-            'requested_by' => ['required', 'string', 'exists:users,id'],
         ];
     }
 }

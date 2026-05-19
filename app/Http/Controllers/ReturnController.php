@@ -2,11 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\Return\ConfirmStockReturnRequest;
 use App\Http\Requests\Return\StoreStockReturnRequest;
 use App\Http\Requests\Return\UpdateStockReturnRequest;
 use App\Http\Resources\ReturnResource;
-use App\Models\Batch;
 use App\Models\StockReturns;
 use App\Services\ReturnService;
 use Illuminate\Http\JsonResponse;
@@ -25,7 +23,7 @@ class ReturnController extends Controller
     public function index(Request $request): JsonResponse
     {
         $returns = StockReturns::query()
-            ->with(['warehouse', 'batch', 'request', 'confirm'])
+            ->with(['warehouse', 'receiving', 'product', 'request', 'confirm'])
             ->latest()
             ->paginate(15);
 
@@ -37,7 +35,7 @@ class ReturnController extends Controller
 
     public function show(StockReturns $stockReturn): JsonResponse
     {
-        $stockReturn->load(['warehouse', 'batch', 'request', 'confirm']);
+        $stockReturn->load(['warehouse', 'receiving', 'product', 'request', 'confirm']);
 
         return response()->json([
             'success' => true,
@@ -48,11 +46,8 @@ class ReturnController extends Controller
     public function store(StoreStockReturnRequest $request): JsonResponse
     {
         try {
-            $payload = array_merge($request->validated(), [
-                'requested_by' => $request->input('requested_by'),
-            ]);
-
-            $stockReturn = $this->returnService->storeReturn($payload);
+            $payload = $request->validated();
+            $stockReturn = $this->returnService->storeReturn($payload, $request->user()->id);
         } catch (InvalidArgumentException $exception) {
             return response()->json([
                 'success' => false,
@@ -62,7 +57,7 @@ class ReturnController extends Controller
 
         return response()->json([
             'message' => 'Request return berhasil dibuat.',
-            'data' => $stockReturn,
+            'data' => new ReturnResource($stockReturn),
         ], 201);
     }
 
@@ -94,26 +89,6 @@ class ReturnController extends Controller
 
         return response()->json([
             'message' => 'Data return berhasil dihapus.',
-        ]);
-    }
-
-    public function confirm(ConfirmStockReturnRequest $request, StockReturns $stockReturn): JsonResponse
-    {
-        try {
-            $stockReturn = $this->returnService->confirmReturn(
-                $stockReturn,
-                $request->validated(),
-                $request->input('confirmed_by')
-            );
-        } catch (InvalidArgumentException $exception) {
-            return response()->json([
-                'message' => $exception->getMessage(),
-            ], 422);
-        }
-
-        return response()->json([
-            'message' => 'Status return berhasil diupdate.',
-            'data' => $stockReturn,
         ]);
     }
 }
