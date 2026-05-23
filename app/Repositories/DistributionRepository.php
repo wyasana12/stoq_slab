@@ -21,7 +21,9 @@ class DistributionRepository
 {
     public function getAllDistributions(): Collection
     {
-        return StockDistributions::with(['items.batch', 'warehouse', 'request', 'confirmedBy'])->get();
+        return StockDistributions::with(['items.batch', 'warehouse', 'request', 'confirmedBy'])
+            ->orderBy('created_at', 'desc')
+            ->get();
     }
 
     public function createDistribution(array $data): StockDistributions
@@ -36,7 +38,7 @@ class DistributionRepository
             } elseif (($data['status'] ?? null) === DistributionStatus::WAITING_APPROVAL->value) {
                 $status = DistributionStatus::WAITING_APPROVAL->value;
             }
-            
+
             $distribution = StockDistributions::create([
                 'distribution_code' => 'DIST-' . now()->format('Ymd') . '-' . rand(1000, 9999),
                 'warehouse_id' => $data['warehouse_id'],
@@ -153,7 +155,7 @@ class DistributionRepository
                 $distribution->notes = $notes;
             }
 
-            if ($newStatus === DistributionStatus::SHIPPED && ! $distribution->dispatched_at) {
+            if ($newStatus === DistributionStatus::SHIPPED) {
                 $distribution->dispatched_at = now();
             }
 

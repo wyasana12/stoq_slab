@@ -28,6 +28,7 @@ class StoreAndUpdateDistributionRequest extends FormRequest
             'requested_by'          => ($isCreate ? 'required' : 'sometimes') . '|exists:users,id',
             'confirmed_by'          => 'nullable|exists:users,id',
             'notes'                 => 'nullable|string|max:255',
+            'dispatched_at'         => 'nullable|date',
 
             'items'                 => ($isCreate ? 'required' : 'sometimes') . '|array|min:1',
             'items.*.batch_id'      => 'required_with:items|exists:batches,id',

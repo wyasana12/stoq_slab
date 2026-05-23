@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
@@ -13,7 +14,7 @@ class DistributionResource extends JsonResource
             'distribution_code' => $this->distribution_code,
             'warehouse_id'      => $this->warehouse?->name,
             'location'          => $this->location,
-            'dispatched_at'     => $this->dispatched_at,
+            'created_at'        => $this->created_at,
             'requested_by'      => $this->request?->name,
             'confirmed_by'      => $this->confirmedBy?->name,
             'notes'             => $this->notes,

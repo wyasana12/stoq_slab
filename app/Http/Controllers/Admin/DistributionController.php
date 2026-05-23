@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
 use App\Enums\DistributionStatus;
 use App\Http\Requests\Distribution\StoreAndUpdateDistributionRequest;
 use App\Http\Requests\Distribution\UpdateDistributionStatusRequest;

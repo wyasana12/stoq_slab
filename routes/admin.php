@@ -3,7 +3,7 @@
 use App\Http\Controllers\Admin\BatchController;
 use App\Http\Controllers\Admin\RestockController;
 use App\Http\Controllers\Admin\TransferController;
-use App\Http\Controllers\DistributionController;
+use App\Http\Controllers\Admin\DistributionController;
 use App\Http\Resources\StockMutationResource;
 use App\Http\Controllers\SuperAdmin\ProductReceivingController;
 use App\Models\StockMutations;
@@ -24,7 +24,7 @@ Route::prefix('/admin')->middleware('auth:sanctum')->name('admin.')->group(funct
     Route::post('distributions', [DistributionController::class, 'store'])->middleware('permission:create_distribution');
     Route::put('distributions/{distribution}', [DistributionController::class, 'update'])->middleware('permission:edit_distribution');
     Route::delete('distributions/{distribution}', [DistributionController::class, 'destroy'])->middleware('permission:delete_distribution');
-    Route::patch('distributions/{distribution}/status', [DistributionController::class, 'updateStatus'])->middleware('permission:confirm_distribution');
+    //Route::patch('distributions/{distribution}/status', [DistributionController::class, 'updateStatus'])->middleware('permission:confirm_distribution');
 
     Route::prefix('transfers')->group(function () {
         Route::get('', [TransferController::class, 'index']);
