@@ -1,10 +1,10 @@
 <?php
 
-use App\Http\Controllers\Admin\BatchController;
 use App\Http\Controllers\Admin\RestockController;
 use App\Http\Controllers\Admin\TransferController;
 use App\Http\Controllers\SuperAdmin\ProductReceivingController;
 use App\Http\Controllers\DistributionController;
+use App\Http\Controllers\Admin\BatchController;
 use App\Http\Resources\StockMutationResource;
 use App\Models\StockMutations;
 use Illuminate\Support\Facades\Route;
@@ -27,11 +27,11 @@ Route::prefix('/admin')->middleware('auth:sanctum')->name('admin.')->group(funct
     });
 
     Route::prefix('/restocks')->group(function () {
-    Route::get('', [RestockController::class, 'index'])->middleware('permission:view_restock');
-    Route::post('', [RestockController::class, 'store'])->middleware('permission:create_restock');
-    Route::get('/{restock}', [RestockController::class, 'show'])->middleware('permission:view_restock');
-    Route::put('/{restock}', [RestockController::class, 'update'])->middleware('permission:edit_restock');
-    Route::delete('/{restock}', [RestockController::class, 'destroy'])->middleware('permission:delete_restock');
+        Route::get('', [RestockController::class, 'index'])->middleware('permission:view_restock');
+        Route::post('', [RestockController::class, 'store'])->middleware('permission:create_restock');
+        Route::get('/{restock}', [RestockController::class, 'show'])->middleware('permission:view_restock');
+        Route::put('/{restock}', [RestockController::class, 'update'])->middleware('permission:edit_restock');
+        Route::delete('/{restock}', [RestockController::class, 'destroy'])->middleware('permission:delete_restock');
     });
 
     Route::get('/distributions', [DistributionController::class, 'index'])->middleware('permission:view_distribution');
