@@ -21,10 +21,39 @@ class StoreRestockRequest extends FormRequest
 
             'products'     => ['required', 'array'],
             'products.*.id' => ['required', 'exists:products,id'],
-            'products.*.qty' => ['required', 'integer', 'min:1'],
+            'products.*.quantity_requested' => ['required', 'integer', 'min:1'],
 
             'status'       => ['nullable', new Enum(RestockStatus::class)],
             'notes'        => ['nullable', 'string'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $products = $this->input('products', []);
+
+        if (! is_array($products)) {
+            return;
+        }
+
+        $mapped = array_map(function ($item) {
+            if (! is_array($item)) {
+                return $item;
+            }
+
+            if (isset($item['quantity_requested'])) {
+                return $item;
+            }
+
+            if (isset($item['requested_quantity'])) {
+                $item['quantity_requested'] = $item['requested_quantity'];
+            } elseif (isset($item['qty'])) {
+                $item['quantity_requested'] = $item['qty'];
+            }
+
+            return $item;
+        }, $products);
+
+        $this->merge(['products' => $mapped]);
     }
 }
