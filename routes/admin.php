@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\BatchController;
 use App\Http\Controllers\Admin\RestockController;
 use App\Http\Controllers\Admin\TransferController;
+use App\Http\Controllers\SuperAdmin\ProductReceivingController;
 use App\Http\Controllers\DistributionController;
 use App\Http\Resources\StockMutationResource;
 use App\Models\StockMutations;
@@ -25,7 +26,7 @@ Route::prefix('/admin')->middleware('auth:sanctum')->name('admin.')->group(funct
         Route::post('/{batch}/generate', [BatchController::class, 'generate'])->name('generate');
     });
 
-    Route::prefix('/restock')->group(function () {
+    Route::prefix('/restocks')->group(function () {
     Route::get('', [RestockController::class, 'index'])->middleware('permission:view_restock');
     Route::post('', [RestockController::class, 'store'])->middleware('permission:create_restock');
     Route::get('/{restock}', [RestockController::class, 'show'])->middleware('permission:view_restock');
