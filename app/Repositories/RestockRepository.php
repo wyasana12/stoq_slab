@@ -2,9 +2,13 @@
 
 namespace App\Repositories;
 
+use App\Enums\MutationStatus;
 use App\Enums\RestockStatus;
+use App\Models\Batch;
 use App\Models\Restock;
+use App\Models\StockMutations;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -12,7 +16,13 @@ class RestockRepository
 {
     public function getAll(): Collection
     {
-        return Restock::with('item.product', 'warehouse', 'request', 'confirm')->get();
+        $query = Restock::with('item.product', 'warehouse', 'request', 'confirm');
+
+        if ($warehouseId = Auth::user()?->warehouse_id) {
+            $query->where('warehouse_id', $warehouseId);
+        }
+
+        return $query->get();
     }
 
     public function create(array $data): Restock
@@ -31,7 +41,7 @@ class RestockRepository
             $restock->item()->create([
                 'id' => (string) Str::ulid(),
                 'product_id' => $item['id'],
-                'requested_quantity' => $item['qty'],
+                'requested_quantity' => $item['quantity_requested'] ?? $item['requested_quantity'] ?? $item['qty'] ?? 0,
             ]);
         }
 
@@ -40,31 +50,37 @@ class RestockRepository
 
     public function update(Restock $restock, array $data): Restock
     {
-        if (isset($data['status'])) {
-            $currentStatus = RestockStatus::fromValue($restock->status instanceof RestockStatus ? $restock->status->value : $restock->status);
-            $newStatus = RestockStatus::fromValue($data['status']);
+        return DB::transaction(function () use ($restock, $data) {
+            if (isset($data['status'])) {
+                $currentStatus = RestockStatus::fromValue($restock->status instanceof RestockStatus ? $restock->status->value : $restock->status);
+                $newStatus = RestockStatus::fromValue($data['status']);
 
-            if (! $currentStatus->canTransition($newStatus)) {
-                throw new \InvalidArgumentException(
-                    "Cannot update restock status from {$currentStatus->value} to {$newStatus->value}."
-                );
+                if (! $currentStatus->canTransition($newStatus)) {
+                    throw new \InvalidArgumentException(
+                        "Cannot update restock status from {$currentStatus->value} to {$newStatus->value}."
+                    );
+                }
+
+                $data['status'] = $newStatus->value;
             }
 
-            $data['status'] = $newStatus->value;
-        }
+            $restock->update($data);
 
-        $restock->update($data);
-
-        if (isset($data['products'])) {
-            foreach ($data['products'] as $item) {
-                $restock->item()->updateOrCreate(
-                    ['product_id' => $item['id']],
-                    ['requested_quantity' => $item['qty']]
-                );
+            if (isset($data['products'])) {
+                foreach ($data['products'] as $item) {
+                    $restock->item()->updateOrCreate(
+                        ['product_id' => $item['id']],
+                        ['requested_quantity' => $item['quantity_requested'] ?? $item['requested_quantity'] ?? $item['qty'] ?? 0]
+                    );
+                }
             }
-        }
 
-        return $restock->refresh();
+            if (isset($data['status']) && $data['status'] === RestockStatus::RESTOCKED->value) {
+                $this->applyStockMutation($restock->refresh());
+            }
+
+            return $restock->refresh();
+        });
     }
 
     public function delete(Restock $restock): bool
@@ -72,22 +88,60 @@ class RestockRepository
         return $restock->delete();
     }
 
+    private function applyStockMutation(Restock $restock): void
+    {
+        $restock->loadMissing('item');
+
+        foreach ($restock->item as $item) {
+            $batch = Batch::query()
+                ->lockForUpdate()
+                ->where('product_id', $item->product_id)
+                ->where('warehouse_id', $restock->warehouse_id)
+                ->orderBy('expired_date')
+                ->first();
+
+            if (! $batch) {
+                throw new \InvalidArgumentException("Batch not found for product {$item->product_id} in warehouse {$restock->warehouse_id}.");
+            }
+
+            $before = $batch->current_quantity;
+            $batch->increment('current_quantity', $item->requested_quantity);
+            $batch->refresh();
+
+            StockMutations::create([
+                'warehouse_id' => $batch->warehouse_id,
+                'batch_id' => $batch->id,
+                'change_quantity' => $item->requested_quantity,
+                'before_quantity' => $before,
+                'after_quantity' => $batch->current_quantity,
+                'reference_type' => 'RESTOCK',
+                'reference_id' => $restock->id,
+                'notes' => 'Restock completed: ' . $restock->restock_code,
+                'status' => MutationStatus::RESTOCK_COMPLETED->value,
+            ]);
+        }
+    }
+
     public function confirm(Restock $restock, string $userId): Restock
     {
-        $currentStatus = RestockStatus::fromValue($restock->status instanceof RestockStatus ? $restock->status->value : $restock->status);
-        $nextStatus = RestockStatus::RESTOCKED;
+        return DB::transaction(function () use ($restock, $userId) {
+            $currentStatus = RestockStatus::fromValue($restock->status instanceof RestockStatus ? $restock->status->value : $restock->status);
+            $nextStatus = RestockStatus::RESTOCKED;
 
-        if (! $currentStatus->canTransition($nextStatus)) {
-            throw new \InvalidArgumentException(
-                "Cannot confirm restock because status {$currentStatus->value} cannot transition to {$nextStatus->value}."
-            );
-        }
+            if (! $currentStatus->canTransition($nextStatus)) {
+                throw new \InvalidArgumentException(
+                    "Cannot confirm restock because status {$currentStatus->value} cannot transition to {$nextStatus->value}."
+                );
+            }
 
-        $restock->update([
-            'confirmed_by' => $userId,
-            'status' => $nextStatus->value,
-        ]);
+            $restock->update([
+                'confirmed_by' => $userId,
+                'status' => $nextStatus->value,
+            ]);
 
-        return $restock;
+            $this->applyStockMutation($restock->refresh());
+
+            return $restock;
+        });
     }
 }

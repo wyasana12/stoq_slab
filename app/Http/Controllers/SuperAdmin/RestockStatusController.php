@@ -3,13 +3,15 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\UpdateRestockStatusRequest;
+use App\Http\Requests\Restock\UpdateRestockStatusRequest;
 use App\Http\Resources\RestockResource;
 use App\Models\Restock;
+use App\Repositories\RestockRepository;
 use Illuminate\Http\JsonResponse;
 
 class RestockStatusController extends Controller
 {
+    public function __construct(protected RestockRepository $repository) {}
     /**
      * Update the status of a restock
      *
@@ -19,7 +21,7 @@ class RestockStatusController extends Controller
      */
     public function patch(UpdateRestockStatusRequest $request, Restock $restock): JsonResponse
     {
-        $userId = request()->user()->id;
+        $userId = request()->user()->id ?? null;
         $newStatus = $request->getStatus();
         $currentStatus = $restock->status;
 
@@ -33,10 +35,10 @@ class RestockStatusController extends Controller
             ], 422);
         }
 
-        // Update the status
-        $restock->update([
-            'status' => $newStatus,
-            'confirmed_by' => $userId
+        // Update the status and record mutation if restocked
+        $restock = $this->repository->update($restock, [
+            'status' => $newStatus->value,
+            'confirmed_by' => $userId,
         ]);
 
         return response()->json([
