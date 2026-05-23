@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Enums\MutationStatus;
 
@@ -13,9 +12,7 @@ class StockMutations extends Model
 {
     use HasFactory, HasUlids, SoftDeletes;
 
-    protected $guarded = [
-        'id'
-    ];
+    protected $guarded = ['id'];
 
     public $incrementing = false;
     public $keyType = 'string';
@@ -23,8 +20,8 @@ class StockMutations extends Model
     public function batch()
     {
         return $this->belongsTo(Batch::class);
-
     }
+
     public function warehouse()
     {
         return $this->belongsTo(Warehouse::class);
@@ -36,24 +33,26 @@ class StockMutations extends Model
         int $before,
         int $change,
         MutationStatus $status,
+        string $referenceType,
         string $referenceId,
         ?string $notes = null
     ) {
+        $after = $before + $change;
 
-    $after = $before + $change;
+        if ($after < 0) {
+            throw new \Exception('Stock tidak mencukupi.');
+        }
 
-    if ($after < 0) {
-        throw new \Exception('Stock tidak mencukupi.');
-    }
         return self::create([
             'warehouse_id' => $warehouseId,
             'batch_id' => $batchId,
-            'before_quantity' => $before,
             'change_quantity' => $change,
-            'after_quantity' => $before + $change,
-            'status' => $status->value,
+            'before_quantity' => $before,
+            'after_quantity' => $after,
+            'reference_type' => $referenceType,
             'reference_id' => $referenceId,
             'notes' => $notes,
+            'status' => $status->value,
         ]);
     }
 }

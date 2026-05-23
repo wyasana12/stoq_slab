@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Distribution;
 
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -28,11 +28,11 @@ class StoreAndUpdateDistributionRequest extends FormRequest
             'requested_by'          => ($isCreate ? 'required' : 'sometimes') . '|exists:users,id',
             'confirmed_by'          => 'nullable|exists:users,id',
             'notes'                 => 'nullable|string|max:255',
+            'dispatched_at'         => 'nullable|date',
 
             'items'                 => ($isCreate ? 'required' : 'sometimes') . '|array|min:1',
             'items.*.batch_id'      => 'required_with:items|exists:batches,id',
             'items.*.requested_quantity' => 'required_with:items|integer|min:1',
-            'items.*.approved_quantity' => 'nullable|integer|min:0',
             'status' => 'nullable|string|in:draft,waiting-approval',
         ];
     }

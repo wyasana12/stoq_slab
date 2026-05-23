@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Return;
 
 use App\Enums\ReturnStatus;
 use Illuminate\Foundation\Http\FormRequest;
@@ -29,7 +29,6 @@ class ConfirmStockReturnRequest extends FormRequest
                 'min:1',
                 'required_if:status,' . ReturnStatus::APPROVED->value,
             ],
-            'confirmed_by' => ['required', 'string', 'exists:users,id'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
     }

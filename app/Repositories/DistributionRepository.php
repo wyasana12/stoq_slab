@@ -10,6 +10,7 @@ use App\Models\StockDistributionItem;
 use App\Models\StockMutations;
 use App\Models\User;
 use App\Notifications\DistributionCreatedNotification;
+use App\Enums\MutationStatus;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Auth;
@@ -20,7 +21,9 @@ class DistributionRepository
 {
     public function getAllDistributions(): Collection
     {
-        return StockDistributions::with(['items.batch', 'warehouse', 'request', 'confirmedBy'])->get();
+        return StockDistributions::with(['items.batch', 'warehouse', 'request', 'confirmedBy'])
+            ->orderBy('created_at', 'desc')
+            ->get();
     }
 
     public function createDistribution(array $data): StockDistributions
@@ -35,7 +38,7 @@ class DistributionRepository
             } elseif (($data['status'] ?? null) === DistributionStatus::WAITING_APPROVAL->value) {
                 $status = DistributionStatus::WAITING_APPROVAL->value;
             }
-            
+
             $distribution = StockDistributions::create([
                 'distribution_code' => 'DIST-' . now()->format('Ymd') . '-' . rand(1000, 9999),
                 'warehouse_id' => $data['warehouse_id'],
@@ -99,9 +102,10 @@ class DistributionRepository
         StockDistributions $distribution,
         DistributionStatus $newStatus,
         ?string $confirmedBy = null,
-        ?string $notes = null
+        ?string $notes = null,
+        ?array $items = null
     ): StockDistributions {
-        return DB::transaction(function () use ($distribution, $newStatus, $confirmedBy, $notes) {
+        return DB::transaction(function () use ($distribution, $newStatus, $confirmedBy, $notes, $items) {
             $currentStatus = DistributionStatus::tryFrom($distribution->status);
 
             if (! $currentStatus) {
@@ -114,11 +118,34 @@ class DistributionRepository
                 );
             }
 
-            if ($newStatus === DistributionStatus::COMPLETED) {
-                $this->applyStockMutation($distribution);
-            }
+            if ($newStatus === DistributionStatus::APPROVED) {
+                if (! is_array($items) || count($items) === 0) {
+                    throw new InvalidArgumentException('Approved quantities harus diisi saat approve distribusi.');
+                }
 
-            $distribution->status = $newStatus->value;
+                $distributionItems = $distribution->items()->get()->keyBy('id');
+
+                foreach ($items as $item) {
+                    if (! isset($item['id']) || ! isset($item['approved_quantity'])) {
+                        throw new InvalidArgumentException('Item approved quantity tidak valid.');
+                    }
+
+                    $distributionItem = $distributionItems[$item['id']] ?? null;
+                    if (! $distributionItem) {
+                        throw new InvalidArgumentException("Item distribusi tidak valid: {$item['id']}.");
+                    }
+
+                    $approvedQuantity = (int) $item['approved_quantity'];
+
+                    if ($approvedQuantity > $distributionItem->requested_quantity) {
+                        throw new InvalidArgumentException('Approved quantity tidak boleh lebih besar dari requested quantity.');
+                    }
+
+                    $distributionItem->update([
+                        'approved_quantity' => $approvedQuantity,
+                    ]);
+                }
+            }
 
             if ($confirmedBy) {
                 $distribution->confirmed_by = $confirmedBy;
@@ -128,10 +155,11 @@ class DistributionRepository
                 $distribution->notes = $notes;
             }
 
-            if ($newStatus === DistributionStatus::SHIPPED && ! $distribution->dispatched_at) {
+            if ($newStatus === DistributionStatus::SHIPPED) {
                 $distribution->dispatched_at = now();
             }
 
+            $distribution->status = $newStatus->value;
             $distribution->save();
 
             return $distribution->refresh()->load('items.batch');
@@ -176,17 +204,16 @@ class DistributionRepository
             $before = $batch->current_quantity;
             $batch->decrement('current_quantity', $quantity);
 
-            StockMutations::create([
-                'warehouse_id' => $batch->warehouse_id,
-                'batch_id' => $batch->id,
-                'change_quantity' => $quantity,
-                'before_quantity' => $before,
-                'after_quantity' => $batch->current_quantity,
-                'reference_type' => 'DISTRIBUTION',
-                'reference_id' => $distribution->id,
-                'notes' => 'Distribusi selesai ke ' . $distribution->location,
-                'status' => 'SUCCESS',
-            ]);
+            StockMutations::record(
+                $batch->warehouse_id,
+                $batch->id,
+                $before,
+                $quantity,
+                MutationStatus::DISTRIBUTION_COMPLETED,
+                'DISTRIBUTION',
+                $distribution->id,
+                'Distribusi selesai ke ' . $distribution->location
+            );
         }
     }
 }

@@ -2,6 +2,10 @@
 
 namespace App\Models;
 
+use App\Models\Product;
+use App\Models\ProductReceiving;
+use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,29 +16,38 @@ class StockReturns extends Model
 {
     use HasFactory, HasUlids, SoftDeletes;
 
+    protected $table = 'stock_returns';
     protected $guarded = ['id'];
-
     public $incrementing = false;
-    public $keyType = 'string';
+    protected $keyType = 'string';
 
     protected $casts = [
         'requested_quantity' => 'integer',
         'approved_quantity' => 'integer',
     ];
 
-    public function warehouse(): BelongsTo {
-        return $this->belongsTo(Warehouse::class, 'warehouse_id');
-    }    
-
-    public function confirm(): BelongsTo {
-        return $this->belongsTo(User::class, 'confirmed_by');
+    public function receiving(): BelongsTo
+    {
+        return $this->belongsTo(ProductReceiving::class, 'receiving_id');
     }
 
-    public function request(): BelongsTo {
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'product_id');
+    }
+
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class, 'warehouse_id');
+    }
+
+    public function request(): BelongsTo
+    {
         return $this->belongsTo(User::class, 'requested_by');
     }
 
-    public function batch(): BelongsTo{
-        return $this->belongsTo(Batch::class, 'batch_id');
+    public function confirm(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'confirmed_by');
     }
 }

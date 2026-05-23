@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
 use App\Enums\DistributionStatus;
-use App\Http\Requests\StoreAndUpdateDistributionRequest;
-use App\Http\Requests\UpdateDistributionStatusRequest;
+use App\Http\Requests\Distribution\StoreAndUpdateDistributionRequest;
+use App\Http\Requests\Distribution\UpdateDistributionStatusRequest;
 use App\Http\Resources\DistributionResource;
 use App\Models\StockDistributions;
 use App\Repositories\DistributionRepository;
@@ -47,7 +48,7 @@ class DistributionController extends Controller
 
     public function show(StockDistributions $distribution): JsonResponse
     {
-        $distribution->load('items.batch');
+        $distribution->load('items.batch', 'warehouse', 'request', 'confirmedBy');
 
         return response()->json([
             'success' => true,
@@ -86,7 +87,8 @@ class DistributionController extends Controller
                 $distribution,
                 $status,
                 $request->validated('confirmed_by'),
-                $request->validated('notes')
+                $request->validated('notes'),
+                $request->validated('items')
             );
         } catch (InvalidArgumentException $exception) {
             return response()->json([

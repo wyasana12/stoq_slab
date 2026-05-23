@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
@@ -11,11 +12,11 @@ class DistributionResource extends JsonResource
         return [
             'id'                => $this->id,
             'distribution_code' => $this->distribution_code,
-            'warehouse_id'      => $this->warehouse_id,
+            'warehouse_id'      => $this->warehouse?->name,
             'location'          => $this->location,
-            'dispatched_at'     => $this->dispatched_at,
-            'requested_by'      => $this->requested_by,
-            'confirmed_by'      => $this->confirmed_by,
+            'created_at'        => $this->created_at,
+            'requested_by'      => $this->request?->name,
+            'confirmed_by'      => $this->confirmedBy?->name,
             'notes'             => $this->notes,
             'status'            => $this->status,
             'items'             => StockDistributionItemResource::collection($this->whenLoaded('items')),

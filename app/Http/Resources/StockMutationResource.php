@@ -16,8 +16,8 @@ class StockMutationResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'warehouse_id' => $this->warehouse_id,
-            'batch_id' => $this->batch_id,
+            'warehouse_id' => $this->warehouse?->name,
+            'batch_id' => $this->batch?->batch_code,
             'change_quantity' => $this->change_quantity,
             'before_quantity' => $this->before_quantity,
             'after_quantity' => $this->after_quantity,

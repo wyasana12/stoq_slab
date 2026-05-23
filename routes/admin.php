@@ -6,6 +6,7 @@ use App\Http\Controllers\SuperAdmin\ProductReceivingController;
 use App\Http\Controllers\DistributionController;
 use App\Http\Controllers\Admin\BatchController;
 use App\Http\Resources\StockMutationResource;
+use App\Http\Controllers\SuperAdmin\ProductReceivingController;
 use App\Models\StockMutations;
 use Illuminate\Support\Facades\Route;
 
@@ -34,12 +35,20 @@ Route::prefix('/admin')->middleware('auth:sanctum')->name('admin.')->group(funct
         Route::delete('/{restock}', [RestockController::class, 'destroy'])->middleware('permission:delete_restock');
     });
 
-    Route::get('/distributions', [DistributionController::class, 'index'])->middleware('permission:view_distribution');
-    Route::get('/distributions/{distribution}', [DistributionController::class, 'show'])->middleware('permission:view_distribution');
-    Route::post('/distributions', [DistributionController::class, 'store'])->middleware('permission:create_distribution');
-    Route::put('/distributions/{distribution}', [DistributionController::class, 'update'])->middleware('permission:edit_distribution');
-    Route::delete('/distributions/{distribution}', [DistributionController::class, 'destroy'])->middleware('permission:delete_distribution');
-    Route::patch('/distributions/{distribution}/status', [DistributionController::class, 'updateStatus'])->middleware('permission:confirm_distribution');
+    Route::get('distributions', [DistributionController::class, 'index'])->middleware('permission:view_distribution');
+    Route::get('distributions/{distribution}', [DistributionController::class, 'show'])->middleware('permission:view_distribution');
+    Route::post('distributions', [DistributionController::class, 'store'])->middleware('permission:create_distribution');
+    Route::put('distributions/{distribution}', [DistributionController::class, 'update'])->middleware('permission:edit_distribution');
+    Route::delete('distributions/{distribution}', [DistributionController::class, 'destroy'])->middleware('permission:delete_distribution');
+    //Route::patch('distributions/{distribution}/status', [DistributionController::class, 'updateStatus'])->middleware('permission:confirm_distribution');
+
+    Route::prefix('transfers')->group(function () {
+        Route::get('', [TransferController::class, 'index']);
+        Route::post('', [TransferController::class, 'store']);
+        Route::get('/{transfer}', [TransferController::class, 'show']);
+        Route::put('/{transfer}', [TransferController::class, 'update']);
+        Route::delete('/{transfer}', [TransferController::class, 'destroy']);
+    });
 
     Route::prefix('/transfers')->group(function () {
         Route::get('', [TransferController::class, 'index']);
