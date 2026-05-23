@@ -8,6 +8,8 @@ use App\Http\Resources\Product\ProductDetailResource;
 use App\Http\Resources\Product\ProductListResource;
 use App\Http\Resources\Product\ProductTrashResource;
 use App\Models\Product;
+use App\Models\PurchaseOrder;
+use App\Models\Supplier;
 use App\Services\ProductService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -156,7 +158,8 @@ class ProductController extends Controller
         }
     }
 
-    public function restore(Product $product): JsonResponse {
+    public function restore(Product $product): JsonResponse
+    {
         try {
             $restoredProduct = $this->productService->restoreProduct($product);
 
@@ -188,6 +191,29 @@ class ProductController extends Controller
                 'message' => 'Failed to force deleted product.',
                 'error' => $err->getMessage(),
             ], 500);
-        }    
+        }
+    }
+
+    public function getProductbyPurchaseOrder(PurchaseOrder $purchase): JsonResponse
+    {
+        $products = $purchase->products()->select('products.id', 'products.sku', 'products.name')->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $products
+        ]);
+    }
+
+    public function getProductBySupplier(Supplier $supplier): JsonResponse
+    {
+        $products = $supplier->products()
+            ->select('products.id', 'products.sku', 'products.name', 'products.category_id', 'products.unit_id')
+            ->with(['category:id,name', 'unit:id,name,symbol'])
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $products
+        ]);
     }
 }

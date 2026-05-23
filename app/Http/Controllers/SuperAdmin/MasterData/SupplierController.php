@@ -99,16 +99,5 @@ class SupplierController extends Controller
         ]);
     }
 
-    public function getProductBySupplier(Supplier $supplier): JsonResponse
-    {
-        $products = $supplier->products()
-            ->select('products.id', 'products.sku', 'products.name', 'products.category_id', 'products.unit_id')
-            ->with(['category:id,name', 'unit:id,name,symbol'])
-            ->get();
 
-        return response()->json([
-            'success' => true,
-            'data' => $products
-        ]);
-    }
 }

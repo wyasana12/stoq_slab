@@ -19,6 +19,11 @@ class BatchRepository
         return $batch->load(['warehouse', 'product', 'receive.purchase.supplier']);
     }
 
+    public function create(array $data): bool
+    {
+        return Batch::insert($data);
+    }
+
     public function updateBarcode(Batch $batch, string $barcode): Batch
     {
         $batch->update([

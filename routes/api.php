@@ -63,7 +63,7 @@ Route::prefix('/suppliers')->middleware('auth:sanctum')->name('supplier.')->grou
     Route::get('/{supplier}', [SupplierController::class, 'show'])->middleware('permission:view_supplier')->name('show');
     Route::put('/{supplier}', [SupplierController::class, 'update'])->middleware('permission:edit_supplier')->name('update');
     Route::delete('/{supplier}', [SupplierController::class, 'destroy'])->middleware('permission:delete_supplier')->name('delete');
-    Route::get('/{supplier}/products', [SupplierController::class, 'getProductBySupplier'])->middleware('permission:view_products')->name('product.supplier');
+    Route::get('/{supplier}/products', [ProductController::class, 'getProductBySupplier'])->name('product.supplier');
 });
 
 Route::prefix('/categories')->middleware('auth:sanctum')->name('category.')->group(function () {
@@ -93,9 +93,11 @@ Route::prefix('/products')->middleware('auth:sanctum')->name('product.')->group(
 
 Route::prefix('/purchases')->middleware('auth:sanctum')->name('purchase.')->group(function () {
     Route::get('', [PurchaseOrderController::class, 'index'])->middleware('permission:view_purchase')->name('index');
+    Route::get('/dropdown', [PurchaseOrderController::class, 'dropdown'])->name('dropdown');
     Route::get('/trash', [PurchaseOrderController::class, 'trashed'])->middleware('permission:restore_purchase')->name('trash');
     Route::post('/request', [PurchaseOrderController::class, 'request'])->middleware('permission:create_purchase')->name('create');
     Route::get('/{purchase}', [PurchaseOrderController::class, 'show'])->middleware('permission:view_purchase')->name('show');
+    Route::get('/{purchase}/products', [ProductController::class, 'getProductbyPurchaseOrder'])->name('product.purchase');
     Route::put('/{purchase}/update', [PurchaseOrderController::class, 'update'])->middleware('permission:edit_purchase')->name('update');
     Route::patch('/{purchase}/status', [PurchaseOrderController::class, 'status'])->middleware('permission:confirm_purchase')->name('status');
     Route::delete('/{purchase}/soft', [PurchaseOrderController::class, 'destroy'])->middleware('permission:delete_purchase')->name('destroy');
@@ -106,6 +108,7 @@ Route::prefix('/purchases')->middleware('auth:sanctum')->name('purchase.')->grou
 Route::prefix('/receives')->middleware('auth:sanctum')->name('receive.')->group(function () {
     Route::get('', [ProductReceivingController::class, 'index'])->middleware('permission:view_receive')->name('index');
     Route::get('/trashed', [ProductReceivingController::class, 'trashed'])->middleware('permission:restore_receive')->name('trashed');
+    Route::post('/create', [ProductReceivingController::class, 'store'])->middleware('permission:create_receive');  
     Route::get('/{receive}', [ProductReceivingController::class, 'show'])->middleware('permission:view_receive')->name('show');
     Route::patch('/{receive}/update', [ProductReceivingController::class, 'updateItemsAndStatus'])->middleware('permission:edit_receive')->name('update');
     Route::delete('/{receive}/soft', [ProductReceivingController::class, 'destroy'])->middleware('permission:delete_receive')->name('destroy');
