@@ -255,4 +255,24 @@ class PurchaseOrderController extends Controller
             ], 500);
         }
     }
+
+    public function dropdown(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+
+            $purchases = PurchaseOrder::select('id', 'po_code')->where('status', 'ordered')->where('warehouse_id', $user->warehouse_id)->latest()->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $purchases
+            ], 200);
+        } catch (\Exception $err) {
+            return response()->json([
+                'success' => false,
+                'messages' => 'Failed to retrieve purchase order dropdown',
+                'error' => $err->getMessage(),
+            ]);
+        }
+    }
 }
