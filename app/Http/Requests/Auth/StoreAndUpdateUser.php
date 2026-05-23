@@ -32,7 +32,7 @@ class StoreAndUpdateUser extends FormRequest
             'email' => ['required', 'email', 'string', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
             'password' => [$isUpdate ? 'nullable' : 'required', 'string', 'min:8', 'confirmed'],
             'role_id' => [$isUpdate ? 'nullable' : 'required', 'exists:roles,id'],
-            'warehouse_id' => [$isUpdate ? 'nullable' : 'required', 'exists:warehouses,id'],
+            'warehouse_id' => ['nullable', 'exists:warehouses,id'],
         ];
     }
 
@@ -58,7 +58,7 @@ class StoreAndUpdateUser extends FormRequest
             'role_id.required' => 'Role is required.',
             'role_id.exists' => 'This selected role is invalid.',
 
-            'warehouse_id.required' => 'Warehouse is required.',
+            //'warehouse_id.required' => 'Warehouse is required.',
             'warehouse_id.exists' => 'This selected warehouse is invalid.',
         ];
     }

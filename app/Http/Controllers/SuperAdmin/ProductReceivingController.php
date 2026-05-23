@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Receive\StoreandUpdateReceiveRequest;
 use App\Http\Requests\Receive\UpdateProductReceiveRequest;
 use App\Http\Resources\Receive\ReceiveDetailResource;
 use App\Http\Resources\Receive\ReceiveListResource;
 use App\Models\ProductReceiving;
 use App\Services\ProductReceivingService;
+use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,10 +27,11 @@ class ProductReceivingController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
+            $filters = $request->only(['search', 'status']);
             $perPage = $request->query('per_page', 10);
             $page = $request->query('page', 1);
 
-            $allReceives = $this->productReceivingService->getAllReceives($perPage);
+            $allReceives = $this->productReceivingService->getAllReceives($perPage, $filters);
 
             return response()->json([
                 'success' => true,
@@ -52,10 +55,41 @@ class ProductReceivingController extends Controller
                 'success' => true,
                 'data' => new ReceiveDetailResource($receiveDetail),
             ], 200);
+        } catch(AuthorizationException $err) {
+            return response()->json([
+                'success' => false,
+                'messages' => $err->getMessage(),
+            ], 403);
         } catch (\Exception $err) {
             return response()->json([
                 'success' => false,
                 'messages' => 'Failed to retrieve receive details.',
+                'error' => $err->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function store(StoreandUpdateReceiveRequest $request): JsonResponse
+    {
+        try {
+            $userId = $request->user()->id;
+
+            $createReceive = $this->productReceivingService->createReceive($request->validated(), $userId);
+            
+            return response()->json([
+                'success' => true,
+                'messages' => 'Receive created successfull.',
+                'data' => new ReceiveDetailResource($createReceive),
+            ], 201);
+        } catch (InvalidArgumentException $err) {
+            return response()->json([
+                'success' => false,
+                'error' => $err->getMessage(),
+            ], 400);
+        }    catch (Exception $err) {
+            return response()->json([
+                'success' => false,
+                'messages' => 'Failed to create receive.',
                 'error' => $err->getMessage(),
             ], 500);
         }
