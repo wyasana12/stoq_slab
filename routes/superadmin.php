@@ -12,6 +12,7 @@ use App\Http\Controllers\SuperAdmin\TransferStatusController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('/superadmin')->name('superadmin.')->middleware('auth:sanctum')->group(function () {
+
     Route::get('/users', [UserController::class, 'index'])->name('user.index');
     Route::post('/users/create', [UserController::class, 'store'])->name('user.create');
     Route::get('/users/{user}', [UserController::class, 'show'])->name('user.show');
@@ -57,8 +58,9 @@ Route::prefix('/superadmin')->name('superadmin.')->middleware('auth:sanctum')->g
         Route::delete('/{purchase}/force', [PurchaseOrderController::class, 'forceDestroy'])->name('force')->withTrashed();
     });
 
-    Route::patch('restocks/{restock}/status', [RestockStatusController::class, 'patch'])->name('restock.status.patch');
-    Route::get('restocks/{restock}/status/allowed', [RestockStatusController::class, 'allowedTransitions'])->name('restock.status.allowed');
+    Route::patch('restocks/{restock}/status', [RestockStatusController::class, 'patch'])->middleware('permission:confirm_restock')->name('restock.status.patch');
+    Route::get('restocks/{restock}/status/allowed', [RestockStatusController::class, 'allowedTransitions'])->middleware('permission:confirm_restock')->name('restock.status.allowed');
+});
 
     Route::patch('transfers/{transfer}/status', [TransferStatusController::class, 'patch'])->name('transfer.status.patch');
     Route::get('transfers/{transfer}/status/allowed', [TransferStatusController::class, 'allowedTransitions'])->name('transfer.status.allowed');
