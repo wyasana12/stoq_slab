@@ -19,10 +19,7 @@ class ConfirmDistributionRequest extends FormRequest
             'status' => [
                 'required',
                 'string',
-                Rule::in([
-                    DistributionStatus::APPROVED->value,
-                    DistributionStatus::REJECTED->value,
-                ]),
+                Rule::in(array_column(DistributionStatus::cases(), 'value')),
             ],
             'confirmed_by' => ['required', 'exists:users,id'],
             'notes' => ['nullable', 'string', 'max:255'],

@@ -150,7 +150,7 @@ class TransferRepository
                 'reference_type' => 'TRANSFER',
                 'reference_id' => $transfer->id,
                 'notes' => 'Kirim transfer ke ' . $transfer->toWarehouse->name,
-                'status' => MutationStatus::TRASFER_COMPLETED->value,
+                'status' => MutationStatus::TRANSFER_COMPLETED->value,
             ]);
 
             $destinationBatch = Batch::query()
@@ -190,7 +190,7 @@ class TransferRepository
                 'reference_type' => 'TRANSFER',
                 'reference_id' => $transfer->id,
                 'notes' => 'Terima transfer dari ' . $transfer->fromWarehouse->name,
-                'status' => MutationStatus::TRASFER_COMPLETED->value,
+                'status' => MutationStatus::TRANSFER_COMPLETED->value,
             ]);
         }
     }

@@ -4,6 +4,7 @@ use App\Http\Controllers\SuperAdmin\RestockStatusController;
 use App\Http\Controllers\SuperAdmin\TransferStatusController;
 use Illuminate\Support\Facades\Route;
 
+Route::prefix('/superadmin')->name('superadmin.')->middleware('auth:sanctum')->group(function () {
     Route::patch('/returns/{stockReturn}/confirm', [ReturnStatusController::class, 'confirm'])->name('return.confirm');
     Route::get('/returns/{stockReturn}/status/allowed', [ReturnStatusController::class, 'allowedTransitions'])->name('return.status.allowed');
 

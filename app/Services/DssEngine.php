@@ -13,9 +13,9 @@ class DssEngine
         $this->repository = $repository;
     }
 
-    public function findSlowMovingSource(string $productId, string $destinationWarehouseId, int $historyDays = null): ?array
+    public function findSlowMovingSource(string $productId, string $destinationWarehouseId, ?int $historyDays = null): ?array
     {
-        $historyDays = $historyDays ?: config('dss.default_history_days');
+        $historyDays = (int) ($historyDays ?? config('dss.default_history_days'));
         $thresholdSlow = config('dss.slow_moving_days_of_stock');
 
         $candidateBatches = $this->repository
@@ -43,9 +43,9 @@ class DssEngine
         return null;
     }
 
-    public function findFastMovingDestination(string $productId, string $sourceWarehouseId, int $historyDays = null): ?array
+    public function findFastMovingDestination(string $productId, string $sourceWarehouseId, ?int $historyDays = null): ?array
     {
-        $historyDays = $historyDays ?: config('dss.default_history_days');
+        $historyDays = (int) ($historyDays ?? config('dss.default_history_days'));
         $thresholdFast = config('dss.fast_moving_days_of_stock');
 
         $candidateBatches = $this->repository

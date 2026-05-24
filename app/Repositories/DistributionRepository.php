@@ -162,6 +162,10 @@ class DistributionRepository
             $distribution->status = $newStatus->value;
             $distribution->save();
 
+            if ($newStatus === DistributionStatus::SHIPPED) {
+                $this->applyStockMutation($distribution);
+            }
+
             return $distribution->refresh()->load('items.batch');
         });
     }
