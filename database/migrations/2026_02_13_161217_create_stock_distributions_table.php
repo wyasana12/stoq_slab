@@ -16,6 +16,10 @@ return new class extends Migration
             $table->string('distribution_code')->unique();
             $table->foreignUlid('warehouse_id')->constrained('warehouses')->cascadeOnDelete();
             $table->string('location');
+            $table->string('outlet_name')->nullable();
+            $table->string('outlet_address')->nullable();
+            $table->string('outlet_phone')->nullable();
+            $table->string('outlet_contact')->nullable();
             $table->date('dispatched_at')->nullable();
             $table->foreignUlid('requested_by')->constrained('users')->cascadeOnDelete();
             $table->foreignUlid('confirmed_by')->nullable()->constrained('users')->nullOnDelete();
