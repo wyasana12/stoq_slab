@@ -11,6 +11,20 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property string $id
+ * @property string|null $warehouse_id
+ * @property string|null $requested_by
+ * @property string|null $confirmed_by
+ * @property string|null $notes
+ * @property mixed|null $status
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read Warehouse|null $warehouse
+ * @property-read User|null $request
+ * @property-read User|null $confirm
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, RestockItem> $item
+ */
 class Restock extends Model
 {
     use HasFactory, HasUlids, SoftDeletes;

@@ -12,6 +12,25 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property string $id
+ * @property string|null $receiving_id
+ * @property string|null $product_id
+ * @property string|null $warehouse_id
+ * @property string|null $requested_by
+ * @property string|null $confirmed_by
+ * @property int|null $requested_quantity
+ * @property int|null $approved_quantity
+ * @property string|null $notes
+ * @property mixed|null $status
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read ProductReceiving|null $receiving
+ * @property-read Product|null $product
+ * @property-read Warehouse|null $warehouse
+ * @property-read User|null $request
+ * @property-read User|null $confirm
+ */
 class StockReturns extends Model
 {
     use HasFactory, HasUlids, SoftDeletes;

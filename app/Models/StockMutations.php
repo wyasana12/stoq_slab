@@ -8,6 +8,22 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Enums\MutationStatus;
 
+/**
+ * @property string $id
+ * @property string|null $warehouse_id
+ * @property string|null $batch_id
+ * @property int|null $change_quantity
+ * @property int|null $before_quantity
+ * @property int|null $after_quantity
+ * @property string|null $reference_type
+ * @property string|null $reference_id
+ * @property string|null $notes
+ * @property string|null $status
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read Warehouse|null $warehouse
+ * @property-read Batch|null $batch
+ */
 class StockMutations extends Model
 {
     use HasFactory, HasUlids, SoftDeletes;

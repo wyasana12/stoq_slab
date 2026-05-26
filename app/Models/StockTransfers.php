@@ -11,6 +11,22 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property string $id
+ * @property string|null $from_warehouse_id
+ * @property string|null $to_warehouse_id
+ * @property string|null $requested_by
+ * @property string|null $confirmed_by
+ * @property string|null $status
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read Warehouse|null $fromWarehouse
+ * @property-read Warehouse|null $toWarehouse
+ * @property-read User|null $request
+ * @property-read User|null $confirm
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, StockTransferItem> $item
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Batch> $batch
+ */
 class StockTransfers extends Model
 {
     use HasFactory, HasUlids, SoftDeletes;

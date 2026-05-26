@@ -7,6 +7,19 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property string $id
+ * @property string|null $batch_code
+ * @property string|null $warehouse_id
+ * @property string|null $product_id
+ * @property int|null $current_quantity
+ * @property mixed|null $production_date
+ * @property mixed|null $expired_date
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read Warehouse|null $warehouse
+ * @property-read Product|null $product
+ */
 class Batch extends Model
 {
     use HasFactory, HasUlids;
@@ -21,7 +34,7 @@ class Batch extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
-    
+
     public $incrementing = false;
 
     protected $keyType = 'string';
@@ -31,11 +44,13 @@ class Batch extends Model
         return $this->belongsTo(Product::class, 'product_id');
     }
 
-    public function receive(): BelongsTo {
+    public function receive(): BelongsTo
+    {
         return $this->belongsTo(ProductReceiving::class, 'receiving_id');
     }
 
-    public function warehouse(): BelongsTo {
+    public function warehouse(): BelongsTo
+    {
         return $this->belongsTo(Warehouse::class, 'warehouse_id');
     }
 }
