@@ -77,6 +77,20 @@ class DistributionRepository
                 throw new InvalidArgumentException('Distribusi hanya dapat diubah saat draft atau waiting approval.');
             }
 
+            $currentStatus = DistributionStatus::tryFrom($distribution->status);
+
+            if (isset($data['status']) && $data['status'] !== $distribution->status) {
+                $newStatus = DistributionStatus::from($data['status']);
+
+                if (! $currentStatus->canTransition($newStatus)) {
+                    throw new InvalidArgumentException(
+                        "Transisi status {$distribution->status} ke {$data['status']} tidak diizinkan."
+                    );
+                }
+
+                $distribution->status = $newStatus->value;
+            }
+
             $distribution->update([
                 'warehouse_id' => $data['warehouse_id'] ?? $distribution->warehouse_id,
                 'location' => $data['location'] ?? $distribution->location,
@@ -87,6 +101,7 @@ class DistributionRepository
                 'outlet_address' => $data['outlet_address'] ?? $distribution->outlet_address,
                 'outlet_phone' => $data['outlet_phone'] ?? $data['outlet_contact'] ?? $distribution->outlet_phone,
                 'outlet_contact' => $data['outlet_contact'] ?? $data['outlet_phone'] ?? $distribution->outlet_contact,
+                'status' => $distribution->status,
             ]);
 
             if (isset($data['items']) && is_array($data['items'])) {
