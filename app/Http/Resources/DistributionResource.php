@@ -24,9 +24,12 @@ class DistributionResource extends JsonResource
             'requested_by_name' => $this->request?->name,
             'confirmed_by'      => $this->confirmed_by,
             'confirmed_by_name' => $this->confirmedBy?->name,
+            'dispatched_at'     => $this->dispatched_at,
             'notes'             => $this->notes,
             'status'            => $this->status,
             'items'             => StockDistributionItemResource::collection($this->whenLoaded('items')),
+            'shipped_proof_url' => $this->when($this->shipped_proof_path, asset('storage/' . $this->shipped_proof_path)),
+            'delivered_proof_url' => $this->when($this->delivered_proof_path, asset('storage/' . $this->delivered_proof_path)),
         ];
     }
 }

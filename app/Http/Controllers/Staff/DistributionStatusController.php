@@ -9,6 +9,7 @@ use App\Http\Resources\DistributionResource;
 use App\Models\StockDistributions;
 use App\Repositories\DistributionRepository;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 
 class DistributionStatusController extends Controller
@@ -21,6 +22,14 @@ class DistributionStatusController extends Controller
     {
         try {
             $status = DistributionStatus::from($request->validated('status'));
+
+            if ($status->name === 'SHIPPED' && $request->hasFile('shipped_proof')) {
+                $this->saveProof($distribution, $request->file('shipped_proof'), 'shipped');
+            }
+
+            if ($status->name === 'DELIVERED' && $request->hasFile('delivered_proof')) {
+                $this->saveProof($distribution, $request->file('delivered_proof'), 'delivered');
+            }
 
             $distribution = $this->repository->updateStatus(
                 $distribution,
@@ -39,7 +48,50 @@ class DistributionStatusController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Distribusi berhasil dikonfirmasi.',
-            'data' => new DistributionResource($distribution),
+            'data' => new DistributionResource($distribution->refresh()),
+        ]);
+    }
+
+    public function downloadShippedProof(StockDistributions $distribution)
+    {
+        if (! $distribution->shipped_proof_path) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Bukti pengiriman shipped tidak ditemukan.',
+            ], 404);
+        }
+
+        return response()->download(
+            Storage::disk('public')->path($distribution->shipped_proof_path),
+            $distribution->shipped_proof_name
+        );
+    }
+
+    public function downloadDeliveredProof(StockDistributions $distribution)
+    {
+        if (! $distribution->delivered_proof_path) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Bukti pengiriman delivered tidak ditemukan.',
+            ], 404);
+        }
+
+        return response()->download(
+            Storage::disk('public')->path($distribution->delivered_proof_path),
+            $distribution->delivered_proof_name
+        );
+    }
+
+    private function saveProof(StockDistributions $distribution, $file, string $type): void
+    {
+        $path = $file->store('distribution_proofs', 'public');
+
+        $distribution->update([
+            "{$type}_proof_path" => $path,
+            "{$type}_proof_name" => $file->getClientOriginalName(),
+            "{$type}_proof_mime" => $file->getClientMimeType(),
+            "{$type}_proof_size" => $file->getSize(),
+            "{$type}_proof_uploaded_at" => now(),
         ]);
     }
 
@@ -67,16 +119,26 @@ class DistributionStatusController extends Controller
 
     private function getStatusLabel(DistributionStatus $status): string
     {
-        return match ($status) {
-            DistributionStatus::DRAFT => 'Draft',
-            DistributionStatus::WAITING_APPROVAL => 'Waiting Approval',
-            DistributionStatus::APPROVED => 'Approved',
-            DistributionStatus::REJECTED => 'Rejected',
-            DistributionStatus::PREPARING => 'Preparing',
-            DistributionStatus::SHIPPED => 'Shipped',
-            DistributionStatus::DELIVERED => 'Delivered',
-            DistributionStatus::COMPLETED => 'Completed',
-            DistributionStatus::CANCELED => 'Canceled',
+        // Use the enum case name to avoid referencing undefined constants
+        return match (strtoupper($status->name)) {
+            'PENDING' => 'Pending',
+            'SHIPPED' => 'Shipped',
+            'DELIVERED' => 'Delivered',
+            'CANCELLED' => 'Cancelled',
+            default => ucfirst(strtolower($status->name)),
         };
+    }
+    public function downloadSuratJalanTemplate()
+    {
+        $path = storage_path('app/public/templates/surat_jalan.docx');
+
+        if (! file_exists($path)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Template Surat Jalan tidak ditemukan.',
+            ], 404);
+        }
+
+        return response()->download($path, 'Surat Jalan Template.docx');
     }
 }

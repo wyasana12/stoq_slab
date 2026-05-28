@@ -27,6 +27,12 @@ class ConfirmDistributionRequest extends FormRequest
             'items' => 'required_if:status,' . DistributionStatus::APPROVED->value . '|array|min:1',
             'items.*.id' => 'required_with:items|exists:stock_distribution_items,id',
             'items.*.approved_quantity' => 'required_if:status,' . DistributionStatus::APPROVED->value . '|integer|min:0',
+
+            'shipped_proof' => 'required_if:status,' . DistributionStatus::SHIPPED->value
+                . '|file|mimes:jpg,jpeg,png,pdf|max:2048',
+
+            'delivered_proof' => 'required_if:status,' . DistributionStatus::DELIVERED->value
+                . '|file|mimes:jpg,jpeg,png,pdf|max:2048',
         ];
     }
 }
