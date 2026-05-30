@@ -108,7 +108,7 @@ Route::prefix('/purchases')->middleware('auth:sanctum')->name('purchase.')->grou
 Route::prefix('/receives')->middleware('auth:sanctum')->name('receive.')->group(function () {
     Route::get('', [ProductReceivingController::class, 'index'])->middleware('permission:view_receive')->name('index');
     Route::get('/trashed', [ProductReceivingController::class, 'trashed'])->middleware('permission:restore_receive')->name('trashed');
-    Route::post('/create', [ProductReceivingController::class, 'store'])->middleware('permission:create_receive');  
+    Route::post('/create', [ProductReceivingController::class, 'store'])->middleware('permission:create_receive');
     Route::get('/{receive}', [ProductReceivingController::class, 'show'])->middleware('permission:view_receive')->name('show');
     Route::patch('/{receive}/update', [ProductReceivingController::class, 'updateItemsAndStatus'])->middleware('permission:edit_receive')->name('update');
     Route::delete('/{receive}/soft', [ProductReceivingController::class, 'destroy'])->middleware('permission:delete_receive')->name('destroy');
@@ -118,6 +118,9 @@ Route::prefix('/receives')->middleware('auth:sanctum')->name('receive.')->group(
 
 Route::prefix('/batches')->middleware('auth:sanctum')->name('batch.')->group(function () {
     Route::get('', [BatchController::class, 'index'])->middleware('permission:view_batch')->name('index');
+    Route::post('/print-labels', [BatchController::class, 'printBySelected']);
     Route::get('/{batch}', [BatchController::class, 'show'])->middleware('permission:view_batch')->name('show');
     Route::post('/{batch}/generate', [BatchController::class, 'generate'])->middleware('permission:generate_barcode')->name('generate');
+    Route::get('/{batch}/qr/preview', [BatchController::class, 'preview'])->name('qr.preview');
+    Route::get('/{batch}/qr/download', [BatchController::class, 'download'])->name('qr.download');
 });

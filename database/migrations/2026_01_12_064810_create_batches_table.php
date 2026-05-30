@@ -15,6 +15,7 @@ return new class extends Migration
             $table->ulid('id')->primary();
             $table->string('batch_code')->unique();
 
+            $table->foreignUlid('receiving_id')->constrained('product_receivings')->onDelete('cascade');
             $table->foreignUlid('product_id')->constrained('products')->onDelete('cascade');
             $table->foreignUlid('warehouse_id')->constrained('warehouses')->onDelete('cascade');
             $table->string('rack_location')->nullable();

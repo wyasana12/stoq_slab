@@ -20,7 +20,7 @@ class ProductReceivingRepository
 
         if(!empty($filters['search'])) {
             $search = $filters['search'];
-            $query->where('receiving_code', 'like', "%{$search}");
+            $query->where('receiving_code', 'like', "%{$search}%");
         }
 
         if(!empty($filters['status'])) {

@@ -24,15 +24,17 @@ class ProductReceivingService
      * Create a new class instance.
      */
 
-    protected $productRecivingRepository;
-    protected $batchRepository;
-    protected $mutationRepository;
+    protected ProductReceivingRepository $productRecivingRepository;
+    protected BatchService $batchService;
+    protected BatchRepository $batchRepository;
+    protected MutationRepository $mutationRepository;
 
-    public function __construct(ProductReceivingRepository $productRecivingRepository, BatchRepository $batchRepository, MutationRepository $mutationRepository)
+    public function __construct(ProductReceivingRepository $productRecivingRepository, BatchRepository $batchRepository, BatchService $batchService, MutationRepository $mutationRepository)
     {
         $this->productRecivingRepository = $productRecivingRepository;
         $this->batchRepository = $batchRepository;
         $this->mutationRepository = $mutationRepository;
+        $this->batchService = $batchService;
     }
 
     public function getAllReceives(int $receivePage = 10, array $filters)
@@ -44,7 +46,7 @@ class ProductReceivingService
     {
         $userId = Auth::user()->warehouse_id;
 
-        if ($receive->warehouse_id !== $userId) {
+        if ($receive->purchase->warehouse_id !== $userId) {
             throw new AuthorizationException(
                 "You are not permitted to view other warehouse."
             );
@@ -112,7 +114,7 @@ class ProductReceivingService
                     'expired_date' => !empty($i['expired_date'])
                         ? Carbon::parse($i['expired_date'])->format('Y-m-d H:i:s')
                         : null,
-                    'price' => $i['price'] ?? 0,
+                    'price' => $poItem->unit_price,
                     'condition' => $i['condition'] ?? null,
                 ];
             }
@@ -140,15 +142,13 @@ class ProductReceivingService
             $this->productRecivingRepository->assignItems($receive, $receiveItemsData);
 
             if (in_array($calculatedStatus, [ReceiveStatus::FULL, ReceiveStatus::PARTIAL])) {
-                $batchInsertData = [];
 
                 foreach ($receiveItemsData as $item) {
                     if ((int) $item['quantity_accepted'] > 0) {
-                        $batchId = (string) Str::ulid();
-
-                        $batchInsertData[] = [
-                            'id' => $batchId,
+                        $batch = $this->batchRepository->create([
+                            'id' => (string) Str::ulid(),
                             'batch_code' => 'BCH-' . $warehouseCode . '-' . strtoupper(Str::random(6)),
+                            'receiving_id' => $receive->id,
                             'product_id' => $item['product_id'],
                             'warehouse_id' => $warehouseId,
                             'initial_quantity' => $item['quantity_accepted'],
@@ -159,12 +159,14 @@ class ProductReceivingService
                             'condition' => $item['condition'],
                             'created_at' => now(),
                             'updated_at' => now(),
-                        ];
+                        ]);
 
-                        $mutationInsertData[] = [
+                        $this->batchService->generateBarcode($batch);
+
+                        $this->mutationRepository->create([
                             'id' => (string) Str::ulid(),
                             'warehouse_id' => $warehouseId,
-                            'batch_id' => $batchId,
+                            'batch_id' => $batch->id,
                             'change_quantity' => $item['quantity_accepted'],
                             'before_quantity' => 0,
                             'after_quantity' => $item['quantity_accepted'],
@@ -174,16 +176,8 @@ class ProductReceivingService
                             'status' => 'SUCCESS',
                             'created_at' => now(),
                             'updated_at' => now(),
-                        ];
+                        ]);
                     }
-                }
-
-                if (!empty($batchInsertData)) {
-                    $this->batchRepository->create($batchInsertData);
-                }
-
-                if (!empty($mutationInsertData)) {
-                    $this->mutationRepository->create($mutationInsertData);
                 }
             }
 
@@ -252,7 +246,7 @@ class ProductReceivingService
         $isProcess = $receive->status === ReceiveStatus::PROCESS;
         $isFinal = $receive->status->isFinal();
 
-        if (!($isProcess || $isFinal)) {
+        if (!($isProcess || !$isFinal)) {
             throw new InvalidArgumentException("The deletion rejected. The product receive must have a PENDING status or FINAL Transition.");
         }
 
