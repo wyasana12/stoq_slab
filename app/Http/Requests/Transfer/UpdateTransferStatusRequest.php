@@ -13,23 +13,19 @@ class UpdateTransferStatusRequest extends FormRequest
         return true;
     }
 
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
     public function rules(): array
     {
         return [
             'status' => ['required', new Enum(TransferStatus::class)],
+            'approved_quantity' => ['required', 'integer', 'min:1'],
+            'from_warehouse_id' => ['sometimes', 'exists:warehouses,id'],
+            'to_warehouse_id' => ['sometimes', 'exists:warehouses,id'],
+            'notes' => ['nullable', 'string', 'max:255'],
         ];
-    }
-
-    public function messages(): array
-    {
-        return [
-            'status.required' => 'Status is required',
-            'status.Illuminate\Validation\Rules\Enum' => 'Invalid status provided',
-        ];
-    }
-
-    public function getStatus(): TransferStatus
-    {
-        return TransferStatus::from($this->validated('status'));
     }
 }

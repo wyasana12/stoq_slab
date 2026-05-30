@@ -41,7 +41,7 @@ class RestockRepository
             $restock->item()->create([
                 'id' => (string) Str::ulid(),
                 'product_id' => $item['id'],
-                'requested_quantity' => $item['quantity_requested'] ?? $item['requested_quantity'] ?? $item['qty'] ?? 0,
+                'requested_quantity' => $item['approved_quantity'] ?? $item['quantity_requested'] ?? $item['requested_quantity'] ?? $item['qty'] ?? 0,
             ]);
         }
 
@@ -70,7 +70,7 @@ class RestockRepository
                 foreach ($data['products'] as $item) {
                     $restock->item()->updateOrCreate(
                         ['product_id' => $item['id']],
-                        ['requested_quantity' => $item['quantity_requested'] ?? $item['requested_quantity'] ?? $item['qty'] ?? 0]
+                        ['requested_quantity' => $item['approved_quantity'] ?? $item['quantity_requested'] ?? $item['requested_quantity'] ?? $item['qty'] ?? 0]
                     );
                 }
             }

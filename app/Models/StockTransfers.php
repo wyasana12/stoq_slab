@@ -46,9 +46,9 @@ class StockTransfers extends Model
         return $this->belongsTo(User::class, 'requested_by');
     }
 
-    public function item(): HasMany
+    public function products(): BelongsTo
     {
-        return $this->hasMany(StockTransferItem::class, 'transfer_id');
+        return $this->belongsTo(Product::class, 'product_id');
     }
 
     public function batch(): BelongsToMany
