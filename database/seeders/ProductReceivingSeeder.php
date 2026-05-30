@@ -17,8 +17,6 @@ class ProductReceivingSeeder extends Seeder
      */
     public function run(): void
     {
-        // Gunakan Eager Loading untuk memuat relasi (sesuaikan nama relasi jika berbeda)
-        // Asumsinya PO Item memiliki relasi 'productSupplierItem' ke model ProductSupplierItem
         $approvedPO = PurchaseOrder::with(['items'])->where('status', 'approved')->get();
 
         $statuses = [

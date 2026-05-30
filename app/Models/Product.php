@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Product extends Model
@@ -22,6 +23,12 @@ class Product extends Model
 
     protected $keyType = 'string';
 
+    public function preferredProductItem(): HasOne
+    {
+        return $this->hasOne(ProductSupplierItem::class, 'product_id')
+            ->where('is_preferred', true);
+    }
+
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class, 'category_id');
@@ -34,7 +41,7 @@ class Product extends Model
 
     public function productItems(): HasMany
     {
-        return $this->hasMany(ProductSupplierItem::class, 'product_id');    
+        return $this->hasMany(ProductSupplierItem::class, 'product_id');
     }
 
     public function purchaseItems(): HasMany

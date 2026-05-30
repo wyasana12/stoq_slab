@@ -2,54 +2,68 @@
 
 namespace Database\Seeders;
 
-use App\Models\Batch;
+use App\Models\PurchaseOrderItem;
 use App\Models\ProductReceivingItem;
+use App\Models\Batch;
 use App\Models\StockMutations;
+use App\Services\BatchService; // Tambahkan import ini
 use Illuminate\Database\Seeder;
-
-use function Illuminate\Support\now;
+use Illuminate\Support\Str;
 
 class BatchSeeder extends Seeder
 {
     /**
-     * Run the database seeds.
+     * Inject BatchService ke dalam method run
      */
-    public function run(): void
+    public function run(BatchService $batchService): void
     {
-        $receivingItems = ProductReceivingItem::with(['receiving.purchase'])->get();
-            
+        $receivingItems = ProductReceivingItem::with([
+            'receiving.purchase.warehouse'
+        ])->get();
+
         foreach ($receivingItems as $item) {
+
+            if ($item->quantity_accepted <= 0) {
+                continue;
+            }
+
             $receiving = $item->receiving;
             $purchase = $receiving->purchase;
+            $warehouse = $purchase->warehouse;
 
-            if ($item->quantity_accepted > 0) {
-                $batch = Batch::create([
-                    'batch_code' => "BTCH-" . now()->format("Ymd") . "-" . rand(0001, 9999),
-                    'product_id' => $item->product_id,
-                    'warehouse_id' => $purchase->warehouse_id,
-                    'receiving_id' => $item->receiving_id,
-                    'rack_location' => (string) rand(00, 99),
-                    'production_date' => now()->subMonths(2),
-                    'expired_date' => now()->addYears(1),
-                    'initial_quantity' => $item->quantity_accepted,
-                    'current_quantity' => $item->quantity_accepted,
-                    'price' => $item->unit_price + 1500,
-                    'condition' => null,
-                    'barcode' => rand(10000000, 999999999),
-                ]);
+            $poItem = PurchaseOrderItem::where('purchase_id', $purchase->id)
+                ->where('product_id', $item->product_id)
+                ->first();
 
-                StockMutations::create([
-                    'warehouse_id' => $batch->warehouse_id,
-                    'batch_id' => $batch->id,
-                    'change_quantity' => $item->quantity_accepted,
-                    'before_quantity' => 0,
-                    'after_quantity' => $item->quantity_accepted,
-                    'reference_type' => 'RECEIVE',
-                    'reference_id' => $item->receiving_id,
-                    'notes' => 'Stock Masuk Dari ' . $purchase->supplier_id,
-                    'status' => 'SUCCESS',
-                ]);
-            }
+            $batch = Batch::create([
+                'id' => (string) Str::ulid(),
+                'batch_code' => 'BCH-' . $warehouse->warehouse_code . '-' . strtoupper(Str::random(6)),
+                'receiving_id' => $receiving->id,
+                'product_id' => $item->product_id,
+                'warehouse_id' => $warehouse->id,
+                'initial_quantity' => $item->quantity_accepted,
+                'current_quantity' => $item->quantity_accepted,
+                'production_date' => $item->production_date ?? now()->subMonth(),
+                'expired_date' => $item->expired_date ?? now()->addYear(),
+                'price' => $poItem?->unit_price ?? 0,
+                'condition' => $item->condition ?? 'GOOD',
+                'barcode' => null, // Biarkan null, akan diisi oleh service
+            ]);
+
+            $batchService->generateBarcode($batch);
+
+            StockMutations::create([
+                'id' => (string) Str::ulid(),
+                'warehouse_id' => $warehouse->id,
+                'batch_id' => $batch->id,
+                'change_quantity' => $item->quantity_accepted,
+                'before_quantity' => 0,
+                'after_quantity' => $item->quantity_accepted,
+                'reference_type' => 'RECEIVE',
+                'reference_id' => $receiving->id,
+                'notes' => "Received product {$purchase->po_code} to Warehouse {$warehouse->name}",
+                'status' => 'SUCCESS',
+            ]);
         }
     }
 }

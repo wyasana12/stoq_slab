@@ -32,7 +32,6 @@ class StoreandUpdateReceiveRequest extends FormRequest
 
             'items.*.production_date' => ['nullable', 'date', 'before_or_equal:today'],
             'items.*.expired_date' => ['nullable', 'date', 'after_or_equal:today'],
-            'items.*.price' => ['nullable', 'numeric', 'min:0'],
             'items.*.condition' => ['nullable', 'string', 'min:4'],
         ];
     }
@@ -62,8 +61,6 @@ class StoreandUpdateReceiveRequest extends FormRequest
             'items.*.expired_date.date' => 'Expired date must be a valid date.',
             'items.*.expired_date.after_or_equal' => 'Expired date cannot be a past date.',
 
-            'items.*.price.numeric' => 'Price product must be a number.',
-            'items.*.price.min' => 'Price product cannot be less than 0.',
             'items.*.condition.min' => 'Condition product cannot be less than 4 characters.',
         ];
     }
