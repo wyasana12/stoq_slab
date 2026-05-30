@@ -15,9 +15,11 @@ class TransferController extends Controller
         protected TransferRepository $repository
     ) {}
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $transfers = $this->repository->getAll();
+        $transferType = $request->query('transfer_type');
+
+        $transfers = $this->repository->getAll($transferType);
 
         return response()->json([
             'success' => true,
@@ -29,7 +31,14 @@ class TransferController extends Controller
     {
         $data = $request->validated();
 
-        $transfer = $this->repository->create($data);
+        try {
+            $transfer = $this->repository->create($data);
+        } catch (\InvalidArgumentException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
 
         return response()->json([
             'success' => true,

@@ -122,6 +122,12 @@ class Roleseeder extends Seeder
             'confirm_distribution',
             'confirm_transfer',
             'confirm_return',
+
+            // Restocks
+            'view_restock',
+
+            // Transfers
+            'view_transfer'
         ];
 
         $admin = [
@@ -165,6 +171,7 @@ class Roleseeder extends Seeder
 
             'view_product',
             'view_warehouse',
+
         ];
 
         $user = [

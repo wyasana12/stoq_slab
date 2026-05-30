@@ -19,10 +19,7 @@ class TransferStatusController extends Controller
     public function patch(UpdateTransferStatusRequest $request, StockTransfers $transfer): JsonResponse
     {
         try {
-            $transfer = $this->repository->update($transfer, [
-                'status' => $request->validated('status'),
-                'confirmed_by' => $request->user()->id,
-            ]);
+            $transfer = $this->repository->update($transfer, $request->validated());
         } catch (InvalidArgumentException $exception) {
             return response()->json([
                 'success' => false,
