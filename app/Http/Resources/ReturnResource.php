@@ -9,6 +9,11 @@ class ReturnResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $damageProofUrl = $this->when(
+            $this->damage_proof_path,
+            asset('storage/' . $this->damage_proof_path)
+        );
+
         return [
             'id' => $this->id,
             'return_code' => $this->return_code,
@@ -25,6 +30,12 @@ class ReturnResource extends JsonResource
             'confirmed_by_name' => $this->confirm?->name,
             'notes' => $this->notes,
             'status' => $this->status,
+            'damage_proof_url' => $damageProofUrl,
+            'photo' => $damageProofUrl,
+            'photo_url' => $damageProofUrl,
+            'image' => $damageProofUrl,
+            'photos' => $damageProofUrl ? [['url' => $damageProofUrl, 'type' => 'damage_proof']] : [],
+            'images' => $damageProofUrl ? [$damageProofUrl] : [],
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

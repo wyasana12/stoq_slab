@@ -22,6 +22,11 @@ return new class extends Migration
             $table->string('reason')->nullable();
             $table->foreignUlid('requested_by')->constrained('users')->cascadeOnDelete();
             $table->foreignUlid('confirmed_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('damage_proof_path')->nullable();
+            $table->string('damage_proof_name')->nullable();
+            $table->string('damage_proof_mime')->nullable();
+            $table->unsignedInteger('damage_proof_size')->nullable();
+            $table->timestamp('damage_proof_uploaded_at')->nullable();
             $table->string('notes')->nullable();
             $table->string('status');
             $table->timestamps();

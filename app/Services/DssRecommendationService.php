@@ -36,7 +36,7 @@ class DssRecommendationService
                     'warehouse_id'   => $row['warehouse_id'],
                     'warehouse_name' => $row['warehouse_name'] ?? 'Unknown',
                     'category'       => $row['category'],
-                    // PERBAIKAN: Mengubah 'velocity' menjadi 'velocity_per_day'
+                    // Mengubah 'velocity' menjadi 'velocity_per_day'
                     'velocity'       => $row['velocity_per_day'],
                     'days_of_stock'  => $row['days_of_stock'],
                     'recommendation' => $source ? 'TRANSFER_IN' : 'RESTOCK',

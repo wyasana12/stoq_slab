@@ -14,6 +14,8 @@ use Illuminate\Support\Carbon;
 
 class MonitoringRepository
 {
+
+
     public function getWarehouseSummary(array $filters = []): Collection
     {
         $warehouses = Warehouse::query()
@@ -32,28 +34,120 @@ class MonitoringRepository
             ->when($filters['warehouse_id'] ?? null, function ($query, $warehouseId) {
                 $query->where('warehouse_id', $warehouseId);
             })
-            ->groupBy('warehouse_id')
-            ->get()
-            ->keyBy('warehouse_id');
-
-        $mutationStats = StockMutations::query()
-            ->selectRaw('warehouse_id, COUNT(*) as activity_count, MAX(created_at) as last_activity_at')
-            ->when($filters['warehouse_id'] ?? null, function ($query, $warehouseId) {
-                $query->where('warehouse_id', $warehouseId);
+            ->when($filters['batch_id'] ?? null, function ($query, $batchId) {
+                $query->whereKey($batchId);
             })
-            ->when($filters['date_from'] ?? null, function ($query, $dateFrom) {
-                $query->whereDate('created_at', '>=', $dateFrom);
-            })
-            ->when($filters['date_to'] ?? null, function ($query, $dateTo) {
-                $query->whereDate('created_at', '<=', $dateTo);
+            ->when($filters['product_id'] ?? null, function ($query, $productId) {
+                $query->where('product_id', $productId);
             })
             ->groupBy('warehouse_id')
             ->get()
             ->keyBy('warehouse_id');
 
-        return $warehouses->map(function (Warehouse $warehouse) use ($batchStats, $mutationStats) {
+        $activityStats = collect();
+
+        $addActivityStats = function ($rows) use ($activityStats) {
+            foreach ($rows as $row) {
+                if (! $row->warehouse_id) {
+                    continue;
+                }
+
+                $existing = $activityStats->get($row->warehouse_id, [
+                    'activity_count' => 0,
+                    'last_activity_at' => null,
+                ]);
+
+                $existing['activity_count'] += (int) $row->activity_count;
+
+                if (
+                    $existing['last_activity_at'] === null ||
+                    Carbon::parse($row->last_activity_at)->gt(Carbon::parse($existing['last_activity_at']))
+                ) {
+                    $existing['last_activity_at'] = $row->last_activity_at;
+                }
+
+                $activityStats->put($row->warehouse_id, $existing);
+            }
+        };
+
+        $hasActivityType = function (string $type) use ($filters): bool {
+            return empty($filters['activity_type']) || $filters['activity_type'] === $type;
+        };
+
+        if ($hasActivityType('stock_mutation')) {
+            $addActivityStats(StockMutations::query()
+                ->selectRaw('warehouse_id, COUNT(*) as activity_count, MAX(created_at) as last_activity_at')
+                ->when($filters['warehouse_id'] ?? null, fn($query, $warehouseId) => $query->where('warehouse_id', $warehouseId))
+                ->when($filters['batch_id'] ?? null, fn($query, $batchId) => $query->where('batch_id', $batchId))
+                ->when($filters['product_id'] ?? null, fn($query, $productId) => $query->whereHas('batch', fn($q) => $q->where('product_id', $productId)))
+                ->when($filters['date_from'] ?? null, fn($query, $dateFrom) => $query->whereDate('created_at', '>=', $dateFrom))
+                ->when($filters['date_to'] ?? null, fn($query, $dateTo) => $query->whereDate('created_at', '<=', $dateTo))
+                ->groupBy('warehouse_id')
+                ->get());
+        }
+
+        if ($hasActivityType('distribution')) {
+            $addActivityStats(StockDistributions::query()
+                ->selectRaw('warehouse_id, COUNT(*) as activity_count, MAX(created_at) as last_activity_at')
+                ->when($filters['warehouse_id'] ?? null, fn($query, $warehouseId) => $query->where('warehouse_id', $warehouseId))
+                ->when($filters['batch_id'] ?? null, fn($query, $batchId) => $query->whereHas('items', fn($itemQuery) => $itemQuery->where('batch_id', $batchId)))
+                ->when($filters['product_id'] ?? null, fn($query, $productId) => $query->whereHas('items.batch', fn($itemQuery) => $itemQuery->where('product_id', $productId)))
+                ->when($filters['date_from'] ?? null, fn($query, $dateFrom) => $query->whereDate('created_at', '>=', $dateFrom))
+                ->when($filters['date_to'] ?? null, fn($query, $dateTo) => $query->whereDate('created_at', '<=', $dateTo))
+                ->groupBy('warehouse_id')
+                ->get());
+        }
+
+        if ($hasActivityType('restock')) {
+            $addActivityStats(Restock::query()
+                ->selectRaw('warehouse_id, COUNT(*) as activity_count, MAX(created_at) as last_activity_at')
+                ->when($filters['warehouse_id'] ?? null, fn($query, $warehouseId) => $query->where('warehouse_id', $warehouseId))
+                ->when($filters['product_id'] ?? null, fn($query, $productId) => $query->whereHas('item', fn($itemQuery) => $itemQuery->where('product_id', $productId)))
+                ->when($filters['date_from'] ?? null, fn($query, $dateFrom) => $query->whereDate('created_at', '>=', $dateFrom))
+                ->when($filters['date_to'] ?? null, fn($query, $dateTo) => $query->whereDate('created_at', '<=', $dateTo))
+                ->groupBy('warehouse_id')
+                ->get());
+        }
+
+        if ($hasActivityType('return')) {
+            $addActivityStats(StockReturns::query()
+                ->selectRaw('warehouse_id, COUNT(*) as activity_count, MAX(created_at) as last_activity_at')
+                ->when($filters['warehouse_id'] ?? null, fn($query, $warehouseId) => $query->where('warehouse_id', $warehouseId))
+                ->when($filters['product_id'] ?? null, fn($query, $productId) => $query->where('product_id', $productId))
+                ->when($filters['date_from'] ?? null, fn($query, $dateFrom) => $query->whereDate('created_at', '>=', $dateFrom))
+                ->when($filters['date_to'] ?? null, fn($query, $dateTo) => $query->whereDate('created_at', '<=', $dateTo))
+                ->groupBy('warehouse_id')
+                ->get());
+        }
+
+        if ($hasActivityType('transfer')) {
+            $addActivityStats(StockTransfers::query()
+                ->selectRaw('from_warehouse_id as warehouse_id, COUNT(*) as activity_count, MAX(created_at) as last_activity_at')
+                ->when($filters['warehouse_id'] ?? null, fn($query, $warehouseId) => $query->where('from_warehouse_id', $warehouseId))
+                ->when($filters['batch_id'] ?? null, fn($query, $batchId) => $query->whereHas('item', fn($itemQuery) => $itemQuery->where('batch_id', $batchId)))
+                ->when($filters['product_id'] ?? null, fn($query, $productId) => $query->whereHas('item.batch', fn($itemQuery) => $itemQuery->where('product_id', $productId)))
+                ->when($filters['date_from'] ?? null, fn($query, $dateFrom) => $query->whereDate('created_at', '>=', $dateFrom))
+                ->when($filters['date_to'] ?? null, fn($query, $dateTo) => $query->whereDate('created_at', '<=', $dateTo))
+                ->groupBy('from_warehouse_id')
+                ->get());
+
+            $addActivityStats(StockTransfers::query()
+                ->selectRaw('to_warehouse_id as warehouse_id, COUNT(*) as activity_count, MAX(created_at) as last_activity_at')
+                ->when($filters['warehouse_id'] ?? null, fn($query, $warehouseId) => $query->where('to_warehouse_id', $warehouseId))
+                ->when($filters['batch_id'] ?? null, fn($query, $batchId) => $query->whereHas('item', fn($itemQuery) => $itemQuery->where('batch_id', $batchId)))
+                ->when($filters['product_id'] ?? null, fn($query, $productId) => $query->whereHas('item.batch', fn($itemQuery) => $itemQuery->where('product_id', $productId)))
+                ->when($filters['date_from'] ?? null, fn($query, $dateFrom) => $query->whereDate('created_at', '>=', $dateFrom))
+                ->when($filters['date_to'] ?? null, fn($query, $dateTo) => $query->whereDate('created_at', '<=', $dateTo))
+                ->groupBy('to_warehouse_id')
+                ->get());
+        }
+
+        return $warehouses->map(function (Warehouse $warehouse) use ($batchStats, $activityStats) {
             $batchStat = $batchStats->get($warehouse->id);
-            $mutationStat = $mutationStats->get($warehouse->id);
+            $activityStat = $activityStats->get($warehouse->id, [
+                'activity_count' => 0,
+                'last_activity_at' => null,
+            ]);
 
             return [
                 'warehouse_id' => $warehouse->id,
@@ -61,8 +155,8 @@ class MonitoringRepository
                 'region_name' => $warehouse->region?->name,
                 'total_batches' => (int) ($batchStat->batch_count ?? 0),
                 'total_stock' => (int) ($batchStat->total_stock ?? 0),
-                'activity_count' => (int) ($mutationStat->activity_count ?? 0),
-                'last_activity_at' => $mutationStat->last_activity_at ?? $batchStat->last_batch_update_at ?? null,
+                'activity_count' => $activityStat['activity_count'],
+                'last_activity_at' => $activityStat['last_activity_at'] ?? $batchStat->last_batch_update_at ?? null,
             ];
         })->values();
     }
@@ -329,14 +423,9 @@ class MonitoringRepository
     private function mapRestocks(array $filters = []): Collection
     {
         return Restock::query()
-            ->with(['item.batch.product', 'warehouse', 'request', 'confirm'])
+            ->with(['item.product', 'warehouse', 'request', 'confirm'])
             ->when($filters['warehouse_id'] ?? null, function ($query, $warehouseId) {
                 $query->where('warehouse_id', $warehouseId);
-            })
-            ->when($filters['batch_id'] ?? null, function ($query, $batchId) {
-                $query->whereHas('item', function ($itemQuery) use ($batchId) {
-                    $itemQuery->where('batch_id', $batchId);
-                });
             })
             ->when($filters['date_from'] ?? null, function ($query, $dateFrom) {
                 $query->whereDate('created_at', '>=', $dateFrom);
@@ -355,12 +444,12 @@ class MonitoringRepository
                     'title' => 'Restock ' . $restock->id,
                     'warehouse_id' => $restock->warehouse_id,
                     'warehouse_name' => $restock->warehouse?->name,
-                    'batch_id' => $item?->batch_id,
-                    'batch_code' => $item?->batch?->batch_code,
-                    'product_id' => $item?->batch?->product_id,
-                    'product_name' => $item?->batch?->product?->name,
+                    'batch_id' => null,
+                    'batch_code' => null,
+                    'product_id' => $item?->product_id,
+                    'product_name' => $item?->product?->name,
                     'status' => $restock->status?->value ?? $restock->status,
-                    'quantity' => (int) $restock->item->sum('quantity'),
+                    'quantity' => (int) $restock->item->sum('requested_quantity'),
                     'before_quantity' => null,
                     'after_quantity' => null,
                     'reference_type' => 'restock',

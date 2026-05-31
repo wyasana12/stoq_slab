@@ -19,6 +19,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string|null $warehouse_id
  * @property string|null $requested_by
  * @property string|null $confirmed_by
+ * @property string|null $damage_proof_path
+ * @property string|null $damage_proof_name
+ * @property string|null $damage_proof_mime
+ * @property int|null $damage_proof_size
+ * @property \Illuminate\Support\Carbon|null $damage_proof_uploaded_at
  * @property int|null $requested_quantity
  * @property int|null $approved_quantity
  * @property string|null $notes
@@ -43,6 +48,7 @@ class StockReturns extends Model
     protected $casts = [
         'requested_quantity' => 'integer',
         'approved_quantity' => 'integer',
+        'damage_proof_uploaded_at' => 'datetime',
     ];
 
     public function receiving(): BelongsTo

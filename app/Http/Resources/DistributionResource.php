@@ -9,6 +9,18 @@ class DistributionResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $shippedProofUrl = $this->when(
+            $this->shipped_proof_path,
+            asset('storage/' . $this->shipped_proof_path)
+        );
+
+        $deliveredProofUrl = $this->when(
+            $this->delivered_proof_path,
+            asset('storage/' . $this->delivered_proof_path)
+        );
+
+        $photoUrl = $deliveredProofUrl ?? $shippedProofUrl;
+
         return [
             'id'                => $this->id,
             'distribution_code' => $this->distribution_code,
@@ -28,8 +40,22 @@ class DistributionResource extends JsonResource
             'notes'             => $this->notes,
             'status'            => $this->status,
             'items'             => StockDistributionItemResource::collection($this->whenLoaded('items')),
-            'shipped_proof_url' => $this->when($this->shipped_proof_path, asset('storage/' . $this->shipped_proof_path)),
-            'delivered_proof_url' => $this->when($this->delivered_proof_path, asset('storage/' . $this->delivered_proof_path)),
+
+            'shipped_proof_url'   => $shippedProofUrl,
+            'delivered_proof_url' => $deliveredProofUrl,
+
+            // Alias field yang dicari frontend
+            'photo'    => $photoUrl,
+            'photo_url' => $photoUrl,
+            'image'    => $photoUrl,
+            'photos'   => array_values(array_filter([
+                $shippedProofUrl ? ['url' => $shippedProofUrl, 'type' => 'shipped'] : null,
+                $deliveredProofUrl ? ['url' => $deliveredProofUrl, 'type' => 'delivered'] : null,
+            ])),
+            'images'   => array_values(array_filter([
+                $shippedProofUrl,
+                $deliveredProofUrl,
+            ])),
         ];
     }
 }
