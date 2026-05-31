@@ -23,7 +23,7 @@ class Restockitem extends Model
 
     public function restock(): BelongsTo
     {
-        return $this->belongsTo(Restock::class . 'restock_id');
+        return $this->belongsTo(Restock::class, 'restock_id');
     }
 
     public function product(): BelongsTo

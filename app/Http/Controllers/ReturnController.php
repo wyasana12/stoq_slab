@@ -47,6 +47,16 @@ class ReturnController extends Controller
     {
         try {
             $payload = $request->validated();
+            $payload['warehouse_id'] = $request->user()->warehouse_id;
+
+            if (! $payload['warehouse_id']) {
+                throw new InvalidArgumentException('User tidak memiliki gudang terkait.');
+            }
+
+            if ($request->hasFile('damage_proof')) {
+                $payload = array_merge($payload, $this->saveProof($request->file('damage_proof')));
+            }
+
             $stockReturn = $this->returnService->storeReturn($payload, $request->user()->id);
         } catch (InvalidArgumentException $exception) {
             return response()->json([
@@ -64,7 +74,13 @@ class ReturnController extends Controller
     public function update(UpdateStockReturnRequest $request, StockReturns $stockReturn): JsonResponse
     {
         try {
-            $stockReturn = $this->returnService->updateReturn($stockReturn, $request->validated());
+            $payload = $request->validated();
+
+            if ($request->hasFile('damage_proof')) {
+                $payload = array_merge($payload, $this->saveProof($request->file('damage_proof')));
+            }
+
+            $stockReturn = $this->returnService->updateReturn($stockReturn, $payload);
         } catch (InvalidArgumentException $exception) {
             return response()->json([
                 'message' => $exception->getMessage(),
@@ -73,8 +89,21 @@ class ReturnController extends Controller
 
         return response()->json([
             'message' => 'Data return berhasil diupdate.',
-            'data' => $stockReturn->fresh(),
+            'data' => new ReturnResource($stockReturn->fresh()),
         ]);
+    }
+
+    private function saveProof($file): array
+    {
+        $path = $file->store('return_proofs', 'public');
+
+        return [
+            'damage_proof_path' => $path,
+            'damage_proof_name' => $file->getClientOriginalName(),
+            'damage_proof_mime' => $file->getClientMimeType(),
+            'damage_proof_size' => $file->getSize(),
+            'damage_proof_uploaded_at' => now(),
+        ];
     }
 
     public function destroy(StockReturns $stockReturn): JsonResponse

@@ -69,7 +69,6 @@ class ReturnConfirmController extends Controller
             ReturnStatus::REQUESTED => 'Requested',
             ReturnStatus::APPROVED => 'Approved',
             ReturnStatus::REJECTED => 'Rejected',
-            ReturnStatus::RETURNING => 'Returning',
             ReturnStatus::COMPLETED => 'Completed',
             ReturnStatus::CANCELLED => 'Cancelled',
         };

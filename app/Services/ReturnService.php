@@ -4,7 +4,10 @@ namespace App\Services;
 
 use App\Enums\ReceiveStatus;
 use App\Enums\ReturnStatus;
+use App\Enums\MutationStatus;
+use App\Models\Batch;
 use App\Models\ProductReceiving;
+use App\Models\StockMutations;
 use App\Models\StockReturns;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -36,6 +39,10 @@ class ReturnService
 
         if (! $receivingItem) {
             throw new InvalidArgumentException('Produk tidak dapat diajukan return karena tidak terdaftar di receiving ini.');
+        }
+
+        if (empty($data['warehouse_id'])) {
+            throw new InvalidArgumentException('Warehouse return tidak tersedia untuk user saat ini.');
         }
 
         if ($data['reason'] === 'mismatch_po') {
@@ -82,12 +89,61 @@ class ReturnService
         }
 
         return DB::transaction(function () use ($stockReturns, $data, $newStatus, $userId) {
-            $stockReturns->update([
-                'status' => $newStatus->value,
-                'approved_quantity' => $data['approved_quantity'] ?? $stockReturns->approved_quantity,
-                'confirmed_by' => $userId,
-                'notes' => $data['notes'] ?? $stockReturns->notes,
-            ]);
+            if ($newStatus === ReturnStatus::APPROVED) {
+                $approvedQuantity = (int) $data['approved_quantity'];
+
+                $batches = Batch::query()
+                    ->where('product_id', $stockReturns->product_id)
+                    ->where('warehouse_id', $stockReturns->warehouse_id)
+                    ->where('current_quantity', '>', 0)
+                    ->orderBy('created_at')
+                    ->lockForUpdate()
+                    ->get();
+
+                $availableQuantity = $batches->sum('current_quantity');
+                if ($availableQuantity < $approvedQuantity) {
+                    throw new InvalidArgumentException('Stok tidak mencukupi untuk return ini.');
+                }
+
+                $remaining = $approvedQuantity;
+                foreach ($batches as $batch) {
+                    if ($remaining <= 0) {
+                        break;
+                    }
+
+                    $decrement = min($batch->current_quantity, $remaining);
+                    $before = $batch->current_quantity;
+                    $batch->decrement('current_quantity', $decrement);
+                    $batch->refresh();
+
+                    StockMutations::record(
+                        $batch->warehouse_id,
+                        $batch->id,
+                        $before,
+                        -$decrement,
+                        MutationStatus::RETURN_COMPLETED,
+                        'RETURN',
+                        $stockReturns->id,
+                        'Return approved ' . $stockReturns->return_code
+                    );
+
+                    $remaining -= $decrement;
+                }
+
+                $stockReturns->update([
+                    'status' => $newStatus->value,
+                    'approved_quantity' => $approvedQuantity,
+                    'confirmed_by' => $userId,
+                    'notes' => $data['notes'] ?? $stockReturns->notes,
+                ]);
+            } else {
+                $stockReturns->update([
+                    'status' => $newStatus->value,
+                    'approved_quantity' => 0,
+                    'confirmed_by' => $userId,
+                    'notes' => $data['notes'] ?? $stockReturns->notes,
+                ]);
+            }
 
             return $stockReturns->refresh();
         });

@@ -12,6 +12,7 @@ use App\Http\Controllers\SuperAdmin\MasterData\SupplierController;
 use App\Http\Controllers\SuperAdmin\MasterData\UnitController;
 use App\Http\Controllers\SuperAdmin\ProductReceivingController;
 use App\Http\Controllers\SuperAdmin\PurchaseOrderController;
+use App\Http\Controllers\DssController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -123,4 +124,8 @@ Route::prefix('/batches')->middleware('auth:sanctum')->name('batch.')->group(fun
     Route::post('/{batch}/generate', [BatchController::class, 'generate'])->middleware('permission:generate_barcode')->name('generate');
     Route::get('/{batch}/qr/preview', [BatchController::class, 'preview'])->name('qr.preview');
     Route::get('/{batch}/qr/download', [BatchController::class, 'download'])->name('qr.download');
+});
+Route::prefix('/dss')->middleware('auth:sanctum')->name('dss.')->group(function () {
+    Route::get('/analysis', [DssController::class, 'analysis'])->name('analysis');
+    Route::get('/recommendations', [DssController::class, 'recommendations'])->name('recommendations');
 });

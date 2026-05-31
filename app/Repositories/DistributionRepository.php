@@ -43,6 +43,10 @@ class DistributionRepository
                 'distribution_code' => 'DIST-' . now()->format('Ymd') . '-' . rand(1000, 9999),
                 'warehouse_id' => $data['warehouse_id'],
                 'location' => $data['location'],
+                'outlet_name' => $data['outlet_name'] ?? null,
+                'outlet_address' => $data['outlet_address'] ?? null,
+                'outlet_phone' => $data['outlet_phone'] ?? $data['outlet_contact'] ?? null,
+                'outlet_contact' => $data['outlet_contact'] ?? $data['outlet_phone'] ?? null,
                 'dispatched_at' => null,
                 'requested_by' => $requestedBy,
                 'confirmed_by' => $data['confirmed_by'] ?? null,
@@ -59,7 +63,7 @@ class DistributionRepository
                 ]);
             }
 
-            return $distribution->load('items.batch');
+            return $distribution->load('items.batch', 'warehouse', 'request', 'confirmedBy');
         });
     }
 
@@ -73,12 +77,31 @@ class DistributionRepository
                 throw new InvalidArgumentException('Distribusi hanya dapat diubah saat draft atau waiting approval.');
             }
 
+            $currentStatus = DistributionStatus::tryFrom($distribution->status);
+
+            if (isset($data['status']) && $data['status'] !== $distribution->status) {
+                $newStatus = DistributionStatus::from($data['status']);
+
+                if (! $currentStatus->canTransition($newStatus)) {
+                    throw new InvalidArgumentException(
+                        "Transisi status {$distribution->status} ke {$data['status']} tidak diizinkan."
+                    );
+                }
+
+                $distribution->status = $newStatus->value;
+            }
+
             $distribution->update([
                 'warehouse_id' => $data['warehouse_id'] ?? $distribution->warehouse_id,
                 'location' => $data['location'] ?? $distribution->location,
                 'requested_by' => $data['requested_by'] ?? $distribution->requested_by,
                 'confirmed_by' => $data['confirmed_by'] ?? $distribution->confirmed_by,
                 'notes' => $data['notes'] ?? $distribution->notes,
+                'outlet_name' => $data['outlet_name'] ?? $distribution->outlet_name,
+                'outlet_address' => $data['outlet_address'] ?? $distribution->outlet_address,
+                'outlet_phone' => $data['outlet_phone'] ?? $data['outlet_contact'] ?? $distribution->outlet_phone,
+                'outlet_contact' => $data['outlet_contact'] ?? $data['outlet_phone'] ?? $distribution->outlet_contact,
+                'status' => $distribution->status,
             ]);
 
             if (isset($data['items']) && is_array($data['items'])) {
@@ -94,7 +117,7 @@ class DistributionRepository
                 }
             }
 
-            return $distribution->refresh()->load('items.batch');
+            return $distribution->refresh()->load('items.batch', 'warehouse', 'request', 'confirmedBy');
         });
     }
 
@@ -162,7 +185,11 @@ class DistributionRepository
             $distribution->status = $newStatus->value;
             $distribution->save();
 
-            return $distribution->refresh()->load('items.batch');
+            if ($newStatus === DistributionStatus::SHIPPED) {
+                $this->applyStockMutation($distribution);
+            }
+
+            return $distribution->refresh()->load('items.batch', 'warehouse', 'request', 'confirmedBy');
         });
     }
 

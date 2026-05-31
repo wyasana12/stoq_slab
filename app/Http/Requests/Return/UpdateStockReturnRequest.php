@@ -18,6 +18,7 @@ class UpdateStockReturnRequest extends FormRequest
             'requested_quantity' => ['required', 'integer', 'min:1'],
             'reason' => ['required', Rule::in(['damaged', 'expired', 'mismatch_po'])],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'damage_proof' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:5120'],
         ];
     }
 }

@@ -10,6 +10,26 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property string $id
+ * @property string|null $distribution_code
+ * @property string|null $warehouse_id
+ * @property string|null $location
+ * @property string|null $outlet_name
+ * @property string|null $outlet_address
+ * @property string|null $outlet_phone
+ * @property string|null $outlet_contact
+ * @property string|null $requested_by
+ * @property string|null $confirmed_by
+ * @property string|null $notes
+ * @property string|null $status
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read Warehouse|null $warehouse
+ * @property-read User|null $request
+ * @property-read User|null $confirmedBy
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, StockDistributionItem> $items
+ */
 class StockDistributions extends Model
 {
     use HasFactory, HasUlids, SoftDeletes;

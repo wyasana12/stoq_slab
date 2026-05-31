@@ -9,7 +9,7 @@ return [
     'fast_moving_days_of_stock' => 14,
     'slow_moving_days_of_stock' => 60,
 
-    'recommendation' => [  // ← fix typo
+    'recommendation' => [
         'fast_moving' => 'RESTOCK_OR_TRANSFER_IN',
         'slow_moving' => 'TRANSFER_OUT',
         'normal'      => 'HOLD',

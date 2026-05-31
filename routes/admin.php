@@ -2,8 +2,7 @@
 
 use App\Http\Controllers\Admin\RestockController;
 use App\Http\Controllers\Admin\TransferController;
-use App\Http\Controllers\SuperAdmin\ProductReceivingController;
-use App\Http\Controllers\DistributionController;
+use App\Http\Controllers\Admin\DistributionController;
 use App\Http\Controllers\Admin\BatchController;
 use App\Http\Resources\StockMutationResource;
 use App\Http\Controllers\SuperAdmin\ProductReceivingController;
@@ -58,9 +57,11 @@ Route::prefix('/admin')->middleware('auth:sanctum')->name('admin.')->group(funct
         Route::delete('/{transfer}', [TransferController::class, 'destroy']);
     });
 
-    Route::get('/mutations', function () {
-        return StockMutationResource::collection(
-            StockMutations::latest()->get()
-        );
+    Route::prefix('/mutations')->name('mutations.')->group(function () {
+        Route::get('', function () {
+            return StockMutationResource::collection(
+                StockMutations::latest()->get()
+            );
+        })->name('mutations');
     });
 });
