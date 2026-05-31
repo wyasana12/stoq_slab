@@ -4,6 +4,7 @@ use App\Http\Controllers\SuperAdmin\ReturnStatusController;
 use App\Http\Controllers\SuperAdmin\RestockStatusController;
 use App\Http\Controllers\SuperAdmin\TransferStatusController;
 use App\Http\Controllers\SuperAdmin\MonitoringController;
+use App\Http\Controllers\SuperAdmin\ReportExportController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('/superadmin')->name('superadmin.')->middleware('auth:sanctum')->group(function () {
@@ -22,5 +23,9 @@ Route::prefix('/superadmin')->name('superadmin.')->middleware('auth:sanctum')->g
         Route::get('/activities', [MonitoringController::class, 'activities'])->name('activities');
         Route::get('/export/csv', [MonitoringController::class, 'exportCsv'])->name('export.csv');
         Route::get('/export/xlsx', [MonitoringController::class, 'exportXlsx'])->name('export.xlsx');
+    });
+    Route::prefix('/reports')->name('reports.')->group(function () {
+        Route::get('/preview', [ReportExportController::class, 'preview'])->name('preview');
+        Route::get('/export', [ReportExportController::class, 'export'])->name('export');
     });
 });

@@ -5,10 +5,10 @@ namespace App\Repositories;
 use App\Models\Batch;
 use App\Models\Restock;
 use App\Models\StockDistributions;
-use App\Models\StockMutations;
 use App\Models\StockReturns;
 use App\Models\StockTransfers;
 use App\Models\Warehouse;
+use App\Models\ProductReceiving;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Carbon;
 
@@ -74,18 +74,6 @@ class MonitoringRepository
             return empty($filters['activity_type']) || $filters['activity_type'] === $type;
         };
 
-        if ($hasActivityType('stock_mutation')) {
-            $addActivityStats(StockMutations::query()
-                ->selectRaw('warehouse_id, COUNT(*) as activity_count, MAX(created_at) as last_activity_at')
-                ->when($filters['warehouse_id'] ?? null, fn($query, $warehouseId) => $query->where('warehouse_id', $warehouseId))
-                ->when($filters['batch_id'] ?? null, fn($query, $batchId) => $query->where('batch_id', $batchId))
-                ->when($filters['product_id'] ?? null, fn($query, $productId) => $query->whereHas('batch', fn($q) => $q->where('product_id', $productId)))
-                ->when($filters['date_from'] ?? null, fn($query, $dateFrom) => $query->whereDate('created_at', '>=', $dateFrom))
-                ->when($filters['date_to'] ?? null, fn($query, $dateTo) => $query->whereDate('created_at', '<=', $dateTo))
-                ->groupBy('warehouse_id')
-                ->get());
-        }
-
         if ($hasActivityType('distribution')) {
             $addActivityStats(StockDistributions::query()
                 ->selectRaw('warehouse_id, COUNT(*) as activity_count, MAX(created_at) as last_activity_at')
@@ -95,6 +83,22 @@ class MonitoringRepository
                 ->when($filters['date_from'] ?? null, fn($query, $dateFrom) => $query->whereDate('created_at', '>=', $dateFrom))
                 ->when($filters['date_to'] ?? null, fn($query, $dateTo) => $query->whereDate('created_at', '<=', $dateTo))
                 ->groupBy('warehouse_id')
+                ->get());
+        }
+        if ($hasActivityType('receiving')) {
+            $addActivityStats(ProductReceiving::query()
+                ->join('purchase_orders', 'product_receivings.purchase_id', '=', 'purchase_orders.id')
+                ->selectRaw('purchase_orders.warehouse_id as warehouse_id, COUNT(*) as activity_count, MAX(product_receivings.created_at) as last_activity_at')
+                ->when($filters['warehouse_id'] ?? null, fn($query, $warehouseId) => $query->where('purchase_orders.warehouse_id', $warehouseId))
+                ->when($filters['product_id'] ?? null, fn($query, $productId) => $query->whereExists(function ($subQuery) use ($productId) {
+                    $subQuery->selectRaw('1')
+                        ->from('product_receiving_items')
+                        ->whereColumn('product_receiving_items.receiving_id', 'product_receivings.id')
+                        ->where('product_receiving_items.product_id', $productId);
+                }))
+                ->when($filters['date_from'] ?? null, fn($query, $dateFrom) => $query->whereDate('product_receivings.created_at', '>=', $dateFrom))
+                ->when($filters['date_to'] ?? null, fn($query, $dateTo) => $query->whereDate('product_receivings.created_at', '<=', $dateTo))
+                ->groupBy('purchase_orders.warehouse_id')
                 ->get());
         }
 
@@ -208,7 +212,7 @@ class MonitoringRepository
     {
         $logs = collect();
 
-        $logs = $logs->merge($this->mapStockMutations($filters));
+        $logs = $logs->merge($this->mapReceivings($filters));
         $logs = $logs->merge($this->mapDistributions($filters));
         $logs = $logs->merge($this->mapTransfers($filters));
         $logs = $logs->merge($this->mapRestocks($filters));
@@ -272,15 +276,19 @@ class MonitoringRepository
         })->all();
     }
 
-    private function mapStockMutations(array $filters = []): Collection
+    private function mapReceivings(array $filters = []): Collection
     {
-        return StockMutations::query()
-            ->with(['warehouse', 'batch.product'])
+        return ProductReceiving::query()
+            ->with(['purchase.warehouse', 'items.products', 'user'])
             ->when($filters['warehouse_id'] ?? null, function ($query, $warehouseId) {
-                $query->where('warehouse_id', $warehouseId);
+                $query->whereHas('purchase', function ($purchaseQuery) use ($warehouseId) {
+                    $purchaseQuery->where('warehouse_id', $warehouseId);
+                });
             })
-            ->when($filters['batch_id'] ?? null, function ($query, $batchId) {
-                $query->where('batch_id', $batchId);
+            ->when($filters['product_id'] ?? null, function ($query, $productId) {
+                $query->whereHas('items', function ($itemQuery) use ($productId) {
+                    $itemQuery->where('product_id', $productId);
+                });
             })
             ->when($filters['date_from'] ?? null, function ($query, $dateFrom) {
                 $query->whereDate('created_at', '>=', $dateFrom);
@@ -290,30 +298,38 @@ class MonitoringRepository
             })
             ->latest()
             ->get()
-            ->map(function (StockMutations $mutation) {
+            ->map(function (ProductReceiving $receive) {
+                $item = $receive->items->first();
+                $product = $item?->products;
+
                 return [
-                    'id' => $mutation->id,
-                    'activity_type' => 'stock_mutation',
-                    'title' => 'Stock mutation',
-                    'warehouse_id' => $mutation->warehouse_id,
-                    'warehouse_name' => $mutation->warehouse?->name,
-                    'batch_id' => $mutation->batch_id,
-                    'batch_code' => $mutation->batch?->batch_code,
-                    'product_id' => $mutation->batch?->product_id,
-                    'product_name' => $mutation->batch?->product?->name,
-                    'status' => $mutation->status,
-                    'quantity' => (int) $mutation->change_quantity,
-                    'before_quantity' => (int) $mutation->before_quantity,
-                    'after_quantity' => (int) $mutation->after_quantity,
-                    'reference_type' => $mutation->reference_type,
-                    'reference_id' => $mutation->reference_id,
-                    'notes' => $mutation->notes,
-                    'activity_at' => $mutation->created_at,
-                    'payload' => $mutation->toArray(),
+                    'id' => $receive->id,
+                    'activity_type' => 'receiving',
+                    'title' => 'Receiving ' . $receive->receiving_code,
+                    'warehouse_id' => $receive->purchase?->warehouse_id,
+                    'warehouse_name' => $receive->purchase?->warehouse?->name,
+                    'batch_id' => null,
+                    'batch_code' => null,
+                    'product_id' => $product?->id,
+                    'product_name' => $product?->name,
+                    'status' => $receive->status?->value ?? $receive->status,
+                    'quantity' => (int) $receive->items->sum('quantity_accepted'),
+                    'before_quantity' => null,
+                    'after_quantity' => null,
+                    'reference_type' => 'receive',
+                    'reference_id' => $receive->id,
+                    'notes' => null,
+                    'activity_at' => $receive->receiving_date ?? $receive->created_at,
+                    'payload' => [
+                        'receiving_code' => $receive->receiving_code,
+                        'purchase_order_code' => $receive->purchase?->po_code,
+                        'received_by' => $receive->user?->name,
+                        'items_count' => $receive->items->count(),
+                    ],
                 ];
             });
     }
-
+   
     private function mapDistributions(array $filters = []): Collection
     {
         return StockDistributions::query()
@@ -368,7 +384,7 @@ class MonitoringRepository
     private function mapTransfers(array $filters = []): Collection
     {
         return StockTransfers::query()
-            ->with(['item.batch.product', 'fromWarehouse', 'toWarehouse', 'request', 'confirm'])
+            ->with(['batch.product', 'products', 'fromWarehouse', 'toWarehouse', 'request', 'confirm'])
             ->when($filters['warehouse_id'] ?? null, function ($query, $warehouseId) {
                 $query->where(function ($warehouseQuery) use ($warehouseId) {
                     $warehouseQuery->where('from_warehouse_id', $warehouseId)
@@ -376,8 +392,16 @@ class MonitoringRepository
                 });
             })
             ->when($filters['batch_id'] ?? null, function ($query, $batchId) {
-                $query->whereHas('item', function ($itemQuery) use ($batchId) {
+                $query->whereHas('batch', function ($itemQuery) use ($batchId) {
                     $itemQuery->where('batch_id', $batchId);
+                });
+            })
+            ->when($filters['product_id'] ?? null, function ($query, $productId) {
+                $query->where(function ($productQuery) use ($productId) {
+                    $productQuery->where('product_id', $productId)
+                        ->orWhereHas('batch', function ($itemQuery) use ($productId) {
+                            $itemQuery->where('product_id', $productId);
+                        });
                 });
             })
             ->when($filters['date_from'] ?? null, function ($query, $dateFrom) {
@@ -389,32 +413,38 @@ class MonitoringRepository
             ->latest()
             ->get()
             ->map(function (StockTransfers $transfer) {
-                $item = $transfer->item->first();
+                $batch = $transfer->batch->first();
+                $product = $transfer->products;
+
+                $quantity = (int) $transfer->approved_quantity;
+                if ($batch?->pivot?->quantity !== null) {
+                    $quantity = (int) $batch->pivot->quantity;
+                }
 
                 return [
                     'id' => $transfer->id,
                     'activity_type' => 'transfer',
-                    'title' => 'Transfer ' . $transfer->id,
+                    'title' => 'Transfer ' . $transfer->transfer_code,
                     'warehouse_id' => $transfer->from_warehouse_id,
                     'warehouse_name' => $transfer->fromWarehouse?->name,
-                    'batch_id' => $item?->batch_id,
-                    'batch_code' => $item?->batch?->batch_code,
-                    'product_id' => $item?->batch?->product_id,
-                    'product_name' => $item?->batch?->product?->name,
+                    'batch_id' => $batch?->id,
+                    'batch_code' => $batch?->batch_code,
+                    'product_id' => $product?->id ?? $batch?->product_id,
+                    'product_name' => $product?->name ?? $batch?->product?->name,
                     'status' => $transfer->status,
-                    'quantity' => (int) $transfer->item->sum('quantity'),
+                    'quantity' => $quantity,
                     'before_quantity' => null,
                     'after_quantity' => null,
                     'reference_type' => 'transfer',
                     'reference_id' => $transfer->id,
-                    'notes' => null,
+                    'notes' => $transfer->notes,
                     'activity_at' => $transfer->created_at,
                     'payload' => [
                         'from_warehouse' => $transfer->fromWarehouse?->name,
                         'to_warehouse' => $transfer->toWarehouse?->name,
                         'requested_by' => $transfer->requested_by,
                         'confirmed_by' => $transfer->confirmed_by,
-                        'items_count' => $transfer->item->count(),
+                        'items_count' => $transfer->batch->count(),
                     ],
                 ];
             });
