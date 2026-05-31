@@ -39,6 +39,7 @@ class RestockStatusController extends Controller
         $restock = $this->repository->update($restock, [
             'status' => $newStatus->value,
             'confirmed_by' => $userId,
+            'products' => $request->getProducts(),
         ]);
 
         return response()->json([

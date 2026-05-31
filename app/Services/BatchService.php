@@ -16,16 +16,16 @@ class BatchService
      * Create a new class instance.
      */
 
-    protected $batchRepository;
+    protected BatchRepository $batchRepository;
 
     public function __construct(BatchRepository $batchRepository)
     {
         $this->batchRepository = $batchRepository;
     }
 
-    public function getAllBatches(int $batchPage = 10)
+    public function getAllBatches(int $batchPage = 10, array $filters)
     {
-        return $this->batchRepository->getAllPaginated($batchPage);
+        return $this->batchRepository->getAllPaginated($batchPage, $filters);
     }
 
     public function getBatchDetail(Batch $batch): Batch
@@ -35,7 +35,7 @@ class BatchService
 
     public function generateBarcode(Batch $batch): Batch
     {
-        $data = url('/api/batches/'.$batch->batch_code);
+        $data = $batch->batch_code;
 
         $renderer = new ImageRenderer(
             new RendererStyle(200),
@@ -46,10 +46,15 @@ class BatchService
 
         $svg = $writer->writeString($data);
 
-        $path = "qrcodes/batch-{$batch->po_code}.svg";
+        $path = "qrcodes/batch-{$batch->batch_code}.svg";
 
         Storage::disk('public')->put($path, $svg);
 
         return $this->batchRepository->updateBarcode($batch, $path);
+    }
+
+    public function getSelectedForPrint(array $batchIds)
+    {
+        return $this->batchRepository->getSelectedForPrint($batchIds);    
     }
 }

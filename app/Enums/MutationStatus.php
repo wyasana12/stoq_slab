@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum MutationStatus:string
+enum MutationStatus: string
 {
     case DISTRIBUTION_COMPLETED = 'DISTRIBUTION_COMPLETED';
     case DISTRIBUTION_CANCELED = 'DISTRIBUTION_CANCELED';

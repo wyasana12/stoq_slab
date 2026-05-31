@@ -17,6 +17,9 @@ class UpdateRestockStatusRequest extends FormRequest
     {
         return [
             'status' => ['required', new Enum(RestockStatus::class)],
+            'products' => ['sometimes', 'array', 'min:1'],
+            'products.*.id' => ['required_with:products', 'exists:products,id'],
+            'products.*.approved_quantity' => ['required_with:products', 'integer', 'min:0'],
         ];
     }
 
@@ -35,6 +38,22 @@ class UpdateRestockStatusRequest extends FormRequest
      */
     public function getStatus(): RestockStatus
     {
-        return RestockStatus::from($this->validated('status'));
+        $validated = $this->validated();
+
+        return RestockStatus::from($validated['status'] ?? '');
+    }
+
+    /**
+     * Get validated product approval data for restock confirmation.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getProducts(): array
+    {
+        $validated = $this->validated();
+
+        return isset($validated['products']) && is_array($validated['products'])
+            ? $validated['products']
+            : [];
     }
 }

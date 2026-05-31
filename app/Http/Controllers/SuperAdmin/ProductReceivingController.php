@@ -17,7 +17,7 @@ use InvalidArgumentException;
 
 class ProductReceivingController extends Controller
 {
-    protected $productReceivingService;
+    protected ProductReceivingService $productReceivingService;
 
     public function __construct(ProductReceivingService $productReceivingService)
     {

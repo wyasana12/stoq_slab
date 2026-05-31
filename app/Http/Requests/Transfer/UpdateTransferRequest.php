@@ -18,6 +18,7 @@ class UpdateTransferRequest extends FormRequest
     {
         $items = $this->input('items');
         $fromWarehouseId = $this->user()?->warehouse_id;
+        $transferType = $this->input('transfer_type');
 
         if (empty($items) && $this->filled('products')) {
             $items = collect($this->input('products', []))
@@ -34,6 +35,7 @@ class UpdateTransferRequest extends FormRequest
 
         $this->merge([
             'from_warehouse_id' => $fromWarehouseId,
+            'transfer_type' => $transferType,
             'notes' => $this->input('notes'),
             'items' => $items,
         ]);
@@ -64,6 +66,7 @@ class UpdateTransferRequest extends FormRequest
         return [
             'from_warehouse_id' => ['sometimes', 'exists:warehouses,id'],
             'to_warehouse_id' => ['sometimes', 'exists:warehouses,id'],
+            'transfer_type' => ['sometimes', 'in:send,request'],
             'confirmed_by' => ['sometimes', 'nullable', 'exists:users,id'],
             'status' => ['sometimes', 'nullable', new Enum(TransferStatus::class)],
             'notes' => ['sometimes', 'nullable', 'string'],

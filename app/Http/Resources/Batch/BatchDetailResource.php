@@ -28,13 +28,9 @@ class BatchDetailResource extends JsonResource
                 'production_date' => $this->production_date?->format('l, d F Y') ?? 'N/A',
                 'expired_date' => $this->expired_date?->format('l, d F Y') ?? 'N/A',
             ],
-            'warehouse' => [
-                'id' => $this->warehouse?->id ?? 'N/A',
-                'name' => $this->warehouse?->name ?? 'N/A',
-            ],
             'supplier' => [
-                'id' => $this->receive?->purchase?->supplier?->id ?? 'N/A',
-                'name' => $this->receive?->purchase?->supplier?->name ?? 'N/A'
+                'id' => $this->receive?->purchase?->supplier->id ?? 'N/A',
+                'name' => $this->receive?->purchase?->supplier->name ?? 'N/A'
             ],
             'barcode' => $this->barcode ? asset('storage/' . $this->barcode) : 'N/A',
         ];
