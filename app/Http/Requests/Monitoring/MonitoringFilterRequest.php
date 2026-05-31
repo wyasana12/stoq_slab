@@ -23,7 +23,7 @@ class MonitoringFilterRequest extends FormRequest
             'search' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'string', 'max:100'],
             'activity_type' => ['nullable', 'string', Rule::in([
-                'stock_mutation',
+                'receiving',
                 'distribution',
                 'transfer',
                 'restock',
