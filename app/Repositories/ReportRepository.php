@@ -51,14 +51,11 @@ class ReportRepository
         ],
         'stock_movement' => [
             'movement_date',
+            'warehouse_name',
             'movement_type',
-            'product_code',
             'product_name',
-            'from_warehouse',
-            'tujuan',
             'qty',
             'satuan',
-            'status',
         ],
         'stock_minimum' => [
             'product_code',
@@ -138,54 +135,43 @@ class ReportRepository
             ->get()
             ->map(fn(ProductReceivingItem $item) => [
                 'movement_date' => $item->receiving?->created_at,
+                'warehouse_name' => $item->receiving?->purchase?->warehouse?->name,
                 'movement_type' => 'receiving',
-                'product_code' => $item->products?->sku,
                 'product_name' => $item->products?->name,
-                'tujuan' => $item->receiving?->purchase?->warehouse?->name,
                 'qty' => (int) $item->quantity_accepted,
-                'current_quantity' => (int) $item->quantity_accepted,
                 'satuan' => $item->products?->unit?->symbol,
-                'status' => $item->receiving?->status?->value ?? $item->receiving?->status,
             ]);
 
         $distributionRows = StockDistributionItem::query()
-            ->with(['batch.product.unit', 'distribution'])
+            ->with(['batch.product.unit', 'distribution.warehouse'])
             ->when($filters['product_id'] ?? null, fn($q, $productId) => $q->whereHas('batch', fn($bq) => $bq->where('product_id', $productId)))
             ->when($filters['date_from'] ?? null, fn($q, $dateFrom) => $q->whereHas('distribution', fn($dq) => $dq->whereDate('created_at', '>=', $dateFrom)))
             ->when($filters['date_to'] ?? null, fn($q, $dateTo) => $q->whereHas('distribution', fn($dq) => $dq->whereDate('created_at', '<=', $dateTo)))
             ->get()
             ->map(fn(StockDistributionItem $item) => [
                 'movement_date' => $item->distribution?->created_at,
-                'movement_type' => 'distribution',
-                'product_code' => $item->batch?->product?->sku,
-                'product_name' => $item->batch?->product?->name,
                 'warehouse_name' => $item->distribution?->warehouse?->name,
-                'tujuan' => $item->distribution?->outlet_name
-                    ? trim($item->distribution?->outlet_name . ' - ' . $item->distribution?->outlet_address)
-                    : $item->distribution?->warehouse?->name,
+                'movement_type' => 'distribution',
+                'product_name' => $item->batch?->product?->name,
                 'qty' => (int) $item->approved_quantity,
-                'current_quantity' => (int) $item->approved_quantity,
                 'satuan' => $item->batch?->product?->unit?->symbol,
-                'status' => $item->distribution?->status?->value ?? $item->distribution?->status,
             ]);
+
         $transferRows = StockTransfers::query()
-            ->with(['batch.product.unit', 'toWarehouse'])
+            ->with(['batch.product.unit', 'fromWarehouse'])
             ->when($filters['product_id'] ?? null, fn($q, $productId) => $q->whereHas('batch', fn($bq) => $bq->where('product_id', $productId)))
             ->when($filters['date_from'] ?? null, fn($q, $dateFrom) => $q->whereDate('created_at', '>=', $dateFrom))
             ->when($filters['date_to'] ?? null, fn($q, $dateTo) => $q->whereDate('created_at', '<=', $dateTo))
             ->get()
             ->map(fn(StockTransfers $transfer) => [
                 'movement_date' => $transfer->created_at,
+                'warehouse_name' => $transfer->fromWarehouse?->name,
                 'movement_type' => 'transfer',
-                'product_code' => $transfer->products?->sku,
                 'product_name' => $transfer->products?->name,
-                'from_warehouse' => $transfer->fromWarehouse?->name,
-                'tujuan' => $transfer->toWarehouse?->name,
-                'qty' => 0, // jika qty berasal dari item, map lagi sesuai struktur item transfer
-                'current_quantity' => 0,
-                'satuan' => null,
-                'status' => $transfer->status?->value ?? $transfer->status,
+                'qty' => 0,
+                'satuan' => $transfer->product?->unit?->symbol,
             ]);
+
         $restockRows = RestockItem::query()
             ->with(['product.unit', 'restock.warehouse'])
             ->when($filters['product_id'] ?? null, fn($q, $productId) => $q->where('product_id', $productId))
@@ -194,15 +180,13 @@ class ReportRepository
             ->get()
             ->map(fn(RestockItem $item) => [
                 'movement_date' => $item->restock?->created_at,
+                'warehouse_name' => $item->restock?->warehouse?->name,
                 'movement_type' => 'restock',
-                'product_code' => $item->product?->sku,
                 'product_name' => $item->product?->name,
-                'tujuan' => $item->restock?->warehouse?->name,
                 'qty' => (int) $item->requested_quantity,
-                'current_quantity' => (int) $item->requested_quantity,
                 'satuan' => $item->product?->unit?->symbol,
-                'status' => $item->restock?->status?->value ?? $item->restock?->status,
             ]);
+
         $returnRows = StockReturns::query()
             ->with(['product.unit', 'warehouse'])
             ->when($filters['product_id'] ?? null, fn($q, $productId) => $q->where('product_id', $productId))
@@ -211,15 +195,11 @@ class ReportRepository
             ->get()
             ->map(fn(StockReturns $item) => [
                 'movement_date' => $item->created_at,
+                'warehouse_name' => $item->warehouse?->name,
                 'movement_type' => 'return',
-                'product_code' => $item->product?->sku,
                 'product_name' => $item->product?->name,
-                'from_warehouse' => $item->warehouse?->name,
-                'tujuan' => $item->warehouse?->name,
                 'qty' => (int) $item->approved_quantity,
-                'current_quantity' => (int) $item->approved_quantity,
                 'satuan' => $item->product?->unit?->symbol,
-                'status' => $item->status?->value ?? $item->status,
             ]);
 
         return $receivingRows
@@ -228,7 +208,7 @@ class ReportRepository
             ->merge($restockRows)
             ->merge($returnRows)
             ->sortByDesc('movement_date')
-            ->values();
+            ->values();;
     }
     protected function getStockMinimum(array $filters): Collection
     {

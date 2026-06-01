@@ -33,6 +33,8 @@ class ReportPreviewRequest extends FormRequest
             'production_date',
             'expired_date',
             'price',
+            'movement_date',
+            'movement_type',
         ];
 
         return [

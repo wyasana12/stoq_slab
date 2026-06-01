@@ -64,7 +64,7 @@ class TransferSeeder extends Seeder
                             'reference_type' => 'TRANSFER',
                             'reference_id' => $transferOut->id,
                             'notes' => 'Seeder: send to ' . $toWarehouse->name,
-                            'status' => 'SUCCESS',
+                            'status' => 'COMPLETED',
                         ]);
 
                         // destination batch: try to find similar batch, otherwise create
