@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\DistributionController;
 use App\Http\Controllers\Admin\BatchController;
 use App\Http\Resources\StockMutationResource;
 use App\Http\Controllers\SuperAdmin\ProductReceivingController;
+use App\Http\Controllers\SuperAdmin\MonitoringController;
 use App\Models\StockMutations;
 use Illuminate\Support\Facades\Route;
 
@@ -49,12 +50,14 @@ Route::prefix('/admin')->middleware('auth:sanctum')->name('admin.')->group(funct
         Route::delete('/{transfer}', [TransferController::class, 'destroy']);
     });
 
-    Route::prefix('/transfers')->group(function () {
-        Route::get('', [TransferController::class, 'index']);
-        Route::post('', [TransferController::class, 'store']);
-        Route::get('/{transfer}', [TransferController::class, 'show']);
-        Route::put('/{transfer}', [TransferController::class, 'update']);
-        Route::delete('/{transfer}', [TransferController::class, 'destroy']);
+    Route::prefix('/monitoring')->name('monitoring.')->group(function () {
+        Route::get('/summary', [MonitoringController::class, 'summary'])->name('summary');
+        Route::get('/batches', [MonitoringController::class, 'batches'])->name('batches');
+        Route::get('/activities', [MonitoringController::class, 'activities'])->name('activities');
+        Route::get('/dashboard', [MonitoringController::class, 'dashboard'])->name('dashboard');
+        Route::get('/alerts', [MonitoringController::class, 'alerts'])->name('alerts');
+        Route::get('/export/csv', [MonitoringController::class, 'exportCsv'])->name('export.csv');
+        Route::get('/export/xlsx', [MonitoringController::class, 'exportXlsx'])->name('export.xlsx');
     });
 
     Route::prefix('/mutations')->name('mutations.')->group(function () {

@@ -117,8 +117,45 @@ class MonitoringController extends Controller
         return Excel::download(new MonitoringExport($rows), $filename);
     }
 
+    // Monitoring Admin Rajwa
+
+    public function dashboard(MonitoringFilterRequest $request): JsonResponse
+    {
+        $filters = $this->filters($request);
+        $dashboard = $this->repository->getDashboardSummary($filters);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Dashboard summary retrieved successfully.',
+            'data' => $dashboard,
+        ]);
+    }
+
+    public function alerts(MonitoringFilterRequest $request): JsonResponse
+    {
+        $filters = $this->filters($request);
+        $alerts = $this->repository->getLowStockAlerts($filters);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Low stock alerts retrieved successfully.',
+            'meta' => [
+                'count' => $alerts->count(),
+            ],
+            'data' => $alerts,
+        ]);
+    }
+
     private function filters(MonitoringFilterRequest $request): array
     {
-        return $request->validated();
+        $filters = $request->validated();
+
+        // Auto-filter to assigned warehouse for admin users
+        $userWarehouseId = auth()->user()?->warehouse_id;
+        if ($userWarehouseId) {
+            $filters['warehouse_id'] = $userWarehouseId;
+        }
+
+        return $filters;
     }
 }
