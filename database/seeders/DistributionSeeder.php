@@ -42,7 +42,7 @@ class DistributionSeeder extends Seeder
                 'requested_by' => $users->id,
                 'confirmed_by' => $users->id,
                 'notes' => null,
-                'status' => 'completed',
+                'status' => 'COMPLETED',
             ]);
 
             DB::table('stock_distribution_items')->insert([
