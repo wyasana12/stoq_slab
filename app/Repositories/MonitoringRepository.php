@@ -11,6 +11,7 @@ use App\Models\Warehouse;
 use App\Models\ProductReceiving;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Carbon;
+use stdClass;
 
 class MonitoringRepository
 {
@@ -539,5 +540,161 @@ class MonitoringRepository
                     ],
                 ];
             });
+    }
+
+    // Monitoring Admin Rajwa
+
+    /**
+     * Get dashboard summary with stock status breakdown
+     */
+    public function getDashboardSummary(array $filters = []): array
+    {
+        $userWarehouseId = $filters['warehouse_id'] ?? null;
+
+        // Get all batches for warehouse
+        $batches = Batch::query()
+            ->with('product')
+            ->when($userWarehouseId, fn($q) => $q->where('warehouse_id', $userWarehouseId))
+            ->get();
+
+        // Categorize by stock status
+        $normal = 0;
+        $rendah = 0;
+        $kritis = 0;
+        $overstock = 0;
+        $alerts = [];
+
+        foreach ($batches as $batch) {
+            $status = $this->getStockStatus($batch);
+
+            match ($status) {
+                'normal' => $normal++,
+                'rendah' => $rendah++,
+                'kritis' => $kritis++,
+                'overstock' => $overstock++,
+            };
+
+            // Collect alerts
+            if (in_array($status, ['rendah', 'kritis'])) {
+                $alerts[] = [
+                    'batch_id' => $batch->id,
+                    'batch_code' => $batch->batch_code,
+                    'product_id' => $batch->product_id,
+                    'product_name' => $batch->product?->name,
+                    'current_quantity' => (int) $batch->current_quantity,
+                    'status' => $status,
+                    'expired_date' => $batch->expired_date,
+                    'expired_in_days' => $batch->expired_date ? $batch->expired_date->diffInDays(now()) : null,
+                    'warehouse_id' => $batch->warehouse_id,
+                ];
+            }
+        }
+
+        return [
+            'total_sku' => $batches->count(),
+            'stock_status' => [
+                'normal' => $normal,
+                'rendah' => $rendah,
+                'kritis' => $kritis,
+                'overstock' => $overstock,
+            ],
+            'alerts' => collect($alerts)
+                ->sortBy(fn($a) => $a['status'] === 'kritis' ? 0 : 1)
+                ->values()
+                ->take(10)
+                ->all(),
+        ];
+    }
+
+    /**
+     * Get low stock alerts
+     */
+    public function getLowStockAlerts(array $filters = []): Collection
+    {
+        $userWarehouseId = $filters['warehouse_id'] ?? null;
+
+        $batches = Batch::query()
+            ->with(['product', 'warehouse'])
+            ->when($userWarehouseId, fn($q) => $q->where('warehouse_id', $userWarehouseId))
+            ->get();
+
+        return collect($batches)
+            ->filter(fn($batch) => in_array($this->getStockStatus($batch), ['rendah', 'kritis']))
+            ->map(function (Batch $batch) {
+                $status = $this->getStockStatus($batch);
+                $expiredInDays = $batch->expired_date ? $batch->expired_date->diffInDays(now()) : null;
+
+                return [
+                    'id' => $batch->id,
+                    'batch_code' => $batch->batch_code,
+                    'sku' => $batch->product?->sku,
+                    'product_name' => $batch->product?->name,
+                    'current_quantity' => (int) $batch->current_quantity,
+                    'warehouse_name' => $batch->warehouse?->name,
+                    'location' => 'TBD', // TODO: add rack_location to Batch
+                    'status' => $status,
+                    'status_label' => match ($status) {
+                        'kritis' => 'Kritis',
+                        'rendah' => 'Rendah',
+                        'akan_expired' => 'Akan Expired',
+                        default => 'Normal',
+                    },
+                    'expired_date' => $batch->expired_date,
+                    'expired_in_days' => $expiredInDays,
+                    'message' => $this->getAlertMessage($batch, $status, $expiredInDays),
+                ];
+            })
+            ->sortByDesc(fn($a) => $a['status'] === 'kritis' ? 1 : 0)
+            ->values();
+    }
+
+    /**
+     * Determine stock status based on quantity and expiry
+     */
+    private function getStockStatus(Batch $batch): string
+    {
+        // Check if expired or will expire soon
+        if ($batch->expired_date) {
+            $daysUntilExpiry = $batch->expired_date->diffInDays(now());
+            if ($daysUntilExpiry <= 0) {
+                return 'kritis';
+            }
+            if ($daysUntilExpiry <= 7) {
+                return 'rendah';
+            }
+        }
+
+        // Check quantity thresholds
+        $quantity = (int) $batch->current_quantity;
+
+        if ($quantity <= 0) {
+            return 'kritis';
+        }
+
+        if ($quantity <= 50) {
+            return 'rendah';
+        }
+
+        if ($quantity > 500) {
+            return 'overstock';
+        }
+
+        return 'normal';
+    }
+
+    /**
+     * Generate alert message
+     */
+    private function getAlertMessage(Batch $batch, string $status, ?int $expiredInDays): string
+    {
+        return match ($status) {
+            'kritis' => $expiredInDays !== null && $expiredInDays <= 0
+                ? 'Produk sudah expired! Segera keluarkan dari gudang.'
+                : 'Stok sangat rendah! Segera lakukan restok.',
+            'rendah' => $expiredInDays !== null && $expiredInDays <= 7
+                ? "Akan expired dalam {$expiredInDays} hari."
+                : 'Stok mendekati batas minimum.',
+            default => 'Status normal',
+        };
     }
 }

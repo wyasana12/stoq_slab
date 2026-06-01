@@ -21,6 +21,8 @@ Route::prefix('/superadmin')->name('superadmin.')->middleware('auth:sanctum')->g
         Route::get('/summary', [MonitoringController::class, 'summary'])->name('summary');
         Route::get('/batches', [MonitoringController::class, 'batches'])->name('batches');
         Route::get('/activities', [MonitoringController::class, 'activities'])->name('activities');
+        Route::get('/dashboard', [MonitoringController::class, 'dashboard'])->name('dashboard');
+        Route::get('/alerts', [MonitoringController::class, 'alerts'])->name('alerts');
         Route::get('/export/csv', [MonitoringController::class, 'exportCsv'])->name('export.csv');
         Route::get('/export/xlsx', [MonitoringController::class, 'exportXlsx'])->name('export.xlsx');
     });
