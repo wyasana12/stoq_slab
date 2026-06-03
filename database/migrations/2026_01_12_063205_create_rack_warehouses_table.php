@@ -15,7 +15,6 @@ return new class extends Migration
             $table->ulid('id')->primary();
             $table->string('rack_code')->unique();
             $table->foreignUlid('warehouse_id')->constrained('warehouses')->onDelete('cascade');
-            $table->string('capacity')->nullable();
             $table->enum('status', ['AVAILABLE', 'FULL', 'INACTIVE', 'MAINTENANCE'])->nullable();
             $table->timestamps();
         });

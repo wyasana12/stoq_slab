@@ -60,6 +60,13 @@ class Roleseeder extends Seeder
             'menu_confirm_transfer',
             'menu_confirm_purchase',
             'menu_confirm_receive',
+            'menu_store',
+
+            // Store
+            'view_store',
+            'create_store',
+            'edit_store',
+            'delete_store',
 
             // Permissions
             'view_permission',

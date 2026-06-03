@@ -8,13 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-/**
- * @property string $id
- * @property string $name
- * @property string|null $region_id
- * @property-read Region|null $region
- */
-class Warehouse extends Model
+class RackWarehouse extends Model
 {
     use HasFactory, HasUlids;
 
@@ -26,13 +20,13 @@ class Warehouse extends Model
 
     protected $keyType = 'string';
 
-    public function region(): BelongsTo
+    public function warehouse(): BelongsTo
     {
-        return $this->belongsTo(Region::class, 'region_id');
+        return $this->belongsTo(Warehouse::class, 'warehouse_id');    
     }
 
-    public function store(): HasMany
+    public function locations(): HasMany
     {
-        return $this->hasMany(Store::class, 'warehouse_id');
+        return $this->hasMany(RackLocation::class, 'rack_id');    
     }
 }

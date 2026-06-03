@@ -16,7 +16,7 @@ class PurchaseOrderService
      * Create a new class instance.
      */
 
-    protected $purchaseOrderRepository;
+    protected PurchaseOrderRepository $purchaseOrderRepository;
 
     public function __construct(PurchaseOrderRepository $purchaseOrderRepository)
     {
