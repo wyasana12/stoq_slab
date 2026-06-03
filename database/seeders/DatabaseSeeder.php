@@ -15,6 +15,8 @@ class DatabaseSeeder extends Seeder
             Roleseeder::class,
             RegionImportSeeder::class,
             WarehouseSeeder::class,
+            StoreSeeder::class,
+            RackSeeder::class,
             UserSeeder::class,
             CategorySeeder::class,
             UnitSeeder::class,

@@ -16,7 +16,7 @@ use InvalidArgumentException;
 
 class PurchaseOrderController extends Controller
 {
-    protected $purchaseOrderService;
+    protected PurchaseOrderService $purchaseOrderService;
 
     public function __construct(PurchaseOrderService $purchaseOrderService)
     {

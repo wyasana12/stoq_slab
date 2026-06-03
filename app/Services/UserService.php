@@ -13,7 +13,7 @@ class UserService
      * Create a new class instance.
      */
 
-    protected $userRepository;
+    protected UserRepository $userRepository;
 
     public function __construct(UserRepository $userRepository)
     {
