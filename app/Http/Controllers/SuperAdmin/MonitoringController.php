@@ -13,7 +13,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
-
+use Illuminate\Support\Facades\Auth;
 class MonitoringController extends Controller
 {
     protected MonitoringRepository $repository;
@@ -122,15 +122,24 @@ class MonitoringController extends Controller
     public function dashboard(MonitoringFilterRequest $request): JsonResponse
     {
         $filters = $this->filters($request);
-        $dashboard = $this->repository->getDashboardSummary($filters);
+
+        $dashboardSummary = $this->repository->getDashboardSummary($filters);
+        $chartData = $this->repository->getChartData($filters);
+
+        // Kita bongkar dulu isinya jika getDashboardSummary mengembalikan array langsung
+        $stockStatus = $dashboardSummary['stock_status'] ?? $dashboardSummary;
 
         return response()->json([
             'success' => true,
-            'message' => 'Dashboard summary retrieved successfully.',
-            'data' => $dashboard,
+            'message' => 'Dashboard summary and chart data retrieved successfully.',
+            'data' => [
+                // Langsung pasang 'stock_status' di tingkat atas agar dibaca 'props.dashboardSummary.stock_status' di Vue
+                'stock_status' => $stockStatus,
+                'activities'   => $chartData['activities'] ?? [],
+                'warehouses'   => $chartData['warehouses'] ?? [],
+            ],
         ]);
     }
-
     public function alerts(MonitoringFilterRequest $request): JsonResponse
     {
         $filters = $this->filters($request);
@@ -151,7 +160,7 @@ class MonitoringController extends Controller
         $filters = $request->validated();
 
         // Auto-filter to assigned warehouse for admin users
-        $userWarehouseId = auth()->user()?->warehouse_id;
+        $userWarehouseId = Auth::user()?->warehouse_id;
         if ($userWarehouseId) {
             $filters['warehouse_id'] = $userWarehouseId;
         }
