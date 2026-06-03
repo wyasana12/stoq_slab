@@ -196,21 +196,21 @@ class TransferRepository
             ->first();
 
         if (! $destinationBatch) {
+            $destinationBefore = 0;
             $destinationBatch = Batch::create([
                 'batch_code' => 'BTCH-' . now()->format('Ymd') . '-' . rand(1000, 9999),
                 'product_id' => $transfer->product_id,
                 'warehouse_id' => $transfer->to_warehouse_id,
-                'batch_id' => $destinationBatch->id,
-                'change_quantity' => $quantity,
-                'before_quantity' => $destinationBefore,
-                'after_quantity' => $destinationBatch->current_quantity,
-                'reference_type' => 'TRANSFER',
-                'reference_id' => $transfer->id,
-                'notes' => 'Terima transfer dari ' . $transfer->fromWarehouse->name,
-                'status' => MutationStatus::TRANSFER_COMPLETED->value,
+                'receiving_id' => $sourceBatch->receiving_id,
+                'production_date' => $sourceBatch->production_date,
+                'expired_date' => $sourceBatch->expired_date,
+                'initial_quantity' => $quantity,
+                'current_quantity' => $quantity,
+                'price' => $sourceBatch->price,
+                'rack_location' => $sourceBatch->rack_location,
+                'condition' => $sourceBatch->condition,
+                'barcode' => $sourceBatch->barcode,
             ]);
-
-            $destinationBefore = 0;
         } else {
             $destinationBefore = $destinationBatch->current_quantity;
             $destinationBatch->increment('current_quantity', $quantity);
