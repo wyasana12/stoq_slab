@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\SuperAdmin\MasterData;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreAndUpdateStoreRequest;
 use App\Http\Resources\StoreDetailResource;
 use App\Http\Resources\StoreListResource;

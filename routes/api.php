@@ -13,7 +13,7 @@ use App\Http\Controllers\SuperAdmin\MasterData\UnitController;
 use App\Http\Controllers\SuperAdmin\ProductReceivingController;
 use App\Http\Controllers\SuperAdmin\PurchaseOrderController;
 use App\Http\Controllers\DssController;
-use App\Http\Controllers\StoreController;
+use App\Http\Controllers\SuperAdmin\MasterData\StoreController;
 use App\Http\Controllers\SuperAdmin\MasterData\RackController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
