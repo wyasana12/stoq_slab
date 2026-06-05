@@ -43,6 +43,59 @@ class ReturnController extends Controller
         ]);
     }
 
+    public function scanBarcode(Request $request): JsonResponse
+    {
+        $barcode = $request->query('barcode');
+
+        if (!$barcode) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Barcode wajib diisi.',
+            ], 400);
+        }
+
+        $batch = \App\Models\Batch::with(['receive', 'product', 'warehouse'])
+            ->where('batch_code', $barcode)
+            ->first();
+
+        if (!$batch) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Barcode tidak ditemukan.',
+            ], 404);
+        }
+
+        if (!$batch->receive) {
+             return response()->json([
+                'success' => false,
+                'message' => 'Data penerimaan untuk produk ini tidak ditemukan.',
+            ], 404);
+        }
+
+        $receivingDate = $batch->receive->receiving_date
+            ? \Carbon\Carbon::parse($batch->receive->receiving_date)
+            : $batch->receive->created_at;
+
+        if (now()->diffInDays($receivingDate) > 3) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Batas waktu return sudah lewat.',
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'batch_id' => $batch->id,
+                'receiving_id' => $batch->receiving_id,
+                'product_id' => $batch->product_id,
+                'product_name' => $batch->product->name ?? null,
+                'current_quantity' => $batch->current_quantity,
+                'receiving_date' => $receivingDate->toIso8601String(),
+            ]
+        ]);
+    }
+
     public function store(StoreStockReturnRequest $request): JsonResponse
     {
         try {
