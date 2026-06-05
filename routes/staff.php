@@ -26,6 +26,7 @@ Route::prefix('/staff')->middleware('auth:sanctum')->name('staff.')->group(funct
         ->name('expired.action');
 
     Route::prefix('/returns')->name('return.')->group(function () {
+        Route::get('/scan-barcode', [ReturnController::class, 'scanBarcode'])->name('scan-barcode');
         Route::get('/', [ReturnController::class, 'index'])->name('index');
         Route::post('/', [ReturnController::class, 'store'])->name('store');
         Route::get('/{stockReturn}', [ReturnController::class, 'show'])->name('show');

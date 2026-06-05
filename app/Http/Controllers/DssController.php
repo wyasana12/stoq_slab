@@ -21,19 +21,32 @@ class DssController extends Controller
     }
 
     /**
-     * GET /api/dss/analysis?days=30
-     * Tampilkan hasil analisis velocity semua batch.
+     * GET /api/dss/analysis?days=30&warehouse_id=xxx
+     * Tampilkan hasil analisis velocity semua batch, bisa difilter per gudang.
      */
     public function analysis(Request $request): JsonResponse
     {
         $days = $this->resolveHistoryDays($request);
+        $warehouseId = $request->query('warehouse_id');
        
+        // Auto-filter to assigned warehouse for admin/staff users
+        $userWarehouseId = $request->user()?->warehouse_id;
+        if ($userWarehouseId) {
+            $warehouseId = $userWarehouseId;
+        }
+
+        $data = $this->analysisService->analyze($days);
+
+        if ($warehouseId) {
+            $data = array_values(array_filter($data, fn($r) => $r['warehouse_id'] == $warehouseId));
+        }
 
         return response()->json([
             'success'      => true,
             'history_days' => $days,
+            'warehouse_id' => $warehouseId,
             'summary' => [
-                'total'       => count($data = $this->analysisService->analyze($days)),
+                'total'       => count($data),
                 'fast_moving' => count(array_filter($data, fn($r) => $r['category'] === 'FAST_MOVING')),
                 'slow_moving' => count(array_filter($data, fn($r) => $r['category'] === 'SLOW_MOVING')),
                 'normal'      => count(array_filter($data, fn($r) => $r['category'] === 'NORMAL')),
@@ -43,19 +56,32 @@ class DssController extends Controller
     }
 
     /**
-     * GET /api/dss/recommendations?days=30
-     * Tampilkan rekomendasi DSS berdasarkan hasil analisis.
+     * GET /api/dss/recommendations?days=30&warehouse_id=xxx
+     * Tampilkan rekomendasi DSS berdasarkan hasil analisis, bisa difilter per gudang.
      */
     public function recommendations(Request $request): JsonResponse
     {
         $days = $this->resolveHistoryDays($request);
+        $warehouseId = $request->query('warehouse_id');
 
+        // Auto-filter to assigned warehouse for admin/staff users
+        $userWarehouseId = $request->user()?->warehouse_id;
+        if ($userWarehouseId) {
+            $warehouseId = $userWarehouseId;
+        }
+
+        $data = $this->recommendationService->recommend($days);
+
+        if ($warehouseId) {
+            $data = array_values(array_filter($data, fn($r) => $r['warehouse_id'] == $warehouseId));
+        }
 
         return response()->json([
             'success'      => true,
             'history_days' => $days,
+            'warehouse_id' => $warehouseId,
             'summary' => [
-                'total'             => count($data = $this->recommendationService->recommend($days)),
+                'total'             => count($data),
                 'restock'           => count(array_filter($data, fn($r) => $r['recommendation'] === 'RESTOCK')),
                 'transfer_in'       => count(array_filter($data, fn($r) => $r['recommendation'] === 'TRANSFER_IN')),
                 'transfer_out'      => count(array_filter($data, fn($r) => $r['recommendation'] === 'TRANSFER_OUT')),

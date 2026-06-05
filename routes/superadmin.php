@@ -18,6 +18,7 @@ Route::prefix('/superadmin')->name('superadmin.')->middleware('auth:sanctum')->g
     Route::get('transfers/{transfer}/status/allowed', [TransferStatusController::class, 'allowedTransitions'])->middleware('permission:confirm_transfer')->name('transfer.status.allowed');
 
     Route::prefix('/monitoring')->name('monitoring.')->group(function () {
+        Route::get('/dashboard-summary', [MonitoringController::class, 'summary'])->name('dashboard-summary');
         Route::get('/summary', [MonitoringController::class, 'summary'])->name('summary');
         Route::get('/batches', [MonitoringController::class, 'batches'])->name('batches');
         Route::get('/activities', [MonitoringController::class, 'activities'])->name('activities');

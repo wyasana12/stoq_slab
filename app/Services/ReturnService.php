@@ -20,8 +20,8 @@ class ReturnService
     {
         $receiving = ProductReceiving::findOrFail($data['receiving_id']);
 
-        if ($receiving->status !== ReceiveStatus::REJECT->value) {
-            throw new InvalidArgumentException('Return hanya dapat diajukan untuk receiving yang berstatus rejected.');
+        if ($receiving->status === ReceiveStatus::PROCESS->value) {
+            throw new InvalidArgumentException('Return hanya dapat diajukan untuk receiving yang sudah selesai diproses.');
         }
 
         $receivingDate = $receiving->receiving_date
@@ -156,6 +156,10 @@ class ReturnService
         }
 
         $receiving = ProductReceiving::findOrFail($stockReturns->receiving_id);
+
+        if ($receiving->status === ReceiveStatus::PROCESS->value) {
+            throw new InvalidArgumentException('Gagal memperbarui. Return hanya dapat diajukan untuk receiving yang sudah selesai diproses.');
+        }
 
         $receivingDate = $receiving->receiving_date
             ? Carbon::parse($receiving->receiving_date)
