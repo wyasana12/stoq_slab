@@ -25,6 +25,18 @@ class PurchaseOrderRepository
             ->paginate($perPage);
     }
 
+    public function getAllConfirmation(int $perPage = 10)
+    {
+        return PurchaseOrder::with(['warehouse:id,name', 'user:id,name'])
+            ->select(['id', 'po_code', 'total_amount', 'status', 'order_date', 'approved_at', 'created_at', 'updated_at', 'warehouse_id', 'created_by'])
+            ->where(
+                'status',
+                '!=',
+                'draft'
+            )->latest()
+            ->paginate($perPage);
+    }
+
     public function createRequest(array $data): PurchaseOrder
     {
         return PurchaseOrder::create($data);
@@ -32,6 +44,10 @@ class PurchaseOrderRepository
 
     public function assignProducts(PurchaseOrder $purchase, array $products): void
     {
+        if (empty($products)) {
+            return;
+        }
+
         $now = now();
         $insertData = [];
 
@@ -75,9 +91,28 @@ class PurchaseOrderRepository
         return $purchase->update($data);
     }
 
-    public function deleteItems(PurchaseOrder $purchase): void
+    public function syncProducts(PurchaseOrder $purchase, array $products): void
     {
-        $purchase->items()->delete();
+        $incomingIds = collect($products)->pluck('product_id')->filter()->toArray();
+
+        if (!empty($incomingIds)) {
+            $purchase->items()
+                ->whereNotIn('product_id', $incomingIds)
+                ->forceDelete();
+        }
+
+        foreach ($products as $p) {
+            $purchase->items()->updateOrCreate(
+                [
+                    'product_id' => $p['product_id'],
+                ],
+                [
+                    'quantity_ordered' => $p['quantity_ordered'],
+                    'unit_price' => $p['unit_price'],
+                    'subtotal' => $p['subtotal'],
+                ]
+            );
+        }
     }
 
     public function getById(PurchaseOrder $purchase): PurchaseOrder
@@ -93,10 +128,10 @@ class PurchaseOrderRepository
     public function getTrashedPaginated(int $perPage = 10, string $userId)
     {
         return PurchaseOrder::onlyTrashed()
-                        ->with(['warehouse:id,name', 'user:id,name', 'supplier:id,name', 'items'])
-                        ->where('created_by', $userId)
-                        ->latest('deleted_at')
-                        ->paginate($perPage);    
+            ->with(['warehouse:id,name', 'user:id,name', 'supplier:id,name', 'items'])
+            ->where('created_by', $userId)
+            ->latest('deleted_at')
+            ->paginate($perPage);
     }
 
     public function restore(PurchaseOrder $purchase): void

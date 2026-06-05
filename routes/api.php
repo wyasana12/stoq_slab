@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\BatchController;
+use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PermissionController;
 use App\Http\Controllers\Auth\RoleController;
 use App\Http\Controllers\Auth\UserController;
@@ -13,14 +14,20 @@ use App\Http\Controllers\SuperAdmin\MasterData\UnitController;
 use App\Http\Controllers\SuperAdmin\ProductReceivingController;
 use App\Http\Controllers\SuperAdmin\PurchaseOrderController;
 use App\Http\Controllers\DssController;
+use App\Http\Controllers\SuperAdmin\AlertConfigController;
 use App\Http\Controllers\SuperAdmin\MasterData\StoreController;
 use App\Http\Controllers\SuperAdmin\MasterData\RackController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
+Route::get('/user', [LoginController::class, 'me'])->middleware('auth:sanctum');
+
+Route::prefix('/configs')->middleware('auth:sanctum')->name('config.')->group(function ()
+ {
+    Route::get('/alerts', [AlertConfigController::class, 'index'])->name('alert.index');
+    Route::post('/alerts/create', [AlertConfigController::class, 'store'])->name('alert.create');
+    Route::put('/alerts/{alert}', [AlertConfigController::class, 'update'])->name('alert.update');
+    Route::delete('/alerts/{alert}', [AlertConfigController::class, 'destroy'])->name('alert.delete');
+});
 
 Route::prefix('/permissions')->middleware(['auth:sanctum', 'role:super-admin'])->name('permission.')->group(function () {
     Route::get('', [PermissionController::class, 'index'])->middleware('permission:view_permission')->name('index');
@@ -112,6 +119,7 @@ Route::prefix('/products')->middleware('auth:sanctum')->name('product.')->group(
 
 Route::prefix('/purchases')->middleware('auth:sanctum')->name('purchase.')->group(function () {
     Route::get('', [PurchaseOrderController::class, 'index'])->middleware('permission:view_purchase')->name('index');
+    Route::get('/confirmation', [PurchaseOrderController::class, 'confirmation'])->middleware('permission:confirm_purchase')->name('confirmation');
     Route::get('/dropdown', [PurchaseOrderController::class, 'dropdown'])->name('dropdown');
     Route::get('/trash', [PurchaseOrderController::class, 'trashed'])->middleware('permission:restore_purchase')->name('trash');
     Route::post('/request', [PurchaseOrderController::class, 'request'])->middleware('permission:create_purchase')->name('create');

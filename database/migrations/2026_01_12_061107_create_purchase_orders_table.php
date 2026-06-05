@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('purchase_orders', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->string('po_code')->unique();
-            $table->foreignUlid('supplier_id')->constrained('suppliers')->onDelete('cascade');
-            $table->foreignUlid('warehouse_id')->constrained('warehouses')->onDelete('cascade');
+            $table->foreignUlid('supplier_id')->nullable()->constrained('suppliers')->onDelete('cascade');
+            $table->foreignUlid('warehouse_id')->nullable()->constrained('warehouses')->onDelete('cascade');
             $table->foreignUlid('created_by')->constrained('users')->onDelete('cascade');
             $table->decimal('total_amount', 12, 2)->default(0);
             $table->string('status');

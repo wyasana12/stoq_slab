@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\AssignPermissions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class RoleController extends Controller
 {
@@ -51,6 +53,14 @@ class RoleController extends Controller
 
         if ($request->has('permissions')) {
             $role->syncPermissions($request->permissions);
+
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+            $role->load('users');
+
+            foreach ($role->users as $user) {
+                Cache::forget("auth_user_{$user->id}");
+            }
         }
 
         return response()->json([
@@ -81,6 +91,14 @@ class RoleController extends Controller
 
         if ($request->has('permissions')) {
             $role->syncPermissions($request->permissions);
+
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+            $role->load('users');
+
+            foreach ($role->users as $user) {
+                Cache::forget("auth_user_{$user->id}");
+            }
         }
 
         return response()->json([

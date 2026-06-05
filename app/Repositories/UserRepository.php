@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Spatie\Permission\Models\Role;
 
 class UserRepository
@@ -21,6 +22,8 @@ class UserRepository
         $roleId = Role::find($role);
 
         $user->assignRole($roleId);
+
+        Cache::forget("auth_user_{$user->id}");
     }
 
     public function assignWarehouse(User $user, string $warehouse)

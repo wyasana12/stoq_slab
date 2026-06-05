@@ -49,11 +49,7 @@ class ProductService
             ]);
 
             if (isset($data['items'])) {
-                $this->productRepository->deleteItems($product);
-
-                if (!empty($data['items'])) {
-                    $this->productRepository->assignSupplier($product, $data['items']);
-                }
+                $this->productRepository->syncSuppliers($product, $data['items']);
             }
 
             return $product->fresh(['unit', 'category', 'productItems.supplier']);

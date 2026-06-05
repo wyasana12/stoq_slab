@@ -24,16 +24,18 @@ class CreateAndUpdateRequestPurchaseOrderRequest extends FormRequest
      */
     public function rules(): array
     {
+        $isSubmit = $this->input('status') === PurchaseOrderStatus::SUBMITTED->value;
+
         return [
-            'supplier_id' => ['required', 'exists:suppliers,id'],
-            'warehouse_id' => ['required', 'exists:warehouses,id'],
+            'supplier_id' => [$isSubmit ? 'required' : 'nullable', 'exists:suppliers,id'],
+            'warehouse_id' => [$isSubmit ? 'required' : 'nullable', 'exists:warehouses,id'],
 
-            'items' => ['required', 'array', 'min:1'],
-            'items.*.product_id' => ['required', 'exists:products,id'],
-            'items.*.quantity_ordered' => ['required', 'integer', 'min:1'],
-            'items.*.unit_price' => ['required', 'numeric', 'min:0'],
+            'items' => [$isSubmit ? 'required' : 'nullable', 'array', $isSubmit ? 'min:1' : null],
+            'items.*.product_id' => [$isSubmit ? 'required' : 'nullable', 'exists:products,id'],
+            'items.*.quantity_ordered' => [$isSubmit ? 'required' : 'nullable', 'integer', 'min:1'],
+            'items.*.unit_price' => [$isSubmit ? 'required' : 'nullable', 'numeric', 'min:0'],
 
-            'status' => ['nullable', Rule::in([PurchaseOrderStatus::DRAFT->value, PurchaseOrderStatus::SUBMITTED->value])],
+            'status' => ['required', Rule::in([PurchaseOrderStatus::DRAFT->value, PurchaseOrderStatus::SUBMITTED->value])],
         ];
     }
 
@@ -69,7 +71,7 @@ class CreateAndUpdateRequestPurchaseOrderRequest extends FormRequest
         $validator->after(function ($validator) {
             $items = $this->input('items', []);
 
-            $productIds = collect($items)->pluck('product_id');
+            $productIds = collect($items)->pluck('product_id')->filter();
 
             if ($productIds->duplicates()->isNotEmpty()) {
                 $validator->errors()->add(

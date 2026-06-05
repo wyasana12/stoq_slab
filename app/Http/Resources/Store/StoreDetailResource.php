@@ -1,11 +1,12 @@
 <?php
 
-namespace App\Http\Resources;
+namespace App\Http\Resources\Store;
 
+use App\Models\Region;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class StoreListResource extends JsonResource
+class StoreDetailResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -21,11 +22,18 @@ class StoreListResource extends JsonResource
             'contact_person' => $this->contact_person,
             'phone_number' => $this->phone_number,
             'email' => $this->email,
-            'status' => $this->status,
+            'region' => [
+                'id' => $this->region_id,
+                'full_address' => Region::getAddress($this->region_id),
+                'levels' => Region::getRegionData($this->region_id),
+            ],
             'warehouse' => [
                 'id' => $this->warehouse?->id ?? 'N/A',
                 'name' => $this->warehouse?->name ?? 'N/A',
-            ]
+            ],
+            'street' => $this->street,
+            'postal_code' => $this->postal_code,
+            'status' => $this->status,
         ];
     }
 }
