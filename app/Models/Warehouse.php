@@ -35,4 +35,14 @@ class Warehouse extends Model
     {
         return $this->hasMany(Store::class, 'warehouse_id');
     }
+
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class, 'warehouse_id');    
+    }
+
+    public function admins(): HasMany
+    {
+        return $this->hasMany(User::class, 'warehouse_id')->role(['admin', 'staff']);    
+    }
 }

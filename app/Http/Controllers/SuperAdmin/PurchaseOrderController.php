@@ -63,6 +63,13 @@ class PurchaseOrderController extends Controller
                 'messages' => 'Purchase order request successful.',
                 'data' => new PurchaseOrderDetailResource($requestPurchaseOrder),
             ], 200);
+        } catch (\InvalidArgumentException $err) {
+            return response()->json([
+                'success' => false,
+                'errors' => [
+                    'items' => [$err->getMessage()]
+                ],
+            ], 422);
         } catch (\Exception $err) {
             return response()->json([
                 'success' => false,
@@ -91,12 +98,35 @@ class PurchaseOrderController extends Controller
         } catch (\InvalidArgumentException $err) {
             return response()->json([
                 'success' => false,
-                'messages' => $err->getMessage(),
+                'errors' => [
+                    'items' => [$err->getMessage()]
+                ],
             ], 422);
         } catch (\Exception $err) {
             return response()->json([
                 'success' => false,
                 'messages' => 'Failed to update request purchase order.',
+                'error' => $err->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function confirmation(Request $request): JsonResponse
+    {
+        try {
+            $perPage = $request->query('per_page', 10);
+            $page = $request->query('page', 1);
+
+            $allConfirmations = $this->purchaseOrderService->getAllConfirmations($perPage);
+
+            return response()->json([
+                'success' => true,
+                'data' => PurchaseOrderListResource::collection($allConfirmations)->response()->getData(true),
+            ], 200);
+        } catch (\Exception $err) {
+            return response()->json([
+                'success' => false,
+                'messages' => 'Failed to retrieve all purchase orders.',
                 'error' => $err->getMessage(),
             ], 500);
         }
@@ -118,7 +148,9 @@ class PurchaseOrderController extends Controller
         } catch (\InvalidArgumentException $err) {
             return response()->json([
                 'success' => false,
-                'messages' => $err->getMessage(),
+                'errors' => [
+                    'items' => [$err->getMessage()]
+                ],
             ], 422);
         } catch (\Exception $err) {
             return response()->json([
@@ -142,7 +174,9 @@ class PurchaseOrderController extends Controller
         } catch (AuthorizationException $err) {
             return response()->json([
                 'success' => false,
-                'messages' => $err->getMessage(),
+                'errors' => [
+                    'items' => [$err->getMessage()]
+                ],
             ], 403);
         } catch (\Exception $err) {
             return response()->json([
@@ -167,12 +201,16 @@ class PurchaseOrderController extends Controller
         } catch (AuthorizationException $err) {
             return response()->json([
                 'success' => false,
-                'messages' => $err->getMessage(),
+                'errors' => [
+                    'items' => [$err->getMessage()]
+                ],
             ], 403);
         } catch (InvalidArgumentException $err) {
             return response()->json([
                 'success' => false,
-                'messages' => $err->getMessage(),
+                'errors' => [
+                    'items' => [$err->getMessage()]
+                ],
             ], 422);
         } catch (\Exception $err) {
             return response()->json([

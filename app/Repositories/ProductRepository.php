@@ -60,9 +60,30 @@ class ProductRepository
         return $product->update($data);
     }
 
-    public function deleteItems(Product $product): void
+    public function syncSuppliers(Product $product, array $suppliers): void
     {
-        $product->productItems()->forceDelete();
+        $incomingIds = collect($suppliers)->pluck('supplier_id')->filter()->toArray();
+
+        if (!empty($incomingIds)) {
+            $product->productItems()
+                ->whereNotIn('supplier_id', $incomingIds)
+                ->forceDelete();
+        }
+
+        foreach ($suppliers as $s) {
+            $product->productItems()->updateOrCreate(
+                [
+                    'supplier_id' => $s['supplier_id']
+                ],
+                [
+                    'unit_price' => $s['unit_price'],
+                    'min_order_quantity' => $s['min_order_quantity'],
+                    'lead_time_days' => $s['lead_time_days'],
+                    'return_limit_days' => $s['return_limit_days'],
+                    'is_preferred' => $s['is_preferred'],
+                ]
+            );
+        }
     }
 
     public function getById(Product $product): Product

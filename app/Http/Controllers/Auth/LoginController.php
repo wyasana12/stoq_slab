@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 
 class LoginController extends Controller
@@ -60,5 +61,31 @@ class LoginController extends Controller
             'success' => true,
             'message' => 'Logout Successfully.',
         ], 200);
+    }
+
+    public function me(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        
+        $auth = Cache::remember(
+            "auth_user_{$user->id}",
+            now()->addHours(24),
+            function () use ($user)
+            {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'roles' => $user->getRoleNames()->toArray(),
+                    'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
+                ]    ;
+            }
+        );
+
+        return response()->json([
+            'success' => true,
+            'data' => $auth
+        ]);
     }
 }

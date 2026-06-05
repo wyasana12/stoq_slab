@@ -28,9 +28,16 @@ class PurchaseOrderService
         return $this->purchaseOrderRepository->getAllPaginated($purchasePage, $userId);
     }
 
+    public function getAllConfirmations(int $purchasePage = 10)
+    {
+        return $this->purchaseOrderRepository->getAllConfirmation($purchasePage);    
+    }
+
     public function createRequestPurchaseOrder(array $data, string $userId): PurchaseOrder
     {
-        $productIds = collect($data['items'])->pluck('product_id');
+        $items = $data['items'] ?? [];
+
+        $productIds = collect($items)->pluck('product_id')->filter();
 
         if ($productIds->duplicates()->isNotEmpty()) {
             throw new \InvalidArgumentException(
@@ -47,18 +54,24 @@ class PurchaseOrderService
         return DB::transaction(function () use ($data, $userId, $supplierCatalog) {
             $totalAmount = 0;
             $processedItems = [];
+            $isSubmit = isset($data['status']) && $data['status'] === PurchaseOrderStatus::SUBMITTED->value;
 
             foreach ($data['items'] as $i) {
-                $productId = $i['product_id'];
-                $qtyOrdered = $i['quantity_ordered'];
+                $productId = $i['product_id'] ?? null;
+                if (!$productId) continue;
 
-                if (!$supplierCatalog->has($productId)) {
-                    throw new InvalidArgumentException("One or more selected products are not supplied by the chosen supplier.");
-                }
+                $qtyOrdered = $i['quantity_ordered'] ?? 1;
+                $unitPrice = $i['unit_price'] ?? 0;
 
-                $moq = $supplierCatalog[$productId]->min_order_quantity;
-                if ($qtyOrdered < $moq) {
-                    throw new InvalidArgumentException("The order quantity for a product is below the required Minimum order quantity $moq");
+                if (!empty($data['supplier_id'])) {
+                    if (!$supplierCatalog->has($productId) && $isSubmit) {
+                        throw new \InvalidArgumentException("One or more selected products are not supplied by the chosen supplier.");
+                    }
+
+                    $moq = $supplierCatalog[$productId]->min_order_quantity ?? 1;
+                    if ($qtyOrdered < $moq && $isSubmit) {
+                        throw new \InvalidArgumentException("The order quantity for a product is below the required Minimum order quantity $moq");
+                    }
                 }
 
                 $subTotal = $i['quantity_ordered'] * $i['unit_price'];
@@ -120,8 +133,6 @@ class PurchaseOrderService
             ->keyBy('product_id');
 
         return DB::transaction(function () use ($purchase, $data, $supplierCatalog) {
-            $this->purchaseOrderRepository->deleteItems($purchase);
-
             $totalAmount = 0;
             $processedItems = [];
 
@@ -164,7 +175,7 @@ class PurchaseOrderService
                 'total_amount' => $totalAmount,
             ]);
 
-            $this->purchaseOrderRepository->assignProducts($purchase, $processedItems);
+            $this->purchaseOrderRepository->syncProducts($purchase, $processedItems);
 
             return $purchase->fresh(['warehouse', 'supplier', 'items.product', 'user']);
         });

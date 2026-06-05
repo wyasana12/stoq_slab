@@ -4,8 +4,8 @@ namespace App\Http\Controllers\SuperAdmin\MasterData;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreAndUpdateStoreRequest;
-use App\Http\Resources\StoreDetailResource;
-use App\Http\Resources\StoreListResource;
+use App\Http\Resources\Store\StoreDetailResource;
+use App\Http\Resources\Store\StoreListResource;
 use App\Models\Store;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
