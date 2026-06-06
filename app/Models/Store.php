@@ -21,11 +21,11 @@ class Store extends Model
 
     public function region(): BelongsTo
     {
-        return $this->belongsTo(Region::class, 'region_id');    
+        return $this->belongsTo(Region::class, 'region_id');
     }
 
-    public function warehouse(): BelongsTo
+    public function warehouses(): BelongsTo
     {
-        return $this->belongsTo(Warehouse::class, 'warehouse_id');    
+        return $this->belongsTo(Warehouse::class, 'warehouse_id');
     }
 }

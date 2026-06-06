@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Distribution;
 
 use App\Models\Batch;
+use App\Models\Store;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreAndUpdateDistributionRequest extends FormRequest
@@ -20,6 +21,19 @@ class StoreAndUpdateDistributionRequest extends FormRequest
         $distribution = $this->route('distribution');
         $items = $this->input('items');
         $outletPhone = $this->input('outlet_phone', $this->input('outlet_contact'));
+
+        // Resolve store information if store_id is provided
+        $storeId = $this->input('store_id');
+        if ($storeId) {
+            $store = Store::find($storeId);
+            if ($store) {
+                $this->merge([
+                    'outlet_name' => $store->name,
+                    'outlet_address' => $store->address,
+                    'outlet_phone' => $store->phone,
+                ]);
+            }
+        }
 
         if (is_array($items)) {
             $items = array_map(function ($item) {
@@ -67,12 +81,9 @@ class StoreAndUpdateDistributionRequest extends FormRequest
     {
         $isCreate = $this->isMethod('post');
         return [
+            'store_id' => ($isCreate ? 'required' : 'sometimes') . '|exists:stores,id',
             'warehouse_id'          => ($isCreate ? 'required' : 'sometimes') . '|exists:warehouses,id',
-            'location'              => ($isCreate ? 'required' : 'sometimes') . '|string|max:255',
-            'outlet_name'           => ($isCreate ? 'required' : 'sometimes') . '|string|max:255',
-            'outlet_address'        => ($isCreate ? 'required' : 'sometimes') . '|string|max:255',
-            'outlet_phone'          => ($isCreate ? 'required' : 'sometimes') . '|numeric',
-            'outlet_contact'        => 'sometimes|nullable|numeric',
+            
             'requested_by'          => ($isCreate ? 'required' : 'sometimes') . '|exists:users,id',
             'confirmed_by'          => 'nullable|exists:users,id',
             'notes'                 => 'nullable|string|max:255',
@@ -85,19 +96,30 @@ class StoreAndUpdateDistributionRequest extends FormRequest
         ];
     }
 
-    public function messages()
+    public function messages(): array
     {
         return [
-            'warehouse_id.required' => 'Warehouse wajib diisi.',
-            'location.required' => 'Location disribusi wajib diisi.',
-            'outlet_name.required' => 'Nama outlet wajib diisi.',
-            'outlet_address.required' => 'Alamat outlet wajib diisi.',
-            'outlet_phone.required' => 'Telepon outlet wajib diisi.',
-            'requested_by.required' => 'Requested wajib diisi.',
-            'items.required' => 'List item distribusi wajib diisi.',
-            'items.*.batch_id.exists' => 'Batch yang dipilih tidak valid.',
-            'items.*.requested_quantity.min' => 'Jumlah yang diminta harus minimal 1 untuk setiap item.',
-            'status.in' => 'Status distribusi tidak valid.',
+            // Field utama
+            'store_id.required'                      => 'Outlet harus dipilih.',
+            'store_id.exists'                        => 'Outlet yang dipilih tidak valid.',
+            'warehouse_id.required'                  => 'Gudang wajib diisi.',
+            'warehouse_id.exists'                    => 'Gudang yang dipilih tidak valid.',
+            'requested_by.required'                  => 'Data pemohon wajib diisi.',
+            'requested_by.exists'                    => 'Pemohon tidak ditemukan.',
+            'confirmed_by.exists'                    => 'Konfirmator tidak ditemukan.',
+            'notes.max'                              => 'Catatan maksimal 255 karakter.',
+            'dispatched_at.date'                     => 'Tanggal pengiriman tidak valid.',
+            'status.in'                              => 'Status distribusi tidak valid.',
+
+            // Items
+            'items.required'                         => 'Item distribusi wajib diisi.',
+            'items.array'                            => 'Format item distribusi tidak valid.',
+            'items.min'                              => 'Minimal harus ada 1 item distribusi.',
+            'items.*.batch_id.required_with'         => 'Batch produk wajib dipilih.',
+            'items.*.batch_id.exists'                => 'Batch yang dipilih tidak valid.',
+            'items.*.requested_quantity.required_with' => 'Jumlah item wajib diisi.',
+            'items.*.requested_quantity.integer'     => 'Jumlah item harus berupa angka.',
+            'items.*.requested_quantity.min'         => 'Jumlah item minimal 1.',
         ];
     }
 }

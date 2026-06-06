@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Enums\DistributionStatus;
 use App\Enums\RoleName;
 use App\Models\Batch;
+use App\Models\Store;
 use App\Models\StockDistributions;
 use App\Models\StockDistributionItem;
 use App\Models\StockMutations;
@@ -39,21 +40,32 @@ class DistributionRepository
                 $status = DistributionStatus::WAITING_APPROVAL->value;
             }
 
+            // If a store_id is provided, pull outlet data from the Store master table
+            if (! empty($data['store_id'])) {
+                $store = Store::find($data['store_id']);
+                if ($store) {
+                    $data['outlet_name'] = $store->name;
+                    $data['outlet_address'] = $store->address;
+                    $data['outlet_phone'] = $store->phone;
+                    $data['outlet_contact'] = $store->phone; // keep contact consistent
+                }
+            }
+
             $distribution = StockDistributions::create([
                 'distribution_code' => 'DIST-' . now()->format('Ymd') . '-' . rand(1000, 9999),
-                'warehouse_id' => $data['warehouse_id'],
-                'location' => $data['location'],
-                'outlet_name' => $data['outlet_name'] ?? null,
-                'outlet_address' => $data['outlet_address'] ?? null,
-                'outlet_phone' => $data['outlet_phone'] ?? $data['outlet_contact'] ?? null,
-                'outlet_contact' => $data['outlet_contact'] ?? $data['outlet_phone'] ?? null,
-                'dispatched_at' => null,
-                'requested_by' => $requestedBy,
-                'confirmed_by' => $data['confirmed_by'] ?? null,
-                'notes' => $data['notes'] ?? null,
-                'status' => $status,
-            ]);
+                'warehouse_id'      => $data['warehouse_id'],
+                'store_id'          => $data['store_id'] ?? null,  // ← tambah ini
 
+                'outlet_name'       => $data['outlet_name'] ?? null,
+                'outlet_address'    => $data['outlet_address'] ?? null,
+                'outlet_phone'      => $data['outlet_phone'] ?? $data['outlet_contact'] ?? null,
+                'outlet_contact'    => $data['outlet_contact'] ?? $data['outlet_phone'] ?? null,
+                'dispatched_at'     => null,
+                'requested_by'      => $requestedBy,
+                'confirmed_by'      => $data['confirmed_by'] ?? null,
+                'notes'             => $data['notes'] ?? null,
+                'status'            => $status,
+            ]);
             foreach ($data['items'] as $item) {
                 StockDistributionItem::create([
                     'distribution_id' => $distribution->id,
@@ -91,16 +103,12 @@ class DistributionRepository
                 $distribution->status = $newStatus->value;
             }
 
+
             $distribution->update([
                 'warehouse_id' => $data['warehouse_id'] ?? $distribution->warehouse_id,
-                'location' => $data['location'] ?? $distribution->location,
                 'requested_by' => $data['requested_by'] ?? $distribution->requested_by,
                 'confirmed_by' => $data['confirmed_by'] ?? $distribution->confirmed_by,
                 'notes' => $data['notes'] ?? $distribution->notes,
-                'outlet_name' => $data['outlet_name'] ?? $distribution->outlet_name,
-                'outlet_address' => $data['outlet_address'] ?? $distribution->outlet_address,
-                'outlet_phone' => $data['outlet_phone'] ?? $data['outlet_contact'] ?? $distribution->outlet_phone,
-                'outlet_contact' => $data['outlet_contact'] ?? $data['outlet_phone'] ?? $distribution->outlet_contact,
                 'status' => $distribution->status,
             ]);
 
@@ -149,8 +157,15 @@ class DistributionRepository
                 $distributionItems = $distribution->items()->get()->keyBy('id');
 
                 foreach ($items as $item) {
-                    if (! isset($item['id']) || ! isset($item['approved_quantity'])) {
-                        throw new InvalidArgumentException('Item approved quantity tidak valid.');
+                    $distributionItem = $distributionItems[$item['id']] ?? null;
+                    if (! $distributionItem) {
+                        throw new InvalidArgumentException("Item distribusi tidak valid: {$item['id']}.");
+                    }
+                    $approvedQuantity = (int) $item['approved_quantity'];
+                    $batch = $distributionItem->batch;
+
+                    if (! $batch) {
+                        throw new InvalidArgumentException('Batch tidak ditemukan.');
                     }
 
                     $distributionItem = $distributionItems[$item['id']] ?? null;
@@ -159,7 +174,12 @@ class DistributionRepository
                     }
 
                     $approvedQuantity = (int) $item['approved_quantity'];
-
+                    if ($approvedQuantity > $batch->current_quantity) {
+                        throw new InvalidArgumentException(
+                            "Stok batch {$batch->batch_code} tidak cukup. " .
+                                "Tersedia: {$batch->current_quantity}, diminta: {$approvedQuantity}."
+                        );
+                    }
                     if ($approvedQuantity > $distributionItem->requested_quantity) {
                         throw new InvalidArgumentException('Approved quantity tidak boleh lebih besar dari requested quantity.');
                     }
@@ -239,7 +259,7 @@ class DistributionRepository
                 MutationStatus::DISTRIBUTION_COMPLETED,
                 'DISTRIBUTION',
                 $distribution->id,
-                'Distribusi selesai ke ' . $distribution->location
+                'Distribusi selesai ke ' . ($distribution->store?->name ?? 'toko')
             );
         }
     }
