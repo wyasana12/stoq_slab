@@ -18,7 +18,7 @@ return new class extends Migration
             $table->foreignUlid('receiving_id')->constrained('product_receivings')->onDelete('cascade');
             $table->foreignUlid('product_id')->constrained('products')->onDelete('cascade');
             $table->foreignUlid('warehouse_id')->constrained('warehouses')->onDelete('cascade');
-            $table->string('rack_location')->nullable();
+            $table->foreignUlid('rack_id')->nullable()->constrained('rack_locations')->cascadeOnDelete();
 
             $table->date('production_date');
             $table->date('expired_date');
