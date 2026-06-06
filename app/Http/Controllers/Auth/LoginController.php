@@ -66,12 +66,11 @@ class LoginController extends Controller
     public function me(Request $request): JsonResponse
     {
         $user = $request->user();
-        
+
         $auth = Cache::remember(
             "auth_user_{$user->id}",
             now()->addHours(24),
-            function () use ($user)
-            {
+            function () use ($user) {
                 return [
                     'id' => $user->id,
                     'name' => $user->name,
@@ -79,7 +78,7 @@ class LoginController extends Controller
                     'email' => $user->email,
                     'roles' => $user->getRoleNames()->toArray(),
                     'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
-                ]    ;
+                ];
             }
         );
 

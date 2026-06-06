@@ -60,4 +60,8 @@ class StockDistributions extends Model
     {
         return $this->hasMany(StockDistributionItem::class, 'distribution_id');
     }
+    public function store()
+    {
+        return $this->belongsTo(Store::class, 'store_id');
+    }
 }

@@ -28,8 +28,26 @@ class ConfirmDistributionRequest extends FormRequest
             'items.*.id' => 'required_with:items|exists:stock_distribution_items,id',
             'items.*.approved_quantity' => 'required_if:status,' . DistributionStatus::APPROVED->value . '|integer|min:0',
 
-            'delivered_proof' => 'required_if:status,' . DistributionStatus::DELIVERED->value
+            'completed_proof' => 'required_if:status,' . DistributionStatus::COMPLETED->value
                 . '|file|mimes:jpg,jpeg,png,pdf|max:2048',
+        ];
+    }
+    public function messages(): array
+    {
+        return [
+            'status.required'                       => 'Status harus diisi.',
+            'status.in'                             => 'Status tidak valid.',
+            'confirmed_by.required'                 => 'Konfirmator harus diisi.',
+            'confirmed_by.exists'                   => 'Konfirmator tidak ditemukan.',
+            'notes.max'                             => 'Catatan maksimal 255 karakter.',
+            'items.required_if'                     => 'Item harus diisi saat approve.',
+            'items.*.id.required_with'              => 'ID item tidak valid.',
+            'items.*.approved_quantity.required_if' => 'Jumlah persetujuan harus diisi.',
+            'items.*.approved_quantity.min'         => 'Jumlah persetujuan minimal 0.',
+            'completed_proof.required_if'           => 'Foto bukti completed wajib diupload.',
+            'completed_proof.file'                  => 'Bukti harus berupa file.',
+            'completed_proof.mimes'                 => 'Bukti harus berformat jpg, jpeg, png, atau pdf.',
+            'completed_proof.max'                   => 'Ukuran file maksimal 2MB.',
         ];
     }
 }

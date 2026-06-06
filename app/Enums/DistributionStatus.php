@@ -45,14 +45,10 @@ enum DistributionStatus: string
                 self::CANCELED,
             ], true),
             self::SHIPPED => in_array($newStatus, [
-                self::DELIVERED,
+                self::COMPLETED,
                 self::CANCELED,
             ], true),
-            self::DELIVERED => in_array($newStatus, [
-                self::COMPLETED,
-            ], true),
-            self::COMPLETED => false,
-            self::CANCELED => false,
+           
         };
     }
 }
