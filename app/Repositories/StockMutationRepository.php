@@ -2,89 +2,87 @@
 
 namespace App\Repositories;
 
+use App\Models\StockMutations;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class StockMutationRepository
 {
-    /**
-     * Mengambil status mutasi yang sudah sukses/selesai.
-     */
     protected function getCompletedStatuses(): array
     {
-        return ['SUCCESS', 'DISTRIBUTION_COMPLETED'];
+        return config('dss.completed_statuses', ['SUCCESS']);
     }
 
     /**
-     * Mengambil TOTAL SELURUH PERGERAKAN (In & Out) untuk rata-rata 7 hari lalu.
+     * Hitung total keluar per produk per gudang (7 hari atau sesuai parameter).
      */
-    public function getOutboundVelocityByBatchWarehouse(int $days): Collection
+    public function getOutboundMovementByProductWarehouse(int $days): Collection
     {
         return DB::table('stock_mutations')
-            ->select([
-                'batch_id',
-                'warehouse_id',
-                DB::raw('SUM(ABS(change_quantity)) as total_quantity'),
-                DB::raw('COUNT(*) as transaction_count')
-            ])
-            ->whereIn('status', $this->getCompletedStatuses())
-            ->whereIn('reference_type', ['DISTRIBUTION', 'RETURN', 'TRANSFER', 'RESTOCK', 'RECEIVE'])
-            ->whereBetween('created_at', [
-                now()->subDays($days)->startOfDay(),
-                now()->subDays(1)->endOfDay()
-            ])
-            ->groupBy(['batch_id', 'warehouse_id'])
-            ->get();
-    }
-
-    /**
-     * Mengambil data pergerakan aktual khusus HARI INI (Hari ke-8)
-     */
-    public function getActualDay8Movement(): Collection
-    {
-        return DB::table('stock_mutations')
-            ->select([
-                'batch_id',
-                'warehouse_id',
-                DB::raw('SUM(ABS(change_quantity)) as total_quantity')
-            ])
-            ->whereIn('status', $this->getCompletedStatuses())
-            ->whereIn('reference_type', ['DISTRIBUTION', 'RETURN', 'TRANSFER', 'RESTOCK', 'RECEIVE'])
-            ->whereBetween('created_at', [
-                now()->startOfDay(),
-                now()->endOfDay()
-            ])
-            ->groupBy(['batch_id', 'warehouse_id'])
-            ->get();
-    }
-
-    /**
-     * Method untuk pencarian spesifik produk (digunakan oleh analyzeByProduct)
-     */
-    public function getVelocityByProductWarehouse(string $productId, int $days): Collection
-    {
-        return DB::table('stock_mutations')
-            // PERBAIKAN: Hubungkan ke tabel batches karena product_id ada di sana
             ->join('batches', 'stock_mutations.batch_id', '=', 'batches.id')
             ->select([
+                'stock_mutations.batch_id',
+                'batches.product_id',
                 'stock_mutations.warehouse_id',
-                DB::raw('SUM(ABS(stock_mutations.change_quantity)) as total_quantity')
+                DB::raw('SUM(ABS(stock_mutations.change_quantity)) as total_out'),
             ])
-            ->where('batches.product_id', $productId) // Menyaring product_id lewat tabel batches
+            ->whereIn('stock_mutations.reference_type', ['DISTRIBUTION', 'TRANSFER'])
             ->whereIn('stock_mutations.status', $this->getCompletedStatuses())
             ->whereBetween('stock_mutations.created_at', [
                 now()->subDays($days)->startOfDay(),
-                now()->subDays(1)->endOfDay()
+                now()->subDays(1)->endOfDay(),
             ])
-            ->groupBy('stock_mutations.warehouse_id')
+            ->groupBy(['stock_mutations.batch_id', 'batches.product_id', 'stock_mutations.warehouse_id'])
             ->get();
     }
-    public function getBatchesByProductExcludingWarehouse(string $productId, string $excludedWarehouseId):Collection
+
+    /**
+     * Hitung total movement per gudang (volume absolut semua reference_type).
+     */
+    public function getWarehouseTotalMovement(int $days): Collection
+    {
+        return DB::table('stock_mutations')
+            ->select([
+                'warehouse_id',
+                DB::raw('SUM(ABS(change_quantity)) as total_movement'),
+            ])
+            ->whereIn('status', $this->getCompletedStatuses())
+            ->whereBetween('created_at', [
+                now()->subDays($days)->startOfDay(),
+                now()->subDays(1)->endOfDay(),
+            ])
+            ->groupBy('warehouse_id')
+            ->get();
+    }
+
+    /**
+     * Ambil semua batch produk selain gudang tertentu.
+     */
+    public function getBatchesByProductExcludingWarehouse(string $productId, string $excludedWarehouseId): Collection
     {
         return \App\Models\Batch::with(['warehouse'])
             ->where('product_id', $productId)
             ->where('warehouse_id', '!=', $excludedWarehouseId)
-            ->where('current_quantity', '>', 0) // Hanya ambil gudang yang masih ada stoknya
+            ->where('current_quantity', '>', 0)
+            ->get();
+    }
+
+    /**
+     * Kecepatan per produk-per-gudang untuk seluruh gudang produk tersebut.
+     */
+    public function getVelocityByProductWarehouse(string $productId, int $days): Collection
+    {
+        return StockMutations::query()
+            ->join('batches', 'batches.id', '=', 'stock_mutations.batch_id')
+            ->select([
+                'stock_mutations.warehouse_id',
+                DB::raw('SUM(stock_mutations.change_quantity) as total_quantity'),
+            ])
+            ->where('batches.product_id', $productId)
+            ->whereIn('stock_mutations.reference_type', ['DISTRIBUTION', 'TRANSFER']) // ← tambah ini
+            ->whereIn('stock_mutations.status', $this->getCompletedStatuses())
+            ->where('stock_mutations.created_at', '>=', now()->subDays($days))
+            ->groupBy('stock_mutations.warehouse_id')
             ->get();
     }
 }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Staff\DistributionStatusController;
+use App\Http\Controllers\Staff\ExpiredConditionController;
 use App\Http\Controllers\ReturnController;
 use Illuminate\Support\Facades\Route;
 
@@ -21,7 +22,11 @@ Route::prefix('/staff')->middleware('auth:sanctum')->name('staff.')->group(funct
     Route::get('/distributions/{distribution}/delivered-proof', [DistributionStatusController::class, 'downloadDeliveredProof'])
         ->name('distribution.download.delivered-proof');
 
+    Route::post('/expired/{batch}/action', [ExpiredConditionController::class, 'process'])
+        ->name('expired.action');
+
     Route::prefix('/returns')->name('return.')->group(function () {
+        Route::get('/scan-barcode', [ReturnController::class, 'scanBarcode'])->name('scan-barcode');
         Route::get('/', [ReturnController::class, 'index'])->name('index');
         Route::post('/', [ReturnController::class, 'store'])->name('store');
         Route::get('/{stockReturn}', [ReturnController::class, 'show'])->name('show');

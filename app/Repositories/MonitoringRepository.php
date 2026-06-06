@@ -5,12 +5,14 @@ namespace App\Repositories;
 use App\Models\Batch;
 use App\Models\Restock;
 use App\Models\StockDistributions;
-use App\Models\StockMutations;
 use App\Models\StockReturns;
 use App\Models\StockTransfers;
 use App\Models\Warehouse;
+use App\Models\ProductReceiving;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use stdClass;
 
 class MonitoringRepository
 {
@@ -74,18 +76,6 @@ class MonitoringRepository
             return empty($filters['activity_type']) || $filters['activity_type'] === $type;
         };
 
-        if ($hasActivityType('stock_mutation')) {
-            $addActivityStats(StockMutations::query()
-                ->selectRaw('warehouse_id, COUNT(*) as activity_count, MAX(created_at) as last_activity_at')
-                ->when($filters['warehouse_id'] ?? null, fn($query, $warehouseId) => $query->where('warehouse_id', $warehouseId))
-                ->when($filters['batch_id'] ?? null, fn($query, $batchId) => $query->where('batch_id', $batchId))
-                ->when($filters['product_id'] ?? null, fn($query, $productId) => $query->whereHas('batch', fn($q) => $q->where('product_id', $productId)))
-                ->when($filters['date_from'] ?? null, fn($query, $dateFrom) => $query->whereDate('created_at', '>=', $dateFrom))
-                ->when($filters['date_to'] ?? null, fn($query, $dateTo) => $query->whereDate('created_at', '<=', $dateTo))
-                ->groupBy('warehouse_id')
-                ->get());
-        }
-
         if ($hasActivityType('distribution')) {
             $addActivityStats(StockDistributions::query()
                 ->selectRaw('warehouse_id, COUNT(*) as activity_count, MAX(created_at) as last_activity_at')
@@ -95,6 +85,22 @@ class MonitoringRepository
                 ->when($filters['date_from'] ?? null, fn($query, $dateFrom) => $query->whereDate('created_at', '>=', $dateFrom))
                 ->when($filters['date_to'] ?? null, fn($query, $dateTo) => $query->whereDate('created_at', '<=', $dateTo))
                 ->groupBy('warehouse_id')
+                ->get());
+        }
+        if ($hasActivityType('receiving')) {
+            $addActivityStats(ProductReceiving::query()
+                ->join('purchase_orders', 'product_receivings.purchase_id', '=', 'purchase_orders.id')
+                ->selectRaw('purchase_orders.warehouse_id as warehouse_id, COUNT(*) as activity_count, MAX(product_receivings.created_at) as last_activity_at')
+                ->when($filters['warehouse_id'] ?? null, fn($query, $warehouseId) => $query->where('purchase_orders.warehouse_id', $warehouseId))
+                ->when($filters['product_id'] ?? null, fn($query, $productId) => $query->whereExists(function ($subQuery) use ($productId) {
+                    $subQuery->selectRaw('1')
+                        ->from('product_receiving_items')
+                        ->whereColumn('product_receiving_items.receiving_id', 'product_receivings.id')
+                        ->where('product_receiving_items.product_id', $productId);
+                }))
+                ->when($filters['date_from'] ?? null, fn($query, $dateFrom) => $query->whereDate('product_receivings.created_at', '>=', $dateFrom))
+                ->when($filters['date_to'] ?? null, fn($query, $dateTo) => $query->whereDate('product_receivings.created_at', '<=', $dateTo))
+                ->groupBy('purchase_orders.warehouse_id')
                 ->get());
         }
 
@@ -208,7 +214,7 @@ class MonitoringRepository
     {
         $logs = collect();
 
-        $logs = $logs->merge($this->mapStockMutations($filters));
+        $logs = $logs->merge($this->mapReceivings($filters));
         $logs = $logs->merge($this->mapDistributions($filters));
         $logs = $logs->merge($this->mapTransfers($filters));
         $logs = $logs->merge($this->mapRestocks($filters));
@@ -272,15 +278,19 @@ class MonitoringRepository
         })->all();
     }
 
-    private function mapStockMutations(array $filters = []): Collection
+    private function mapReceivings(array $filters = []): Collection
     {
-        return StockMutations::query()
-            ->with(['warehouse', 'batch.product'])
+        return ProductReceiving::query()
+            ->with(['purchase.warehouse', 'items.products', 'user'])
             ->when($filters['warehouse_id'] ?? null, function ($query, $warehouseId) {
-                $query->where('warehouse_id', $warehouseId);
+                $query->whereHas('purchase', function ($purchaseQuery) use ($warehouseId) {
+                    $purchaseQuery->where('warehouse_id', $warehouseId);
+                });
             })
-            ->when($filters['batch_id'] ?? null, function ($query, $batchId) {
-                $query->where('batch_id', $batchId);
+            ->when($filters['product_id'] ?? null, function ($query, $productId) {
+                $query->whereHas('items', function ($itemQuery) use ($productId) {
+                    $itemQuery->where('product_id', $productId);
+                });
             })
             ->when($filters['date_from'] ?? null, function ($query, $dateFrom) {
                 $query->whereDate('created_at', '>=', $dateFrom);
@@ -290,30 +300,117 @@ class MonitoringRepository
             })
             ->latest()
             ->get()
-            ->map(function (StockMutations $mutation) {
+            ->map(function (ProductReceiving $receive) {
+                $item = $receive->items->first();
+                $product = $item?->products;
+
                 return [
-                    'id' => $mutation->id,
-                    'activity_type' => 'stock_mutation',
-                    'title' => 'Stock mutation',
-                    'warehouse_id' => $mutation->warehouse_id,
-                    'warehouse_name' => $mutation->warehouse?->name,
-                    'batch_id' => $mutation->batch_id,
-                    'batch_code' => $mutation->batch?->batch_code,
-                    'product_id' => $mutation->batch?->product_id,
-                    'product_name' => $mutation->batch?->product?->name,
-                    'status' => $mutation->status,
-                    'quantity' => (int) $mutation->change_quantity,
-                    'before_quantity' => (int) $mutation->before_quantity,
-                    'after_quantity' => (int) $mutation->after_quantity,
-                    'reference_type' => $mutation->reference_type,
-                    'reference_id' => $mutation->reference_id,
-                    'notes' => $mutation->notes,
-                    'activity_at' => $mutation->created_at,
-                    'payload' => $mutation->toArray(),
+                    'id' => $receive->id,
+                    'activity_type' => 'receiving',
+                    'title' => 'Receiving ' . $receive->receiving_code,
+                    'warehouse_id' => $receive->purchase?->warehouse_id,
+                    'warehouse_name' => $receive->purchase?->warehouse?->name,
+                    'batch_id' => null,
+                    'batch_code' => null,
+                    'product_id' => $product?->id,
+                    'product_name' => $product?->name,
+                    'status' => $receive->status?->value ?? $receive->status,
+                    'quantity' => (int) $receive->items->sum('quantity_accepted'),
+                    'before_quantity' => null,
+                    'after_quantity' => null,
+                    'reference_type' => 'receive',
+                    'reference_id' => $receive->id,
+                    'notes' => null,
+                    'activity_at' => $receive->receiving_date ?? $receive->created_at,
+                    'payload' => [
+                        'receiving_code' => $receive->receiving_code,
+                        'purchase_order_code' => $receive->purchase?->po_code,
+                        'received_by' => $receive->user?->name,
+                        'items_count' => $receive->items->count(),
+                    ],
                 ];
             });
     }
+    public function getChartData($filters)
+    {
+        // 1. Tentukan rentang waktu 7 hari terakhir
+        $startDate = isset($filters['start_date']) ? Carbon::parse($filters['start_date']) : Carbon::now()->subDays(7)->startOfDay();
+        $endDate = isset($filters['end_date']) ? Carbon::parse($filters['end_date']) : Carbon::now()->endOfDay();
 
+        // 2. Ambil data dari 4 tabel aktivitas. 
+        // Kita gunakan perwakilan kolom 'quantity' (ganti jika nama kolom aslimu berbeda, misal 'qty' atau 'total')
+        $restocks = Restock::whereBetween('created_at', [$startDate, $endDate])
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'activity_at' => $item->created_at->toIso8601String(),
+                    'type' => 'restock',
+                    'quantity' => (int) ($item->quantity ?? 0)
+                ];
+            });
+
+        $transfers = StockTransfers::whereBetween('created_at', [$startDate, $endDate])
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'activity_at' => $item->created_at->toIso8601String(),
+                    'type' => 'transfer',
+                    'quantity' => (int) ($item->quantity ?? 0)
+                ];
+            });
+
+        $distributions = StockDistributions::whereBetween('created_at', [$startDate, $endDate])
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'activity_at' => $item->created_at->toIso8601String(),
+                    'type' => 'distribution',
+                    'quantity' => (int) ($item->quantity ?? 0)
+                ];
+            });
+
+        $returns = StockReturns::whereBetween('created_at', [$startDate, $endDate])
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'activity_at' => $item->created_at->toIso8601String(),
+                    'type' => 'return',
+                    'quantity' => (int) ($item->quantity ?? 0)
+                ];
+            });
+
+        // 3. Gabungkan semua data aktivitas menjadi satu array tunggal
+        $activities = collect()
+            ->merge($restocks)
+            ->merge($transfers)
+            ->merge($distributions)
+            ->merge($returns)
+            ->sortByDesc('activity_at')
+            ->values()
+            ->toArray();
+
+        // 4. Ambil data total stok per gudang
+        // Pastikan relasi di model Warehouse kamu bernama 'stocks' (atau sesuaikan jika berbeda)
+        $warehouses = Warehouse::select('id', 'name')
+            ->withCount(['stocks as total_stock' => function ($q) {
+                $q->select(DB::raw('coalesce(sum(quantity), 0)'));
+            }])
+            ->get()
+            ->map(function ($w) {
+                return [
+                    'name' => $w->name,
+                    'total_stock' => (int) $w->total_stock,
+                    'totalStock' => (int) $w->total_stock // double check untuk mengamankan pembacaan di FE
+                ];
+            })
+            ->toArray();
+
+        return [
+            'activities' => $activities,
+            'warehouses' => $warehouses
+        ];
+    }
+   
     private function mapDistributions(array $filters = []): Collection
     {
         return StockDistributions::query()
@@ -368,17 +465,15 @@ class MonitoringRepository
     private function mapTransfers(array $filters = []): Collection
     {
         return StockTransfers::query()
-            ->with(['item.batch.product', 'fromWarehouse', 'toWarehouse', 'request', 'confirm'])
+            ->with(['fromWarehouse', 'toWarehouse', 'request', 'confirm', 'products'])
             ->when($filters['warehouse_id'] ?? null, function ($query, $warehouseId) {
                 $query->where(function ($warehouseQuery) use ($warehouseId) {
                     $warehouseQuery->where('from_warehouse_id', $warehouseId)
                         ->orWhere('to_warehouse_id', $warehouseId);
                 });
             })
-            ->when($filters['batch_id'] ?? null, function ($query, $batchId) {
-                $query->whereHas('item', function ($itemQuery) use ($batchId) {
-                    $itemQuery->where('batch_id', $batchId);
-                });
+            ->when($filters['product_id'] ?? null, function ($query, $productId) {
+                $query->where('product_id', $productId);
             })
             ->when($filters['date_from'] ?? null, function ($query, $dateFrom) {
                 $query->whereDate('created_at', '>=', $dateFrom);
@@ -389,32 +484,29 @@ class MonitoringRepository
             ->latest()
             ->get()
             ->map(function (StockTransfers $transfer) {
-                $item = $transfer->item->first();
-
                 return [
-                    'id' => $transfer->id,
-                    'activity_type' => 'transfer',
-                    'title' => 'Transfer ' . $transfer->id,
-                    'warehouse_id' => $transfer->from_warehouse_id,
-                    'warehouse_name' => $transfer->fromWarehouse?->name,
-                    'batch_id' => $item?->batch_id,
-                    'batch_code' => $item?->batch?->batch_code,
-                    'product_id' => $item?->batch?->product_id,
-                    'product_name' => $item?->batch?->product?->name,
-                    'status' => $transfer->status,
-                    'quantity' => (int) $transfer->item->sum('quantity'),
+                    'id'              => $transfer->id,
+                    'activity_type'   => 'transfer',
+                    'title'           => 'Transfer ' . $transfer->transfer_code,
+                    'warehouse_id'    => $transfer->from_warehouse_id,
+                    'warehouse_name'  => $transfer->fromWarehouse?->name,
+                    'batch_id'        => null,   // tidak ada lagi pivot batch
+                    'batch_code'      => null,
+                    'product_id'      => $transfer->product_id,
+                    'product_name'    => $transfer->products?->name,
+                    'status'          => $transfer->status,
+                    'quantity'        => (int) ($transfer->approved_quantity ?? $transfer->requested_quantity ?? 0),
                     'before_quantity' => null,
-                    'after_quantity' => null,
-                    'reference_type' => 'transfer',
-                    'reference_id' => $transfer->id,
-                    'notes' => null,
-                    'activity_at' => $transfer->created_at,
+                    'after_quantity'  => null,
+                    'reference_type'  => 'transfer',
+                    'reference_id'    => $transfer->id,
+                    'notes'           => $transfer->notes,
+                    'activity_at'     => $transfer->created_at,
                     'payload' => [
                         'from_warehouse' => $transfer->fromWarehouse?->name,
-                        'to_warehouse' => $transfer->toWarehouse?->name,
-                        'requested_by' => $transfer->requested_by,
-                        'confirmed_by' => $transfer->confirmed_by,
-                        'items_count' => $transfer->item->count(),
+                        'to_warehouse'   => $transfer->toWarehouse?->name,
+                        'requested_by'   => $transfer->requested_by,
+                        'confirmed_by'   => $transfer->confirmed_by,
                     ],
                 ];
             });
@@ -509,5 +601,159 @@ class MonitoringRepository
                     ],
                 ];
             });
+    }
+
+ /**
+     * Get dashboard summary with stock status breakdown
+     */
+    public function getDashboardSummary(array $filters = []): array
+    {
+        $userWarehouseId = $filters['warehouse_id'] ?? null;
+
+        // Get all batches for warehouse
+        $batches = Batch::query()
+            ->with('product')
+            ->when($userWarehouseId, fn($q) => $q->where('warehouse_id', $userWarehouseId))
+            ->get();
+
+        // Categorize by stock status
+        $normal = 0;
+        $rendah = 0;
+        $kritis = 0;
+        $overstock = 0;
+        $alerts = [];
+
+        foreach ($batches as $batch) {
+            $status = $this->getStockStatus($batch);
+
+            match ($status) {
+                'normal' => $normal++,
+                'rendah' => $rendah++,
+                'kritis' => $kritis++,
+                'overstock' => $overstock++,
+            };
+
+            // Collect alerts
+            if (in_array($status, ['rendah', 'kritis'])) {
+                $alerts[] = [
+                    'batch_id' => $batch->id,
+                    'batch_code' => $batch->batch_code,
+                    'product_id' => $batch->product_id,
+                    'product_name' => $batch->product?->name,
+                    'current_quantity' => (int) $batch->current_quantity,
+                    'status' => $status,
+                    'expired_date' => $batch->expired_date,
+                    'expired_in_days' => $batch->expired_date ? $batch->expired_date->diffInDays(now()) : null,
+                    'warehouse_id' => $batch->warehouse_id,
+                ];
+            }
+        }
+
+        return [
+            'total_sku' => $batches->count(),
+            'stock_status' => [
+                'normal' => $normal,
+                'rendah' => $rendah,
+                'kritis' => $kritis,
+                'overstock' => $overstock,
+            ],
+            'alerts' => collect($alerts)
+                ->sortBy(fn($a) => $a['status'] === 'kritis' ? 0 : 1)
+                ->values()
+                ->take(10)
+                ->all(),
+        ];
+    }
+
+    /**
+     * Get low stock alerts
+     */
+    public function getLowStockAlerts(array $filters = []): Collection
+    {
+        $userWarehouseId = $filters['warehouse_id'] ?? null;
+
+        $batches = Batch::query()
+            ->with(['product', 'warehouse'])
+            ->when($userWarehouseId, fn($q) => $q->where('warehouse_id', $userWarehouseId))
+            ->get();
+
+        return collect($batches)
+            ->filter(fn($batch) => in_array($this->getStockStatus($batch), ['rendah', 'kritis']))
+            ->map(function (Batch $batch) {
+                $status = $this->getStockStatus($batch);
+                $expiredInDays = $batch->expired_date ? $batch->expired_date->diffInDays(now()) : null;
+
+                return [
+                    'id' => $batch->id,
+                    'batch_code' => $batch->batch_code,
+                    'sku' => $batch->product?->sku,
+                    'product_name' => $batch->product?->name,
+                    'current_quantity' => (int) $batch->current_quantity,
+                    'warehouse_name' => $batch->warehouse?->name,
+                    'location' => 'TBD', // TODO: add rack_location to Batch
+                    'status' => $status,
+                    'status_label' => match ($status) {
+                        'kritis' => 'Kritis',
+                        'rendah' => 'Rendah',
+                        'akan_expired' => 'Akan Expired',
+                        default => 'Normal',
+                    },
+                    'expired_date' => $batch->expired_date,
+                    'expired_in_days' => $expiredInDays,
+                    'message' => $this->getAlertMessage($batch, $status, $expiredInDays),
+                ];
+            })
+            ->sortByDesc(fn($a) => $a['status'] === 'kritis' ? 1 : 0)
+            ->values();
+    }
+   
+    
+
+   
+    private function getStockStatus(Batch $batch): string
+    {
+        // Check if expired or will expire soon
+        if ($batch->expired_date) {
+            $daysUntilExpiry = $batch->expired_date->diffInDays(now());
+            if ($daysUntilExpiry <= 0) {
+                return 'kritis';
+            }
+            if ($daysUntilExpiry <= 7) {
+                return 'rendah';
+            }
+        }
+
+        // Check quantity thresholds
+        $quantity = (int) $batch->current_quantity;
+
+        if ($quantity <= 0) {
+            return 'kritis';
+        }
+
+        if ($quantity <= 50) {
+            return 'rendah';
+        }
+
+        if ($quantity > 500) {
+            return 'overstock';
+        }
+
+        return 'normal';
+    }
+
+    /**
+     * Generate alert message
+     */
+    private function getAlertMessage(Batch $batch, string $status, ?int $expiredInDays): string
+    {
+        return match ($status) {
+            'kritis' => $expiredInDays !== null && $expiredInDays <= 0
+                ? 'Produk sudah expired! Segera keluarkan dari gudang.'
+                : 'Stok sangat rendah! Segera lakukan restok.',
+            'rendah' => $expiredInDays !== null && $expiredInDays <= 7
+                ? "Akan expired dalam {$expiredInDays} hari."
+                : 'Stok mendekati batas minimum.',
+            default => 'Status normal',
+        };
     }
 }
