@@ -21,26 +21,54 @@ class RackController extends Controller
     {
         $this->rackService = $rackService;    
     }
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request): JsonResponse
     {
         try {
-            $userId = $request->user()->id;
             $perPage = $request->query('per_page', 10);
-            $page = $request->query('page', 1);
+            $search  = $request->query('search');
+            $status  = $request->query('status');
 
-            $allRacks = $this->rackService->getAllRack($perPage);
+            $allRacks = $this->rackService->getAllRack($perPage, $search, $status);
 
             return response()->json([
                 'success' => true,
                 'data' => RackWarehouseListResource::collection($allRacks),
+                'meta' => [
+                    'current_page' => $allRacks->currentPage(),
+                    'last_page'    => $allRacks->lastPage(),
+                    'per_page'     => $allRacks->perPage(),
+                    'total'        => $allRacks->total(),
+                ],
             ], 200);
         } catch (\Exception $err) {
             return response()->json([
                 'success' => false,
                 'messages' => 'Failed to retrieve all racks.',
+                'error' => $err->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get rack statistics for dashboard cards.
+     */
+    public function statistics(): JsonResponse
+    {
+        try {
+            $stats = $this->rackService->getStatistics();
+
+            return response()->json([
+                'success' => true,
+                'data' => $stats,
+            ], 200);
+        } catch (\Exception $err) {
+            return response()->json([
+                'success' => false,
+                'messages' => 'Failed to retrieve rack statistics.',
                 'error' => $err->getMessage(),
             ], 500);
         }
@@ -56,15 +84,15 @@ class RackController extends Controller
 
             return response()->json([
                 'success' => true,
-                'messages' => 'Rack created successful.',
-                'data' => new RackLocationListResource($rack),
+                'messages' => 'Rack berhasil dibuat.',
+                'data' => new RackWarehouseListResource($rack),
             ], 201);
         } catch (\Exception $err) {
             return response()->json([
                 'success' => false,
-                'messages' => 'Failed to created rack.',
+                'messages' => 'Gagal membuat rack.',
                 'error' => $err->getMessage(),
-            ]);
+            ], 500);
         }
     }
 
@@ -74,17 +102,17 @@ class RackController extends Controller
     public function show(RackWarehouse $rack): JsonResponse
     {
         try {
-            $locationList = $this->rackService->getRackDetail($rack);
+            $rackDetail = $this->rackService->getRackDetail($rack);
 
             return response()->json([
                 'success' => true,
-                'data' => new RackLocationListResource($locationList),
+                'data' => new RackWarehouseListResource($rackDetail),
             ], 200);
         } catch (\Exception $err) {
             return response()->json([
                 'success' => false,
-                'messages' => 'Failed to retrieve warehouse detail',
-                'error' => $err->getMessage()
+                'messages' => 'Failed to retrieve rack detail.',
+                'error' => $err->getMessage(),
             ], 500);
         }
     }
@@ -92,20 +120,26 @@ class RackController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateRackLocationRequest $request, RackLocation $rackLocation): JsonResponse
+    public function update(Request $request, RackWarehouse $rack): JsonResponse
     {
         try {
-            $location = $this->rackService->updateLocation($rackLocation, $request->validated());
+            $validated = $request->validate([
+                'status' => 'required|in:AVAILABLE,FULL,INACTIVE,MAINTENANCE'
+            ]);
+
+            $rack->update(['status' => $validated['status']]);
+
+            // Update rack location statuses as well if needed? For now just the warehouse status.
 
             return response()->json([
                 'success' => true,
-                'messages' => 'Success to updated rack location.',
-                'data' => new RackLocationListResource($location),
-            ], 201);
+                'messages' => 'Status rack berhasil diperbarui.',
+                'data' => new RackWarehouseListResource($rack->fresh()),
+            ], 200);
         } catch (\Exception $err) {
             return response()->json([
                 'success' => false,
-                'messages' => 'Failed to updated rack location.',
+                'messages' => 'Gagal memperbarui status rack.',
                 'error' => $err->getMessage(),
             ], 500);
         }
@@ -114,8 +148,21 @@ class RackController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(RackLocation $rackLocation)
+    public function destroy(RackWarehouse $rack): JsonResponse
     {
-        //
+        try {
+            $this->rackService->deleteRack($rack);
+
+            return response()->json([
+                'success' => true,
+                'messages' => 'Rack berhasil dihapus.',
+            ], 200);
+        } catch (\Exception $err) {
+            return response()->json([
+                'success' => false,
+                'messages' => 'Gagal menghapus rack.',
+                'error' => $err->getMessage(),
+            ], 500);
+        }
     }
 }

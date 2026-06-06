@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\BatchController;
 use App\Http\Resources\StockMutationResource;
 use App\Http\Controllers\SuperAdmin\ProductReceivingController;
 use App\Http\Controllers\SuperAdmin\MonitoringController;
+use App\Http\Controllers\SuperAdmin\MasterData\RackController;
 use App\Models\StockMutations;
 use Illuminate\Support\Facades\Route;
 
@@ -66,5 +67,14 @@ Route::prefix('/admin')->middleware('auth:sanctum')->name('admin.')->group(funct
                 StockMutations::latest()->get()
             );
         })->name('mutations');
+    });
+
+    Route::prefix('/racks')->name('rack.')->group(function () {
+        Route::get('/statistics', [RackController::class, 'statistics'])->name('statistics');
+        Route::get('', [RackController::class, 'index'])->name('index');
+        Route::post('/create', [RackController::class, 'store'])->name('create');
+        Route::get('/{rack}', [RackController::class, 'show'])->name('show');
+        Route::put('/{rack}', [RackController::class, 'update'])->name('update');
+        Route::delete('/{rack}', [RackController::class, 'destroy'])->name('delete');
     });
 });

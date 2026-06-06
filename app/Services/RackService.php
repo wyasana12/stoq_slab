@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\RackLocation;
 use App\Models\RackWarehouse;
 use App\Repositories\RackRepository;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -17,30 +18,55 @@ class RackService
         $this->rackRepository = $rackRepository;
     }
 
-    public function getAllRack(int $rackPage = 10)
+    public function getAllRack(int $perPage = 10, ?string $search = null, ?string $status = null)
     {
-        return $this->rackRepository->getAllPaginated($rackPage);
+        return $this->rackRepository->getAllPaginated($perPage, $search, $status);
     }
 
     public function create(array $data): RackWarehouse
     {
         return DB::transaction(function () use ($data) {
+            $warehouseId = Auth::user()->warehouse_id;
+            $rackCode    = $this->generateRackCode($warehouseId);
+
             $rack = $this->rackRepository->create([
-                'rack_code' => $data['rack_code'],
-                'warehouse_id' => $data['warehouse_id'],
-                'status' => $data['status'],
+                'rack_code'    => $rackCode,
+                'warehouse_id' => $warehouseId,
+                'status'       => 'AVAILABLE',
             ]);
 
             $this->rackRepository->assignLocation(
                 rack: $rack,
                 levels: $data['levels'],
                 bins_per_level: $data['bins_per_level'],
-                capacity_unit: $data['capacity_unit'],
+                capacity_unit: 'PCS',
                 capacity: $data['capacity']
             );
 
-            return $rack;
+            return $rack->load('locations');
         });
+    }
+
+    /**
+     * Generate rack code in format RA0001, RA0002, etc.
+     * Numbering resets per warehouse.
+     */
+    private function generateRackCode(string $warehouseId): string
+    {
+        $lastRack = RackWarehouse::where('warehouse_id', $warehouseId)
+            ->where('rack_code', 'LIKE', 'RA-%')
+            ->orderByRaw("CAST(SUBSTRING(rack_code, 4) AS UNSIGNED) DESC")
+            ->first();
+
+        $nextNumber = 1;
+
+        if ($lastRack) {
+            // Extract numeric part from e.g. "RA0005" → 5
+            $numericPart = (int) substr($lastRack->rack_code, 3);
+            $nextNumber  = $numericPart + 1;
+        }
+
+        return 'RA-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
     }
 
     public function getRackDetail(RackWarehouse $rack): RackWarehouse
@@ -65,5 +91,10 @@ class RackService
             $this->rackRepository->deleteLocation($rack);
             $this->rackRepository->deleteRack($rack);
         });
+    }
+
+    public function getStatistics(): array
+    {
+        return $this->rackRepository->getStatistics();
     }
 }

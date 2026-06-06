@@ -9,13 +9,22 @@ use Illuminate\Support\Str;
 
 class RackRepository
 {
-    public function getAllPaginated(int $perPage = 10)
+    public function getAllPaginated(int $perPage = 10, ?string $search = null, ?string $status = null)
     {
-        $userId = Auth::user()->warehouse_id;
+        $warehouseId = Auth::user()->warehouse_id;
 
-        $query = RackWarehouse::with(['warehouse:id,name'])->select(['id', 'warehouse_id', 'rack_code', 'status']);
+        $query = RackWarehouse::with(['warehouse:id,name', 'locations'])
+            ->where('warehouse_id', $warehouseId);
 
-        return $query->where('warehouse_id', $userId)->latest()->paginate($perPage);
+        if ($search) {
+            $query->where('rack_code', 'LIKE', "%{$search}%");
+        }
+
+        if ($status) {
+            $query->where('status', strtoupper($status));
+        }
+
+        return $query->latest()->paginate($perPage);
     }
 
     public function getById(RackWarehouse $rackWarehouse): RackWarehouse
@@ -68,7 +77,43 @@ class RackRepository
         $rack->locations()->delete();
     }
 
-    public function deleteRack(RackWarehouse $rack) : void {
+    public function deleteRack(RackWarehouse $rack): void
+    {
         $rack->delete();
+    }
+
+    /**
+     * Get statistics for the rack dashboard cards.
+     */
+    public function getStatistics(): array
+    {
+        $warehouseId = Auth::user()->warehouse_id;
+
+        $racks = RackWarehouse::withCount([
+            'locations',
+            'locations as available_locations_count' => function ($q) {
+                $q->where('status', 'AVAILABLE');
+            },
+            'locations as full_locations_count' => function ($q) {
+                $q->where('status', 'FULL');
+            },
+        ])->where('warehouse_id', $warehouseId)->get();
+
+        $totalRacks = $racks->count();
+        $racksAvailable = $racks->where('status', 'AVAILABLE')->count();
+        $racksFull = $racks->where('status', 'FULL')->count();
+
+        $totalBins = $racks->sum('locations_count');
+        $binsAvailable = $racks->sum('available_locations_count');
+        $binsFull = $racks->sum('full_locations_count');
+
+        return [
+            'total_racks'     => $totalRacks,
+            'racks_available' => $racksAvailable,
+            'racks_full'      => $racksFull,
+            'total_bins'      => $totalBins,
+            'bins_available'  => $binsAvailable,
+            'bins_full'       => $binsFull,
+        ];
     }
 }

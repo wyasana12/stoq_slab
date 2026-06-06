@@ -17,12 +17,12 @@ class RackSeeder extends Seeder
     {
         $racks = [
             [
-                'rack_code' => 'R01',
+                'rack_code' => 'RA-0001',
                 'levels' => 3,
                 'bins_per_level' => 4,
             ],
             [
-                'rack_code' => 'R02',
+                'rack_code' => 'RA-0002',
                 'levels' => 2,
                 'bins_per_level' => 3
             ],

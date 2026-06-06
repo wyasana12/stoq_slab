@@ -35,7 +35,7 @@ class BatchService
 
     public function generateBarcode(Batch $batch): Batch
     {
-        $data = $batch->batch_code;
+        $data = json_encode($batch->toArray());
 
         $renderer = new ImageRenderer(
             new RendererStyle(200),
