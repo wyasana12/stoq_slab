@@ -2,22 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\DssRecommendationService;
-use App\Services\StockAnalysisService;
+use App\Services\DssCacheService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class DssController extends Controller
 {
-    protected DssRecommendationService $recommendationService;
-    protected StockAnalysisService $analysisService;
+    protected DssCacheService $cacheService;
 
     public function __construct(
-        DssRecommendationService $recommendationService,
-        StockAnalysisService $analysisService
+        DssCacheService $cacheService
     ) {
-        $this->recommendationService = $recommendationService;
-        $this->analysisService       = $analysisService;
+        $this->cacheService = $cacheService;
     }
 
     /**
@@ -27,15 +23,15 @@ class DssController extends Controller
     public function analysis(Request $request): JsonResponse
     {
         $days = $this->resolveHistoryDays($request);
+
         $warehouseId = $request->query('warehouse_id');
        
-        // Auto-filter to assigned warehouse for admin/staff users
         $userWarehouseId = $request->user()?->warehouse_id;
         if ($userWarehouseId) {
             $warehouseId = $userWarehouseId;
         }
 
-        $data = $this->analysisService->analyze($days);
+        $data = $this->cacheService->getAnalysis($days);
 
         if ($warehouseId) {
             $data = array_values(array_filter($data, fn($r) => $r['warehouse_id'] == $warehouseId));
@@ -69,8 +65,8 @@ class DssController extends Controller
         if ($userWarehouseId) {
             $warehouseId = $userWarehouseId;
         }
-
-        $data = $this->recommendationService->recommend($days);
+      
+        $data = $this->cacheService->getRecommendation($days);
 
         if ($warehouseId) {
             $data = array_values(array_filter($data, fn($r) => $r['warehouse_id'] == $warehouseId));

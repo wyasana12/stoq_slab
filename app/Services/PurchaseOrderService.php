@@ -4,9 +4,12 @@ namespace App\Services;
 
 use App\Enums\PurchaseOrderStatus;
 use App\Models\PurchaseOrder;
+use App\Models\User;
+use App\Notifications\PurchaseOrderNotification;
 use App\Repositories\PurchaseOrderRepository;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
@@ -30,7 +33,7 @@ class PurchaseOrderService
 
     public function getAllConfirmations(int $purchasePage = 10)
     {
-        return $this->purchaseOrderRepository->getAllConfirmation($purchasePage);    
+        return $this->purchaseOrderRepository->getAllConfirmation($purchasePage);
     }
 
     public function createRequestPurchaseOrder(array $data, string $userId): PurchaseOrder
@@ -51,7 +54,7 @@ class PurchaseOrderService
             ->get()
             ->keyBy('product_id');
 
-        return DB::transaction(function () use ($data, $userId, $supplierCatalog) {
+        $purchase = DB::transaction(function () use ($data, $userId, $supplierCatalog) {
             $totalAmount = 0;
             $processedItems = [];
             $isSubmit = isset($data['status']) && $data['status'] === PurchaseOrderStatus::SUBMITTED->value;
@@ -94,7 +97,7 @@ class PurchaseOrderService
 
             $poCode = 'PO-' . $warehouseCode . '-' . strtoupper(Str::random(6));
 
-            $purchase = $this->purchaseOrderRepository->createRequest([
+            $newPurchase = $this->purchaseOrderRepository->createRequest([
                 'po_code' => $poCode,
                 'created_by' => $userId,
                 'supplier_id' => $data['supplier_id'],
@@ -103,10 +106,17 @@ class PurchaseOrderService
                 'status' => $initialStatus,
             ]);
 
-            $this->purchaseOrderRepository->assignProducts($purchase, $processedItems);
+            $this->purchaseOrderRepository->assignProducts($newPurchase, $processedItems);
 
-            return $purchase;
+            return $newPurchase;
         });
+
+        if ($purchase->status === PurchaseOrderStatus::SUBMITTED) {
+            $purchase->load('user');
+            $this->sendPurchaseOrderNotification($purchase, PurchaseOrderStatus::SUBMITTED);
+        }
+
+        return $purchase->fresh(['warehouse', 'supplier', 'items.product', 'user']);
     }
 
     public function updateRequestPurchaseOrder(PurchaseOrder $purchase, array $data, string $userId): PurchaseOrder
@@ -132,7 +142,7 @@ class PurchaseOrderService
             ->get()
             ->keyBy('product_id');
 
-        return DB::transaction(function () use ($purchase, $data, $supplierCatalog) {
+        $updatedPurchase = DB::transaction(function () use ($purchase, $data, $supplierCatalog) {
             $totalAmount = 0;
             $processedItems = [];
 
@@ -179,6 +189,13 @@ class PurchaseOrderService
 
             return $purchase->fresh(['warehouse', 'supplier', 'items.product', 'user']);
         });
+
+        if ($updatedPurchase->status === PurchaseOrderStatus::SUBMITTED) {
+            $updatedPurchase->load('user');
+            $this->sendPurchaseOrderNotification($updatedPurchase, PurchaseOrderStatus::SUBMITTED);
+        }
+
+        return $updatedPurchase->fresh(['warehouse', 'supplier', 'items.product', 'user']);
     }
 
     public function updateStatusPurchaseOrder(PurchaseOrder $purchase, array $data): PurchaseOrder
@@ -189,7 +206,7 @@ class PurchaseOrderService
             throw new \InvalidArgumentException("Update status failed, Status transition from '{$purchase->status->value}' to '{$newStatus->value}' is not allowed.");
         }
 
-        return DB::transaction(function () use ($purchase, $newStatus, $data) {
+        $updatedPurchase = DB::transaction(function () use ($purchase, $newStatus, $data) {
             $this->purchaseOrderRepository->updateStatus($purchase, $newStatus);
 
             if (array_key_exists('notes', $data)) {
@@ -200,6 +217,10 @@ class PurchaseOrderService
 
             return $purchase->fresh(['warehouse', 'supplier', 'items.product', 'user']);
         });
+
+        $this->sendPurchaseOrderNotification($updatedPurchase, $newStatus);
+
+        return $updatedPurchase;
     }
 
     public function getPurchaseOrderDetail(PurchaseOrder $purchase, string $userId): PurchaseOrder
@@ -251,5 +272,50 @@ class PurchaseOrderService
     public function getTrashedPurchaseOrder(int $perPage, string $userId)
     {
         return $this->purchaseOrderRepository->getTrashedPaginated($perPage, $userId);
+    }
+
+    protected function sendPurchaseOrderNotification(PurchaseOrder $purchase, PurchaseOrderStatus $newStatus): void
+    {
+        $notificationData = match ($newStatus) {
+            PurchaseOrderStatus::SUBMITTED => [
+                'recipients' => User::role('super-admin'),
+                'title' => '[MENUNGGU APPROVAL] Pengajuan Purchase Order Baru',
+                'message' => "Sistem mencatat adanya pengajan Purchase Order baru yang diterbitkan oleh {$purchase->user->name}. Mohon kesediannya untuk meninjau dan memberikan persetujuan melalui dashboard sistem.",
+            ],
+            PurchaseOrderStatus::APPROVED => [
+                'recipients' => collect([$purchase->user]),
+                'title' => '[DISETUJUI] Pengajuan Purchase Order Diterima',
+                'message' => "Pemberitahuan bahwa pengajuan Purchase Order anda telah diperiksa dan disetujui oleh ... Dokumen ini telah diterima oleh sistem untuk dilanjutkan ke tahap pengadaan barang.",
+            ],
+            PurchaseOrderStatus::ORDERED => [
+                'recipients' => $purchase->warehouse->admins,
+                'title' => '[Instruksi Inbound] Purchase Order Dalam Proses Pengiriman',
+                'message' => "Purchase Order yang dialokasikan untuk fasilitas {$purchase->warehouse->name} telah diproses kepada pihak pemasok. Mohon agar tim gudang mempersiapkan proses penerimaan barang.",
+            ],
+
+            PurchaseOrderStatus::REJECTED,
+            PurchaseOrderStatus::CANCELLED => [
+                'recipients' => collect([$purchase->user]),
+                'title' => '[' . ucfirst($newStatus->value) . '] Pembaruan status Purchase Order',
+                'message' => "Dengan hormat, kami sampaikan bahwa Purchase Order anda tidak dapat dilanjutkan dan saat ini berstatus " . strtoupper($newStatus->value) . ". Catatan yang terlampir pada sistem: " . ($purchase->notes ?? 'Tidak ada keterangan tambahan.')
+            ],
+            PurchaseOrderStatus::CLOSED => [
+                'recipients' => User::where("warehouse_id", $purchase->warehouse_id)->role("admin")->get(),
+                'title' => "[SELESAI] Penutupan rekaman Purchase Order",
+                'message' => "Purchase Order ini telah ditutup secara resmi di dalam sistem. Status ini mengindikasikan bahwa prosedur pengadaan telah tuntas dan seluruh barang telah terkonfirmasi masuk ke dalam fasilitas gudang.",
+            ],
+            default => null,
+        };
+
+        if ($notificationData && $notificationData['recipients'] && $notificationData['recipients']->isNotEmpty()) {
+            Notification::send(
+                $notificationData['recipients'],
+                new PurchaseOrderNotification(
+                    $purchase,
+                    $notificationData['title'],
+                    $notificationData['message']
+                )
+            );
+        }
     }
 }

@@ -35,7 +35,20 @@ class BatchService
 
     public function generateBarcode(Batch $batch): Batch
     {
-        $data = $batch->batch_code;
+        $data = [
+            'id' => $batch->id,
+            'batch_code' => $batch->batch_code,
+            'product' => [
+                'id' => $batch->product?->id ?? 'N/A',
+                'name' => $batch->product?->name ?? 'N/A',
+                'current_quantity' => $batch->current_quantity,
+                'price' => $batch->price,
+                'condition' => $batch->condition,
+                'rack_location' => $batch->rack?->location_code ?? 'N/A',
+                'production_date' => $batch->production_date ? $batch->production_date->format('l, d F Y') : 'N/A',
+                'expired_date' => $batch->expired_date ? $batch->expired_date->format('l, d F Y') : 'N/A',
+            ],
+        ];
 
         $renderer = new ImageRenderer(
             new RendererStyle(200),
@@ -44,7 +57,7 @@ class BatchService
 
         $writer = new Writer($renderer);
 
-        $svg = $writer->writeString($data);
+        $svg = $writer->writeString(json_encode($data));
 
         $path = "qrcodes/batch-{$batch->batch_code}.svg";
 

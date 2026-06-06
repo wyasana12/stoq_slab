@@ -43,6 +43,6 @@ class Warehouse extends Model
 
     public function admins(): HasMany
     {
-        return $this->hasMany(User::class, 'warehouse_id')->role(['admin', 'staff']);    
+        return $this->hasMany(User::class, 'warehouse_id')->role('admin');    
     }
 }
