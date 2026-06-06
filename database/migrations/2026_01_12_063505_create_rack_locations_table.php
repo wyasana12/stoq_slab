@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignUlid('rack_id')->constrained('rack_warehouses')->cascadeOnDelete();
             $table->unsignedInteger('level');
             $table->unsignedInteger('bin');
-            $table->string('location_code')->unique();
+            $table->string('location_code')->unique;
             $table->enum('capacity_unit', ['PCS', 'BOX', 'CARTON', 'PALLET']);
             $table->unsignedInteger('capacity')->default(0);
             $table->unsignedInteger('used')->default(0);

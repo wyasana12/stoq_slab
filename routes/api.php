@@ -77,10 +77,12 @@ Route::prefix('/warehouses')->middleware('auth:sanctum')->name('warehouse.')->gr
 });
 
 Route::prefix('/racks')->middleware('auth:sanctum')->name('rack.')->group(function () {
+    Route::get('/statistics', [RackController::class, 'statistics'])->name('statistics');
     Route::get('', [RackController::class, 'index'])->name('index');
     Route::post('/create', [RackController::class, 'store'])->name('create');
     Route::get('/{rack}', [RackController::class, 'show'])->name('show');
-    Route::put('/{rack}');
+    Route::put('/{rack}', [RackController::class, 'update'])->name('update');
+    Route::delete('/{rack}', [RackController::class, 'destroy'])->name('delete');
 });
 
 Route::prefix('/suppliers')->middleware('auth:sanctum')->name('supplier.')->group(function () {
