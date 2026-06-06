@@ -14,14 +14,53 @@ class RackWarehouseListResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $capacityCurrent = $this->locations->sum('used');
+        $capacityTotal   = $this->locations->sum('capacity');
+
+        // Calculate levels and bins per level from actual rack_locations data
+        $levels      = $this->locations->max('level') ?? 0;
+        $binsPerLevel = $levels > 0
+            ? (int) ceil($this->locations->count() / $levels)
+            : 0;
+
         return [
-            'id' => $this->id,
-            'rack_code' => $this->rack_code,
-            'warehouse' => [
-                'id' => $this->warehouse?->id ?? 'N/A',
-                'name' => $this->warehouse?->name ?? 'N/A',
-            ],
-            'status' => $this->status,
+            'id'              => $this->id,
+            'code'            => $this->rack_code,
+            'zoneText'        => $this->warehouse?->name ?? 'N/A',
+            'zoneLink'        => '#',
+            'statusLabel'     => ucfirst(strtolower($this->status ?? 'available')),
+            'statusVariant'   => $this->mapStatusVariant($this->status),
+            'capacityCurrent' => $capacityCurrent,
+            'capacityTotal'   => $capacityTotal,
+            'capacityUnit'    => 'unit',
+            'productCount'    => $this->locations->where('used', '>', 0)->count(),
+            'levels'          => $levels,
+            'binsPerLevel'    => $binsPerLevel,
+            'availableCount'  => $capacityTotal - $capacityCurrent,
+            'locations'       => $this->locations->sortBy(['level', 'bin'])->map(fn ($loc) => [
+                'id'            => $loc->id,
+                'level'         => $loc->level,
+                'bin'           => $loc->bin,
+                'location_code' => $loc->location_code,
+                'capacity_unit' => $loc->capacity_unit,
+                'capacity'      => $loc->capacity,
+                'used'          => $loc->used,
+                'status'        => $loc->status,
+            ])->values()->all(),
         ];
+    }
+
+    /**
+     * Map backend status to frontend status variant.
+     */
+    private function mapStatusVariant(?string $status): string
+    {
+        return match (strtoupper($status ?? '')) {
+            'AVAILABLE'   => 'success',
+            'FULL'        => 'danger',
+            'INACTIVE'    => 'warning',
+            'MAINTENANCE' => 'maintenance',
+            default       => 'info',
+        };
     }
 }
