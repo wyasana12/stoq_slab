@@ -24,7 +24,7 @@ class Store extends Model
         return $this->belongsTo(Region::class, 'region_id');    
     }
 
-    public function warehouse(): BelongsTo
+    public function warehouses(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class, 'warehouse_id');    
     }

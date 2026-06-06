@@ -12,7 +12,7 @@ class StoreAndUpdateStoreRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -29,7 +29,7 @@ class StoreAndUpdateStoreRequest extends FormRequest
             'contact_person' => ['required', 'string', Rule::unique('stores', 'contact_person')->ignore($storeId)],
             'phone_number' => ['required', 'string', Rule::unique('stores', 'phone_number')->ignore($storeId), 'regex:/^\+?[0-9]{7,15}$/'],
             'email' => ['nullable', 'email', Rule::unique('stores', 'email')->ignore($storeId)],
-            'warehouse_id' => ['required', 'exists:warehouse,id'],
+            'warehouse_id' => ['required', 'exists:warehouses,id'],
             'region_id' => ['required', 'exists:region,id'],
             'street' => ['required', 'string', 'min:5'],
             'postal_code' => ['required', 'string', 'min:5', 'max:5'],

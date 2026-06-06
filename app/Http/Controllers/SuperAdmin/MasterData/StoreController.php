@@ -89,7 +89,7 @@ class StoreController extends Controller
     public function dropdown() : JsonResponse {
         $warehouse_id = Auth::user()->warehouse_id;
 
-        $store = Store::where('warehouse_id', $warehouse_id)->select('id', 'store_code', 'name');
+        $store = Store::where('warehouse_id', $warehouse_id)->select('id', 'store_code', 'name')->get();
 
         return response()->json([
             'success' => true,

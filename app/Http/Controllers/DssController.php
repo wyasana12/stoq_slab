@@ -2,22 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\DssRecommendationService;
-use App\Services\StockAnalysisService;
+use App\Services\DssCacheService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class DssController extends Controller
 {
-    protected DssRecommendationService $recommendationService;
-    protected StockAnalysisService $analysisService;
+    protected DssCacheService $cacheService;
 
     public function __construct(
-        DssRecommendationService $recommendationService,
-        StockAnalysisService $analysisService
+        DssCacheService $cacheService
     ) {
-        $this->recommendationService = $recommendationService;
-        $this->analysisService       = $analysisService;
+        $this->cacheService = $cacheService;
     }
 
     /**
@@ -27,13 +23,14 @@ class DssController extends Controller
     public function analysis(Request $request): JsonResponse
     {
         $days = $this->resolveHistoryDays($request);
-       
+
+        $data = $this->cacheService->getAnalysis($days);
 
         return response()->json([
             'success'      => true,
             'history_days' => $days,
             'summary' => [
-                'total'       => count($data = $this->analysisService->analyze($days)),
+                'total'       => count($data),
                 'fast_moving' => count(array_filter($data, fn($r) => $r['category'] === 'FAST_MOVING')),
                 'slow_moving' => count(array_filter($data, fn($r) => $r['category'] === 'SLOW_MOVING')),
                 'normal'      => count(array_filter($data, fn($r) => $r['category'] === 'NORMAL')),
@@ -50,12 +47,13 @@ class DssController extends Controller
     {
         $days = $this->resolveHistoryDays($request);
 
+        $data = $this->cacheService->getRecommendation($days);
 
         return response()->json([
             'success'      => true,
             'history_days' => $days,
             'summary' => [
-                'total'             => count($data = $this->recommendationService->recommend($days)),
+                'total'             => count($data),
                 'restock'           => count(array_filter($data, fn($r) => $r['recommendation'] === 'RESTOCK')),
                 'transfer_in'       => count(array_filter($data, fn($r) => $r['recommendation'] === 'TRANSFER_IN')),
                 'transfer_out'      => count(array_filter($data, fn($r) => $r['recommendation'] === 'TRANSFER_OUT')),

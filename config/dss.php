@@ -4,7 +4,7 @@ use App\Enums\MutationStatus;
 
 return [
     'default_history_days' => 30,
-    'history_days'         => [30, 60, 90],
+    'history_days'         => [7,30, 60, 90],
 
     'fast_moving_days_of_stock' => 14,
     'slow_moving_days_of_stock' => 60,

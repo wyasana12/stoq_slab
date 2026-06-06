@@ -21,6 +21,15 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/user', [LoginController::class, 'me'])->middleware('auth:sanctum');
 
+Route::prefix('/stores')->middleware('auth:sanctum')->name('store.')->group(function (){
+    Route::get('', [StoreController::class, 'index'])->middleware('permission:view_store')->name('index');
+    Route::get('/dropdown', [StoreController::class, 'dropdown'])->name('dropdown');
+    Route::post('/create', [StoreController::class, 'store'])->name('create');
+    Route::get('/{store}', [StoreController::class, 'show'])->middleware('permission:view_store')->name('show');
+    Route::put('/{store}', [StoreController::class, 'update'])->middleware('permission:edit_store')->name('update');
+    Route::delete('/{store}', [StoreController::class, 'destroy'])->middleware('perrmission:delete_store')->name('delete');
+});
+
 Route::prefix('/configs')->middleware('auth:sanctum')->name('config.')->group(function ()
  {
     Route::get('/alerts', [AlertConfigController::class, 'index'])->name('alert.index');
@@ -57,15 +66,6 @@ Route::prefix('/regions')->group(function () {
     Route::get('/regencies/{provinceId}', [RegionController::class, 'regencies']);
     Route::get('/districts/{regencyId}', [RegionController::class, 'districts']);
     Route::get('/villages/{districtId}', [RegionController::class, 'villages']);
-});
-
-Route::prefix('/stores')->middleware('auth:sanctum')->name('store.')->group(function (){
-    Route::get('', [StoreController::class, 'index'])->middleware('permission:view_store')->name('index');
-    Route::get('/dropdown', [StoreController::class, 'dropdown']);
-    Route::post('/create', [StoreController::class, 'store'])->middleware('perrmission:create_store')->name('create');
-    Route::get('/{store}', [StoreController::class, 'show'])->middleware('permission:view_store')->name('show');
-    Route::put('/{store}', [StoreController::class, 'update'])->middleware('permission:edit_store')->name('update');
-    Route::delete('/{store}', [StoreController::class, 'destroy'])->middleware('perrmission:delete_store')->name('delete');
 });
 
 Route::prefix('/warehouses')->middleware('auth:sanctum')->name('warehouse.')->group(function () {

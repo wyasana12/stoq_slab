@@ -37,7 +37,6 @@ class StockAnalysisService
      */
     public function analyze(?int $historyDays = null, bool $withTrend = false): array
     {
-        // 1. Resolve hari ke default alur kamu (7 Hari)
         $historyDays = $historyDays ?? 7;
         if ($historyDays <= 0) {
             throw new InvalidArgumentException("historyDays harus bernilai positif, diberikan: {$historyDays}.");
@@ -46,7 +45,6 @@ class StockAnalysisService
         $thresholdFast = $this->resolveThreshold('dss.fast_moving_days_of_stock', 14);
         $thresholdSlow = $this->resolveThreshold('dss.slow_moving_days_of_stock', 60);
 
-        // PERBAIKAN: Melempar variabel ke objek lokal ber-PHPDoc agar Intelephense 100% mengenali method-nya
         /**
          * Repository instance (typed as mixed to accommodate dynamic proxy/implementation
          * used at runtime and to satisfy static analyzers when the concrete method
