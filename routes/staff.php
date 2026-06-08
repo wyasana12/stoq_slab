@@ -1,11 +1,14 @@
 <?php
 
+use App\Http\Controllers\Staff\DashboardController;
 use App\Http\Controllers\Staff\DistributionStatusController;
 use App\Http\Controllers\Staff\ExpiredConditionController;
 use App\Http\Controllers\ReturnController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('/staff')->middleware('auth:sanctum')->name('staff.')->group(function () {
+
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
 
     Route::patch('/distributions/{distribution}/confirm', [DistributionStatusController::class, 'confirm'])
         ->name('distribution.confirm');

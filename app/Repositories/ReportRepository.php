@@ -33,6 +33,10 @@ class ReportRepository
         'restock_date' => 'Tanggal Restok',
         'distribution_date' => 'Tanggal Distribusi',
         'status' => 'Status',
+        'recommendation' => 'Rekomendasi',
+        'suggested_qty' => 'Saran Qty',
+        'from_warehouse' => 'Dari Gudang',
+        'to_warehouse' => 'Ke Gudang',
     ];
 
     protected array $defaultFields = [
@@ -68,6 +72,43 @@ class ReportRepository
             'price',
             'nilai',
         ],
+        'stock_critical' => [
+            'warehouse_name',
+            'product_name',
+            'category',
+            'recommendation',
+            'qty',
+            'from_warehouse',
+        ],
+        'stock_batch_expiry' => [
+            'product_code',
+            'product_name',
+            'category',
+            'batch_code',
+            'warehouse_name',
+            'qty',
+            'satuan',
+            'production_date',
+            'expired_date',
+        ],
+        'stock_value' => [
+            'product_code',
+            'product_name',
+            'category',
+            'warehouse_name',
+            'qty',
+            'satuan',
+            'price',
+            'nilai',
+        ],
+        'warehouse_comparison' => [
+            'product_code',
+            'product_name',
+            'category',
+            'warehouse_name',
+            'qty',
+            'satuan',
+        ],
     ];
 
     public function getReportRows(string $template, array $filters = []): Collection
@@ -76,6 +117,10 @@ class ReportRepository
             'stock_current' => $this->getStockCurrent($filters),
             'stock_movement' => $this->getStockMovement($filters),
             'stock_minimum' => $this->getStockMinimum($filters),
+            'stock_critical' => $this->getStockCritical($filters),
+            'stock_batch_expiry' => $this->getStockBatchExpiry($filters),
+            'stock_value' => $this->getStockValue($filters),
+            'warehouse_comparison' => $this->getWarehouseComparison($filters),
             default => collect(),
         };
     }
@@ -232,5 +277,101 @@ class ReportRepository
             ])->values();
     }
 
-    
+    protected function getStockCritical(array $filters): Collection
+    {
+        $dssCache = app(\App\Services\DssCacheService::class);
+        $days = (int) ($filters['days'] ?? config('dss.default_history_days', 30));
+        
+        $data = collect($dssCache->getRecommendation($days));
+
+        if (!empty($filters['warehouse_id'])) {
+            $data = $data->where('warehouse_id', $filters['warehouse_id']);
+        }
+
+        return $data->filter(fn($item) => in_array($item['recommendation'], ['RESTOCK', 'TRANSFER_IN']))
+            ->map(function ($item) {
+                return [
+                    'warehouse_name' => $item['warehouse_name'] ?? '-',
+                    'product_name' => $item['product_name'] ?? '-',
+                    'category' => $item['category'] ?? '-',
+                    'recommendation' => $item['recommendation'] ?? '-',
+                    'qty' => $item['suggested_qty'] ?? 0,
+                    'from_warehouse' => $item['from_warehouse'] ?? '-',
+                ];
+            })->values();
+    }
+
+    protected function getStockBatchExpiry(array $filters): Collection
+    {
+        return $this->applyCommonFilters(
+            Batch::query()->with(['product.category', 'product.unit', 'warehouse']),
+            $filters
+        )
+            ->whereNotNull('expired_date')
+            ->orderBy('expired_date', 'asc')
+            ->get()
+            ->map(fn(Batch $batch) => [
+                'product_code' => $batch->product?->sku,
+                'product_name' => $batch->product?->name,
+                'category' => $batch->product?->category?->name,
+                'batch_code' => $batch->batch_code,
+                'warehouse_name' => $batch->warehouse?->name,
+                'qty' => (int) $batch->current_quantity,
+                'current_quantity' => (int) $batch->current_quantity,
+                'satuan' => $batch->product?->unit?->symbol,
+                'production_date' => $batch->production_date,
+                'expired_date' => $batch->expired_date,
+            ])->values();
+    }
+
+    protected function getStockValue(array $filters): Collection
+    {
+        $batches = $this->applyCommonFilters(
+            Batch::query()->with(['product.category', 'product.unit', 'warehouse']),
+            $filters
+        )->get();
+
+        return $batches->groupBy(fn($batch) => $batch->product_id . '-' . $batch->warehouse_id)
+            ->map(function ($groupedBatches) {
+                $firstBatch = $groupedBatches->first();
+                $totalQty = $groupedBatches->sum('current_quantity');
+                $totalValue = $groupedBatches->sum(fn($b) => $b->price * $b->current_quantity);
+                
+                return [
+                    'product_code' => $firstBatch->product?->sku,
+                    'product_name' => $firstBatch->product?->name,
+                    'category' => $firstBatch->product?->category?->name,
+                    'warehouse_name' => $firstBatch->warehouse?->name,
+                    'qty' => (int) $totalQty,
+                    'current_quantity' => (int) $totalQty,
+                    'satuan' => $firstBatch->product?->unit?->symbol,
+                    'price' => $firstBatch->product?->price ?? $firstBatch->price, // approx
+                    'nilai' => $totalValue,
+                ];
+            })->values();
+    }
+
+    protected function getWarehouseComparison(array $filters): Collection
+    {
+        $batches = $this->applyCommonFilters(
+            Batch::query()->with(['product.category', 'product.unit', 'warehouse']),
+            $filters
+        )->get();
+
+        return $batches->groupBy(fn($batch) => $batch->product_id . '-' . $batch->warehouse_id)
+            ->map(function ($groupedBatches) {
+                $firstBatch = $groupedBatches->first();
+                $totalQty = $groupedBatches->sum('current_quantity');
+                
+                return [
+                    'product_code' => $firstBatch->product?->sku,
+                    'product_name' => $firstBatch->product?->name,
+                    'category' => $firstBatch->product?->category?->name,
+                    'warehouse_name' => $firstBatch->warehouse?->name,
+                    'qty' => (int) $totalQty,
+                    'current_quantity' => (int) $totalQty,
+                    'satuan' => $firstBatch->product?->unit?->symbol,
+                ];
+            })->values();
+    }
 }

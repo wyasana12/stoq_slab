@@ -20,11 +20,16 @@ use InvalidArgumentException;
 
 class DistributionRepository
 {
-    public function getAllDistributions(): Collection
+    public function getAllDistributions(?string $warehouseId = null): Collection
     {
-        return StockDistributions::with(['items.batch', 'warehouse', 'request', 'confirmedBy'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $query = StockDistributions::with(['items.batch', 'warehouse', 'request', 'confirmedBy'])
+            ->orderBy('created_at', 'desc');
+
+        if ($warehouseId) {
+            $query->where('warehouse_id', $warehouseId);
+        }
+
+        return $query->get();
     }
 
     public function createDistribution(array $data): StockDistributions

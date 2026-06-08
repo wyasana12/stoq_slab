@@ -20,7 +20,8 @@ class DistributionController extends Controller
 
     public function index(): JsonResponse
     {
-        $distributions = $this->repository->getAllDistributions();
+        $user = auth()->user();
+        $distributions = $this->repository->getAllDistributions($user->warehouse_id);
 
         return response()->json([
             'success' => true,
