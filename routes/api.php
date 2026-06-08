@@ -152,6 +152,7 @@ Route::prefix('/batches')->middleware('auth:sanctum')->name('batch.')->group(fun
     Route::post('/{batch}/generate', [BatchController::class, 'generate'])->middleware('permission:generate_barcode')->name('generate');
     Route::get('/{batch}/qr/preview', [BatchController::class, 'preview'])->name('qr.preview');
     Route::get('/{batch}/qr/download', [BatchController::class, 'download'])->name('qr.download');
+    Route::patch('/{batch}/status', [BatchController::class, 'updateStatus'])->name('status.update');
 });
 Route::prefix('/dss')->middleware('auth:sanctum')->name('dss.')->group(function () {
     Route::get('/analysis', [DssController::class, 'analysis'])->name('analysis');

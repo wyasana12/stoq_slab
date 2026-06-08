@@ -142,4 +142,52 @@ class BatchController extends Controller
             ]);
         }
     }
+
+    public function updateStatus(Request $request, Batch $batch): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'condition' => 'nullable|string',
+                'rack_location' => 'nullable|string',
+            ]);
+
+            $updateData = [];
+
+            if (isset($validated['condition'])) {
+                $updateData['condition'] = $validated['condition'];
+            }
+
+            if (array_key_exists('rack_location', $validated) && !empty($validated['rack_location'])) {
+                $rackLocation = \App\Models\RackLocation::where('location_code', $validated['rack_location'])->first();
+                if (!$rackLocation) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Lokasi rak tidak ditemukan.',
+                    ], 404);
+                }
+                $updateData['rack_id'] = $rackLocation->id;
+            }
+
+            if (!empty($updateData)) {
+                $batch->update($updateData);
+                $batch = $batch->fresh();
+            }
+
+            $this->batchService->generateBarcode($batch);
+
+            $batchDetail = $this->batchService->getBatchDetail($batch);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Status batch berhasil diperbarui.',
+                'data' => new BatchDetailResource($batchDetail),
+            ], 200);
+        } catch (\Exception $err) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memperbarui status batch.',
+                'error' => $err->getMessage(),
+            ], 500);
+        }
+    }
 }

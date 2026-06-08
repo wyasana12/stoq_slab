@@ -81,7 +81,6 @@ class TransferSeeder extends Seeder
                                 'product_id' => $sourceBatch->product_id,
                                 'warehouse_id' => $toWarehouse->id,
                                 'receiving_id' => $sourceBatch->receiving_id,
-                                
                                 'production_date' => $sourceBatch->production_date,
                                 'expired_date' => $sourceBatch->expired_date,
                                 'initial_quantity' => $decrement,
@@ -169,7 +168,6 @@ class TransferSeeder extends Seeder
                                 'product_id' => $batchIn->product_id,
                                 'warehouse_id' => $toW->id,
                                 'receiving_id' => $batchIn->receiving_id,
-                                
                                 'production_date' => $batchIn->production_date,
                                 'expired_date' => $batchIn->expired_date,
                                 'initial_quantity' => $decrementIn,
