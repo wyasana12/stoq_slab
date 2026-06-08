@@ -31,6 +31,7 @@ class StoreDetailResource extends JsonResource
                 'id' => $this->warehouse?->id ?? 'N/A',
                 'name' => $this->warehouse?->name ?? 'N/A',
             ],
+            'address' => $this->street ? "{$this->street}, {$this->postal_code}" : null,
             'street' => $this->street,
             'postal_code' => $this->postal_code,
             'status' => $this->status,

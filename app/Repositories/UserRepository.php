@@ -21,15 +21,9 @@ class UserRepository
     {
         $roleId = Role::find($role);
 
-        $user->assignRole($roleId);
+        $user->syncRoles($roleId);
 
         Cache::forget("auth_user_{$user->id}");
-    }
-
-    public function assignWarehouse(User $user, string $warehouse)
-    {
-        $user->warehouse_id = $warehouse;
-        $user->save();
     }
 
     public function update(User $user, array $data)
@@ -39,6 +33,6 @@ class UserRepository
 
     public function getById(User $user): User
     {
-        return $user->load(['roles', 'warehouse']);
+        return $user->load(['roles', 'warehouse', 'region']);
     }
 }

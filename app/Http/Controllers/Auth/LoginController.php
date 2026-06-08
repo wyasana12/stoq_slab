@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\UpdateProfileRequest;
+use App\Models\Region;
 use App\Models\User;
+use App\Services\UserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -11,6 +14,13 @@ use Illuminate\Support\Facades\Hash;
 
 class LoginController extends Controller
 {
+    protected UserService $userService;
+
+    public function __construct(UserService $userService)
+    {
+        $this->userService = $userService;
+    }
+    
     public function login(Request $request): JsonResponse
     {
         $request->validate([
@@ -18,7 +28,15 @@ class LoginController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        $loginType = filter_var($request->login, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+        $loginInput = $request->login;
+
+        if (filter_var($loginInput, FILTER_VALIDATE_EMAIL)) {
+            $loginType = 'email';
+        } elseif (preg_match('/^\+?[0-9]{7,15}$/', $loginInput)) {
+            $loginType = 'phone_number';
+        } else {
+            $loginType = 'username';
+        }
 
         $user = User::where($loginType, $request->login)->first();
 
@@ -31,7 +49,7 @@ class LoginController extends Controller
 
         $user->tokens()->delete();
 
-        $token = $user->createToken('auth_token', [$user->role])->plainTextToken;
+        $token = $user->createToken('auth_token', [$user->getRoleNames()->toArray()])->plainTextToken;
 
         return response()->json([
             'success' => true,
@@ -67,6 +85,8 @@ class LoginController extends Controller
     {
         $user = $request->user();
 
+        $user->loadMissing('warehouse');
+
         $auth = Cache::remember(
             "auth_user_{$user->id}",
             now()->addHours(24),
@@ -76,6 +96,21 @@ class LoginController extends Controller
                     'name' => $user->name,
                     'username' => $user->username,
                     'email' => $user->email,
+                    'phone_number' => $user->phone_number,
+                    'region' => [
+                        'id' => $user->region_id,
+                        'full_address' => Region::getAddress($user->region_id),
+                        'levels' => Region::getRegionData($user->region_id),
+                    ],
+                    'address' => $user->street ? "{$user->street}, {$user->postal_code}" : null,
+                    'birth_date' => $user->birth_date?->format('l, d F Y'),
+                    'raw_birth_date' => $user->birth_date?->format('Y-m-d'),
+                    'street' => $user->street,
+                    'postal_code' => $user->postal_code,
+                    'warehouse' => $user->warehouse ? [
+                        'id' => $user->warehouse->id,
+                        'name' => $user->warehouse->name,
+                    ] : null,
                     'roles' => $user->getRoleNames()->toArray(),
                     'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
                 ];
@@ -86,5 +121,27 @@ class LoginController extends Controller
             'success' => true,
             'data' => $auth
         ]);
+    }
+
+    public function update(UpdateProfileRequest $request): JsonResponse
+    {
+        $user = $request->user();
+
+        try {
+            $this->userService->updateUser($user, $request->validated());
+
+            Cache::forget("auth_user_{$user->id}");
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Profile updated successfully.',
+            ], 200);
+        } catch (\Exception $err) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update profile.',
+                'error' => $err->getMessage()
+            ], 500);
+        }
     }
 }

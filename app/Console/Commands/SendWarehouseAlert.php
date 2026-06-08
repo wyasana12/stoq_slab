@@ -46,7 +46,7 @@ class SendWarehouseAlert extends Command
 
             $this->info("Memproses konfigurasi {$c->name} (Target Date: {$targetData})");
 
-            $batches = Batch::with('warehouse.admins', 'product')
+            $batches = Batch::with('warehouse.staffs', 'product')
                 ->whereDate('expired_date', $targetData)
                 ->whereDoesntHave('alerts', function ($q) use ($c) {
                     $q->where('alert_config_id', $c->id);
@@ -61,7 +61,7 @@ class SendWarehouseAlert extends Command
             foreach ($batches as $b) {
                 $warehouse = $b->warehouse;
 
-                if (!$warehouse || $warehouse->admins->isEmpty()) {
+                if (!$warehouse || $warehouse->staffs->isEmpty()) {
                     $this->warn("-> Batch {$b->batch_code} diabaikan karena Warehouse tidak ditemukan atau tidak memiliki admin/staff.");
                     continue;
                 }
@@ -75,7 +75,7 @@ class SendWarehouseAlert extends Command
                            "Mohon segera lakukan tindakan manajemen stok (FEFO).";
 
                 try {
-                    Notification::send($warehouse->admins, new BatchExpiryNotification($title, $message));
+                    Notification::send($warehouse->staffs, new BatchExpiryNotification($title, $message));
 
                     AlertLog::create([
                         'warehouse_id' => $warehouse->id,
@@ -85,7 +85,7 @@ class SendWarehouseAlert extends Command
                         'message' => $message,
                     ]);
 
-                    $totalPenerima = $warehouse->admins->count();
+                    $totalPenerima = $warehouse->staffs->count();
                     $this->info(" [SUKSES] Alert dikirim ke {$totalPenerima} personil di warehouse {$warehouse->name} (Batch: {$b->batch_code})");
                 } catch (\Exception $err) {
                     Log::error("Gagal mengirim alert untuk kode batch {$b->batch_code} ".$err->getMessage());

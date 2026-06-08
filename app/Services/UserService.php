@@ -34,11 +34,16 @@ class UserService
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'username' => $data['username'],
+                'phone_number' => $data['phone_number'],
+                'region_id' => $data['region_id'],
+                'street' => $data['street'],
+                'postal_code' => $data['postal_code'],
+                'birth_date' => $data['birth_date'],
                 'password' => $data['password'],
+                'warehouse_id' => $data['warehouse_id'],
             ]);
 
             $this->userRepository->assignRole($user, $data['role_id']);
-            $this->userRepository->assignWarehouse($user, $data['warehouse_id']);
 
             return $user;
         });
@@ -59,9 +64,6 @@ class UserService
                 $this->userRepository->assignRole($user, $data['role_id']);
             }
 
-            if (isset($data['warehouse_id'])) {
-                $this->userRepository->assignWarehouse($user, $data['warehouse_id']);
-            }
 
             return $user;
         });

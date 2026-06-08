@@ -32,7 +32,7 @@ class StoreAndUpdateSupplierRequest extends FormRequest
             'email' => ['nullable', 'email', Rule::unique('suppliers', 'email')->ignore($supplierId)],
             'region_id' => ['required', 'exists:region,id'],
             'street' => ['required', 'string', 'min:5'],
-            'postal_code' => ['required', 'string', 'min:5'],
+            'postal_code' => ['required', 'string', 'digits:5'],
             'status' => ['required', 'boolean']
         ];
     }
@@ -58,7 +58,7 @@ class StoreAndUpdateSupplierRequest extends FormRequest
             'street.min' => 'Supplier location must be at least 5 characters.',
 
             'postal_code.required' => 'Supplier postal code is required.',
-            'postal_code.min' => 'Supplier postal code must be at least 5 characters.',
+            'postal_code.digits' => 'Supplier postal code must be exactly 5 digits.',
 
             'status.required' => 'Supplier status is required.',
             'status.boolean' => 'Supplier status must be true or false.'

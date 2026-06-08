@@ -32,7 +32,7 @@ class StoreAndUpdateWarehouseRequest extends FormRequest
             'email' => ['nullable', 'email', Rule::unique('warehouses', 'email')->ignore($warehouseId)],
             'region_id' => ['required', 'exists:region,id'],
             'street' => ['required', 'string', 'min:5'],
-            'postal_code' => ['required', 'string', 'min:5', 'max:5'],
+            'postal_code' => ['required', 'string', 'digits:5'],
             'status' => ['required', 'boolean'],
         ];
     }
@@ -62,8 +62,7 @@ class StoreAndUpdateWarehouseRequest extends FormRequest
             'street.min' => 'Warehouse street must be at least 5 characters.',
             
             'postal_code.required' => 'Warehouse postal code is required.',
-            'postal_code.min' => 'Warehouse postal code must be at least 5 characters.',
-            'postal_code.max' => 'Warehouse postal code must be at most 5 characters.',
+            'postal_code.digits' => 'Warehouse postal code must be exactly 5 digits.',
             
             'status.required' => 'Warehouse status is required.',
             'status.boolean' => 'Warehouse status must be true or false.',

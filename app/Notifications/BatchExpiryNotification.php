@@ -35,7 +35,7 @@ class BatchExpiryNotification extends Notification implements ShouldQueue
             ->subject($this->title)
             ->greeting('Halo Tim Gudang.')
             ->line($this->message)
-            ->action('Buka dashboard WMS', url('/'))
+            ->action('Buka Halaman Kelola Kondisi Barang', config('app.frontend_url').'/kelolakondisibarang')
             ->line('Notifikasi ini dikirim secara otomatis oleh sistem. Mohon tidak membalas email ini.');
     }
 

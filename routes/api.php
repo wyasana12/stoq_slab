@@ -19,7 +19,10 @@ use App\Http\Controllers\SuperAdmin\MasterData\StoreController;
 use App\Http\Controllers\SuperAdmin\MasterData\RackController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/user', [LoginController::class, 'me'])->middleware('auth:sanctum');
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/user', [LoginController::class, 'me']);
+    Route::put('/profile', [LoginController::class, 'update']);
+});
 
 Route::prefix('/stores')->middleware('auth:sanctum')->name('store.')->group(function (){
     Route::get('', [StoreController::class, 'index'])->middleware('permission:view_store')->name('index');
@@ -27,7 +30,7 @@ Route::prefix('/stores')->middleware('auth:sanctum')->name('store.')->group(func
     Route::post('/create', [StoreController::class, 'store'])->name('create');
     Route::get('/{store}', [StoreController::class, 'show'])->middleware('permission:view_store')->name('show');
     Route::put('/{store}', [StoreController::class, 'update'])->middleware('permission:edit_store')->name('update');
-    Route::delete('/{store}', [StoreController::class, 'destroy'])->middleware('perrmission:delete_store')->name('delete');
+    Route::delete('/{store}', [StoreController::class, 'destroy'])->middleware('permission:delete_store')->name('delete');
 });
 
 Route::prefix('/configs')->middleware('auth:sanctum')->name('config.')->group(function ()
@@ -70,6 +73,7 @@ Route::prefix('/regions')->group(function () {
 
 Route::prefix('/warehouses')->middleware('auth:sanctum')->name('warehouse.')->group(function () {
     Route::get('', [WarehouseController::class, 'index'])->middleware('permission:view_warehouse')->name('index');
+    Route::get('/dropdown', [WarehouseController::class, 'dropdown'])->name('dropdown');
     Route::post('/create', [WarehouseController::class, 'store'])->middleware('permission:create_warehouse')->name('create');
     Route::get('/{warehouse}', [WarehouseController::class, 'show'])->middleware('permission:view_warehouse')->name('show');
     Route::put('/{warehouse}', [WarehouseController::class, 'update'])->middleware('permission:edit_warehouse')->name('update');
@@ -87,6 +91,7 @@ Route::prefix('/racks')->middleware('auth:sanctum')->name('rack.')->group(functi
 
 Route::prefix('/suppliers')->middleware('auth:sanctum')->name('supplier.')->group(function () {
     Route::get('', [SupplierController::class, 'index'])->middleware('permission:view_supplier')->name('index');
+    Route::get('/dropdown', [SupplierController::class, 'dropdown'])->name('dropdown');
     Route::post('/create', [SupplierController::class, 'store'])->middleware('permission:create_supplier')->name('create');
     Route::get('/{supplier}', [SupplierController::class, 'show'])->middleware('permission:view_supplier')->name('show');
     Route::put('/{supplier}', [SupplierController::class, 'update'])->middleware('permission:edit_supplier')->name('update');
