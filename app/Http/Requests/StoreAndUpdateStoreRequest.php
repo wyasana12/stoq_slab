@@ -32,7 +32,7 @@ class StoreAndUpdateStoreRequest extends FormRequest
             'warehouse_id' => ['required', 'exists:warehouses,id'],
             'region_id' => ['required', 'exists:region,id'],
             'street' => ['required', 'string', 'min:5'],
-            'postal_code' => ['required', 'string', 'min:5', 'max:5'],
+            'postal_code' => ['required', 'digits:5'],
             'status' => ['required', 'boolean'],
         ];
     }
@@ -65,8 +65,7 @@ class StoreAndUpdateStoreRequest extends FormRequest
             'street.min' => 'Store street must be at least 5 characters.',
 
             'postal_code.required' => 'Store postal code is required.',
-            'postal_code.min' => 'Store postal code must be at least 5 characters.',
-            'postal_code.max' => 'Store postal code must be at most 5 characters.',
+            'postal_code.digits' => 'Store postal code must be exactly 5 digits.',
 
             'status.required' => 'Store status is required.',
             'status.boolean' => 'Store status must be true or false.',

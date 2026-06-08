@@ -17,7 +17,7 @@ class StoreController extends Controller
     {
         $perPage = $request->query('per_page', 10);
         $page = $request->query('page', 1);
-        $query = Store::with('warehouse:id,name')->select('id', 'name', 'contact_person', 'phone_number', 'email','status', 'store_code', 'warehouse_id');
+        $query = Store::with('warehouse:id,name')->select('id', 'name', 'contact_person', 'phone_number', 'email', 'status', 'store_code', 'warehouse_id');
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -29,14 +29,23 @@ class StoreController extends Controller
         }
 
         if ($request->has('status')) {
-            $query->where('status', (bool) $request->status);
+            $query->where('status', filter_var($request->status, FILTER_VALIDATE_BOOLEAN));
         }
 
         $stores = $query->paginate($perPage);
 
+        $summary = [
+            'total_stores'    => Store::count(),
+            'active_stores'   => Store::where('status', true)->count(),
+            'inactive_stores' => Store::where('status', false)->count(),
+        ];
+
         return response()->json([
             'success' => true,
-            'data' => StoreListResource::collection($stores)->response()->getData(),
+            'data' => array_merge(
+                StoreListResource::collection($stores)->response()->getData(true),
+                ['summary' => $summary]
+                ),
         ], 200);
     }
 
@@ -56,7 +65,7 @@ class StoreController extends Controller
     public function show(Store $store): JsonResponse
     {
         $store->load(['region', 'warehouse']);
-        
+
         return response()->json([
             'success' => true,
             'data' => new StoreDetailResource($store),
@@ -66,7 +75,7 @@ class StoreController extends Controller
     public function update(StoreAndUpdateStoreRequest $request, Store $store): JsonResponse
     {
         $store->update($request->validated());
-        
+
         $store->load(['region', 'warehouse']);
 
         return response()->json([
@@ -79,7 +88,7 @@ class StoreController extends Controller
     public function destroy(Store $store): JsonResponse
     {
         $store->delete();
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Store deleted successful.',
@@ -91,7 +100,7 @@ class StoreController extends Controller
         $user = Auth::user();
         $warehouse_id = $user->warehouse_id ?? null;
 
-        $query = Store::with('warehouses:id,name')
+        $query = Store::with('warehouse:id,name')
             ->select('id', 'store_code', 'name', 'warehouse_id', 'street', 'phone_number');
 
         if ($warehouse_id) {

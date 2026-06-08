@@ -27,6 +27,7 @@ class SupplierDetailResource extends JsonResource
                 'full_address' => Region::getAddress($this->region_id),
                 'levels' => Region::getRegionData($this->region_id),
             ],
+            'address' => $this->street ? "{$this->street}, {$this->postal_code}" : null,
             'street' => $this->street,
             'postal_code' => $this->postal_code,
             'status' => $this->status,

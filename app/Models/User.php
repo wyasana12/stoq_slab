@@ -31,6 +31,12 @@ class User extends Authenticatable
         'email',
         'username',
         'password',
+        'phone_number',
+        'region_id',   
+        'street',      
+        'postal_code', 
+        'birth_date',  
+        'warehouse_id',
     ];
 
     /**
@@ -53,11 +59,17 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'birth_date' => 'datetime'
         ];
     }
 
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class, 'warehouse_id');
+    }
+
+    public function region(): BelongsTo
+    {
+        return $this->belongsTo(Region::class, 'region_id');
     }
 }

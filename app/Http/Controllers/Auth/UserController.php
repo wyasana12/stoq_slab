@@ -66,7 +66,7 @@ class UserController extends Controller
             ], 200);
         } catch (\Exception $err) {
             return response()->json([
-                'success' => true,
+                'success' => false,
                 'messages' => 'Failed to retrieve user details.',
                 'error' => $err->getMessage(),
             ], 500);

@@ -3,7 +3,7 @@
 namespace App\Http\Requests\PurchaseOrder;
 
 use App\Enums\PurchaseOrderStatus;
-use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -27,13 +27,12 @@ class CreateAndUpdateRequestPurchaseOrderRequest extends FormRequest
         $isSubmit = $this->input('status') === PurchaseOrderStatus::SUBMITTED->value;
 
         return [
-            'supplier_id' => [$isSubmit ? 'required' : 'nullable', 'exists:suppliers,id'],
-            'warehouse_id' => [$isSubmit ? 'required' : 'nullable', 'exists:warehouses,id'],
+            'supplier_id' => array_filter([$isSubmit ? 'required' : 'nullable', 'exists:suppliers,id']),
 
-            'items' => [$isSubmit ? 'required' : 'nullable', 'array', $isSubmit ? 'min:1' : null],
-            'items.*.product_id' => [$isSubmit ? 'required' : 'nullable', 'exists:products,id'],
-            'items.*.quantity_ordered' => [$isSubmit ? 'required' : 'nullable', 'integer', 'min:1'],
-            'items.*.unit_price' => [$isSubmit ? 'required' : 'nullable', 'numeric', 'min:0'],
+            'items' => array_filter([$isSubmit ? 'required' : 'nullable', 'array', $isSubmit ? 'min:1' : null]),
+            'items.*.product_id' => array_filter([$isSubmit ? 'required' : 'nullable', 'exists:products,id']),
+            'items.*.quantity_ordered' => array_filter([$isSubmit ? 'required' : 'nullable', 'integer', 'min:1']),
+            'items.*.unit_price' => array_filter([$isSubmit ? 'required' : 'nullable', 'numeric', 'min:0']),
 
             'status' => ['required', Rule::in([PurchaseOrderStatus::DRAFT->value, PurchaseOrderStatus::SUBMITTED->value])],
         ];
@@ -44,9 +43,6 @@ class CreateAndUpdateRequestPurchaseOrderRequest extends FormRequest
         return [
             'supplier_id.required' => 'Supplier is required.',
             'supplier_id.exists' => 'This selected supplier is invalid.',
-
-            'warehouse_id.required' => 'Warehouse is required.',
-            'warehouse_id.exists' => 'This selected warehouse is invalid.',
 
             'items.required' => 'At least one product item is required.',
             'items.array' => 'The items must be an array format.',

@@ -30,15 +30,23 @@ class SupplierController extends Controller
         }
 
         if ($request->has('status')) {
-            $query->where('status', (bool) $request->status);
+            $query->where('status', filter_var($request->status, FILTER_VALIDATE_BOOLEAN));
         }
 
         $suppliers = $query->paginate(10);
 
+        $summary = [
+            'total_suppliers'    => Supplier::count(),
+            'active_suppliers'   => Supplier::where('status', true)->count(),
+            'inactive_suppliers' => Supplier::where('status', false)->count(),
+        ];
+
         return response()->json([
             'success' => true,
-            'data' => SupplierListResource::collection($suppliers)->response()->getData(true),
-        ]);
+            'data' => array_merge(SupplierListResource::collection($suppliers)->response()->getData(true),
+                    ['summary' => $summary]
+                    )
+        ], 200);
     }
 
     /**
@@ -99,5 +107,12 @@ class SupplierController extends Controller
         ]);
     }
 
+    public function dropdown(): JsonResponse {
+        $suppliers = Supplier::select('id', 'name')->get();
 
+        return response()->json([
+            'success' => true,
+            'data' => $suppliers
+        ]);
+    }
 }

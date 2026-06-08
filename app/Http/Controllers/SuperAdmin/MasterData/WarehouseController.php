@@ -31,15 +31,24 @@ class WarehouseController extends Controller
         }
 
         if ($request->has('status')) {
-            $query->where('status', (bool) $request->status);
+            $query->where('status', filter_var($request->status, FILTER_VALIDATE_BOOLEAN));
         }
 
         $warehouses = $query->paginate($perPage);
 
+        $summary = [
+            'total_warehouses'    => Warehouse::count(),
+            'active_warehouses'   => Warehouse::where('status', true)->count(),
+            'inactive_warehouses' => Warehouse::where('status', false)->count(),
+        ];
+
         return response()->json([
             'success' => true,
-            'data' => WarehouseListResource::collection($warehouses)->response()->getData(true),
-        ]);
+            'data' => array_merge(
+                WarehouseListResource::collection($warehouses)->response()->getData(true),
+                ['summary' => $summary]
+                ),
+        ], 200);
     }
 
     /**
@@ -97,6 +106,16 @@ class WarehouseController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Warehouse deleted successful.',
+        ]);
+    }
+
+    public function dropdown(): JsonResponse
+    {
+        $warehouses = Warehouse::select('id', 'name')->get();
+        
+        return response()->json([
+            'success' => true,
+            'data' => $warehouses
         ]);
     }
 }

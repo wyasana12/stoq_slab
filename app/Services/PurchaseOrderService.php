@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Notifications\PurchaseOrderNotification;
 use App\Repositories\PurchaseOrderRepository;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
@@ -55,6 +56,8 @@ class PurchaseOrderService
             ->keyBy('product_id');
 
         $purchase = DB::transaction(function () use ($data, $userId, $supplierCatalog) {
+            $warehouseId = Auth::user()?->warehouse_id;
+
             $totalAmount = 0;
             $processedItems = [];
             $isSubmit = isset($data['status']) && $data['status'] === PurchaseOrderStatus::SUBMITTED->value;
@@ -92,7 +95,7 @@ class PurchaseOrderService
                 ? PurchaseOrderStatus::from($data['status'])
                 : PurchaseOrderStatus::DRAFT;
 
-            $warehouse = DB::table('warehouses')->where('id', $data['warehouse_id'])->first();
+            $warehouse = DB::table('warehouses')->where('id', $warehouseId)->first();
             $warehouseCode = $warehouse ? strtoupper($warehouse->warehouse_code) : 'WHS';
 
             $poCode = 'PO-' . $warehouseCode . '-' . strtoupper(Str::random(6));
@@ -101,7 +104,7 @@ class PurchaseOrderService
                 'po_code' => $poCode,
                 'created_by' => $userId,
                 'supplier_id' => $data['supplier_id'],
-                'warehouse_id' => $data['warehouse_id'],
+                'warehouse_id' => $warehouseId,
                 'total_amount' => $totalAmount,
                 'status' => $initialStatus,
             ]);
@@ -181,13 +184,12 @@ class PurchaseOrderService
 
             $this->purchaseOrderRepository->updateRequest($purchase, [
                 'supplier_id' => $data['supplier_id'],
-                'warehouse_id' => $data['warehouse_id'],
                 'total_amount' => $totalAmount,
             ]);
 
             $this->purchaseOrderRepository->syncProducts($purchase, $processedItems);
 
-            return $purchase->fresh(['warehouse', 'supplier', 'items.product', 'user']);
+            return $purchase;
         });
 
         if ($updatedPurchase->status === PurchaseOrderStatus::SUBMITTED) {
@@ -278,7 +280,7 @@ class PurchaseOrderService
     {
         $notificationData = match ($newStatus) {
             PurchaseOrderStatus::SUBMITTED => [
-                'recipients' => User::role('super-admin'),
+                'recipients' => User::role('super-admin')->get(),
                 'title' => '[MENUNGGU APPROVAL] Pengajuan Purchase Order Baru',
                 'message' => "Sistem mencatat adanya pengajan Purchase Order baru yang diterbitkan oleh {$purchase->user->name}. Mohon kesediannya untuk meninjau dan memberikan persetujuan melalui dashboard sistem.",
             ],
