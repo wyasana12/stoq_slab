@@ -44,7 +44,7 @@ class ReportExportController extends Controller
             'meta' => [
                 'template' => $template,
                 'total_records' => $rows->count(),
-                'total_items' => $rows->sum('current_quantity'),
+                'total_items' => $rows->sum(fn($row) => $row['qty'] ?? $row['current_quantity'] ?? 0),
                 'categories' => $categories,
                 'fields' => $fields,
             ],

@@ -76,7 +76,7 @@ class StockMutationRepository
             ->join('batches', 'batches.id', '=', 'stock_mutations.batch_id')
             ->select([
                 'stock_mutations.warehouse_id',
-                DB::raw('SUM(stock_mutations.change_quantity) as total_quantity'),
+                DB::raw('SUM(ABS(stock_mutations.change_quantity)) as total_quantity'),
             ])
             ->where('batches.product_id', $productId)
             ->whereIn('stock_mutations.reference_type', ['DISTRIBUTION', 'TRANSFER']) // ← tambah ini

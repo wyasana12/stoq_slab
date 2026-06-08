@@ -22,10 +22,37 @@ class ReturnController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $returns = StockReturns::query()
+        $query = StockReturns::query()
             ->with(['warehouse', 'receiving', 'product', 'request', 'confirm'])
-            ->latest()
-            ->paginate(15);
+            ->latest();
+
+        if ($request->has('status')) {
+            $query->where('status', $request->query('status'));
+        }
+
+        if ($request->has('type')) {
+            $type = $request->query('type');
+            if ($type === 'expired') {
+                $query->where('reason', 'expired');
+            } else if ($type === 'return') {
+                $query->where(function($q) {
+                    $q->where('reason', '!=', 'expired')->orWhereNull('reason');
+                });
+            }
+        }
+
+        if ($request->has('search')) {
+            $search = $request->query('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('return_code', 'like', "%{$search}%")
+                  ->orWhereHas('product', function ($q2) use ($search) {
+                      $q2->where('name', 'like', "%{$search}%")
+                         ->orWhere('product_code', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $returns = $query->paginate($request->query('per_page', 15));
 
         return response()->json([
             'success' => true,
