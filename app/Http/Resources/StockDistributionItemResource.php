@@ -15,6 +15,7 @@ class StockDistributionItemResource extends JsonResource
             'product_id'         => $this->batch?->product?->id,
             'product_code'       => $this->batch?->product?->product_code,
             'product'            => $this->batch?->product?->name,
+            'current_quantity'    => $this->batch?->current_quantity,
             'requested_quantity' => $this->requested_quantity,
             'approved_quantity'  => $this->approved_quantity,
         ];

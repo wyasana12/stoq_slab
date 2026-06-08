@@ -27,8 +27,8 @@ class DistributionStatusController extends Controller
                 $this->saveProof($distribution, $request->file('shipped_proof'), 'shipped');
             }
 
-            if ($status->name === 'DELIVERED' && $request->hasFile('delivered_proof')) {
-                $this->saveProof($distribution, $request->file('delivered_proof'), 'delivered');
+            if ($status->name === 'COMPLETED' && $request->hasFile('completed_proof')) {
+                $this->saveProof($distribution, $request->file('completed_proof'), 'completed');
             }
 
             $distribution = $this->repository->updateStatus(
@@ -67,18 +67,18 @@ class DistributionStatusController extends Controller
         );
     }
 
-    public function downloadDeliveredProof(StockDistributions $distribution)
+    public function downloadCompletedProof(StockDistributions $distribution)
     {
-        if (! $distribution->delivered_proof_path) {
+        if (! $distribution->completed_proof_path) {
             return response()->json([
                 'success' => false,
-                'message' => 'Bukti pengiriman delivered tidak ditemukan.',
+                'message' => 'Bukti pengiriman completed tidak ditemukan.',
             ], 404);
         }
 
         return response()->download(
-            Storage::disk('public')->path($distribution->delivered_proof_path),
-            $distribution->delivered_proof_name
+            Storage::disk('public')->path($distribution->completed_proof_path),
+            $distribution->completed_proof_name
         );
     }
 
@@ -123,7 +123,7 @@ class DistributionStatusController extends Controller
         return match (strtoupper($status->name)) {
             'PENDING' => 'Pending',
             'SHIPPED' => 'Shipped',
-            'DELIVERED' => 'Delivered',
+            'COMPLETED' => 'Completed',
             'CANCELLED' => 'Cancelled',
             default => ucfirst(strtolower($status->name)),
         };

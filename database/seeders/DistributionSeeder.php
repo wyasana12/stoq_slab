@@ -37,7 +37,6 @@ class DistributionSeeder extends Seeder
             $dist = StockDistributions::create([
                 'distribution_code' => "DIST-" . now()->format('Ymd') . "-" . rand(0001, 9999),
                 'warehouse_id' => $batch->warehouse_id,
-                'location' => 'Toko cabang ' . rand(1, 3),
                 'dispatched_at' => now(),
                 'requested_by' => $users->id,
                 'confirmed_by' => $users->id,
@@ -64,7 +63,7 @@ class DistributionSeeder extends Seeder
                 'after_quantity' => $batch->current_quantity,
                 'reference_type' => 'DISTRIBUTION',
                 'reference_id' => $dist->id,
-                'notes' => 'Barang masuk ke ' . $dist->location,
+                'notes' => 'Barang masuk ke ' . ($dist->store?->name ?? 'toko'),
                 'status' => MutationStatus::DISTRIBUTION_COMPLETED->value,
             ]);
         }

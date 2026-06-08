@@ -86,10 +86,19 @@ class StoreController extends Controller
         ]);
     }
 
-    public function dropdown() : JsonResponse {
-        $warehouse_id = Auth::user()->warehouse_id;
+    public function dropdown(): JsonResponse
+    {
+        $user = Auth::user();
+        $warehouse_id = $user->warehouse_id ?? null;
 
-        $store = Store::where('warehouse_id', $warehouse_id)->select('id', 'store_code', 'name')->get();
+        $query = Store::with('warehouses:id,name')
+            ->select('id', 'store_code', 'name', 'warehouse_id', 'street', 'phone_number');
+
+        if ($warehouse_id) {
+            $query->where('warehouse_id', $warehouse_id);
+        }
+
+        $store = $query->get();
 
         return response()->json([
             'success' => true,

@@ -30,6 +30,7 @@ class DatabaseSeeder extends Seeder
             ReturnSeeder::class,
             TransferSeeder::class,
             DistributionSeeder::class,
+            StockMutationSeeder::class,
         ]);
     }
 }

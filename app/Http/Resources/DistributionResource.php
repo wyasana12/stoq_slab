@@ -14,23 +14,22 @@ class DistributionResource extends JsonResource
             asset('storage/' . $this->shipped_proof_path)
         );
 
-        $deliveredProofUrl = $this->when(
-            $this->delivered_proof_path,
-            asset('storage/' . $this->delivered_proof_path)
+        $completedProofUrl = $this->when(
+            $this->completed_proof_path,
+            asset('storage/' . $this->completed_proof_path)
         );
 
-        $photoUrl = $deliveredProofUrl ?? $shippedProofUrl;
+        $photoUrl = $completedProofUrl ?? $shippedProofUrl;
 
         return [
             'id'                => $this->id,
             'distribution_code' => $this->distribution_code,
+            'store_id'          => $this->store?->id,
+            'store_name'        => $this->store?->name,
+            'store_address'     => $this->store?->street,
+            'store_phone'       => $this->store?->phone_number,
             'warehouse_id'      => $this->warehouse?->id,
             'warehouse_name'    => $this->warehouse?->name,
-            'location'          => $this->location,
-            'outlet_name'       => $this->outlet_name,
-            'outlet_address'    => $this->outlet_address,
-            'outlet_phone'      => $this->outlet_phone,
-            'outlet_contact'    => $this->outlet_contact ?? $this->outlet_phone,
             'created_at'        => $this->created_at,
             'requested_by'      => $this->requested_by,
             'requested_by_name' => $this->request?->name,
@@ -42,7 +41,7 @@ class DistributionResource extends JsonResource
             'items'             => StockDistributionItemResource::collection($this->whenLoaded('items')),
 
             'shipped_proof_url'   => $shippedProofUrl,
-            'delivered_proof_url' => $deliveredProofUrl,
+            'completed_proof_url' => $completedProofUrl,
 
             // Alias field yang dicari frontend
             'photo'    => $photoUrl,
@@ -50,11 +49,11 @@ class DistributionResource extends JsonResource
             'image'    => $photoUrl,
             'photos'   => array_values(array_filter([
                 $shippedProofUrl ? ['url' => $shippedProofUrl, 'type' => 'shipped'] : null,
-                $deliveredProofUrl ? ['url' => $deliveredProofUrl, 'type' => 'delivered'] : null,
+                $completedProofUrl ? ['url' => $completedProofUrl, 'type' => 'completed'] : null,
             ])),
             'images'   => array_values(array_filter([
                 $shippedProofUrl,
-                $deliveredProofUrl,
+                $completedProofUrl,
             ])),
         ];
     }

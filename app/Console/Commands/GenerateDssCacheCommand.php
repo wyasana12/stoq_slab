@@ -25,9 +25,9 @@ class GenerateDssCacheCommand extends Command
      */
     public function handle()
     {
-        GenerateDssCacheCommand::dispatch();
+        \App\Jobs\GenerateDssCacheJob::dispatch();
 
-        $this->info('Dss Job Cache dispached.');
+        $this->info('Dss Job Cache dispatched.');
 
         return self::SUCCESS;
     }
