@@ -43,8 +43,6 @@ Route::prefix('/configs')->middleware('auth:sanctum')->name('config.')->group(fu
 
 Route::prefix('/permissions')->middleware(['auth:sanctum', 'role:super-admin'])->name('permission.')->group(function () {
     Route::get('', [PermissionController::class, 'index'])->middleware('permission:view_permission')->name('index');
-    Route::post('/create', [PermissionController::class, 'store'])->middleware('permission:create_permission')->name('create');
-    Route::put('/{permission}', [PermissionController::class, 'update'])->middleware('permission:edit_permission')->name('update');
     Route::delete('/{permission}', [PermissionController::class, 'destroy'])->middleware('permission:delete_permission')->name('delete');
 });
 

@@ -31,6 +31,7 @@ return new class extends Migration
 
             $table->string('notes')->nullable();
             $table->string('status');
+            $table->boolean('flag_print')->default(false);
             $table->timestamps();
             $table->softDeletes();
         });

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class RackLocation extends Model
+class RackLocationCapacity extends Model
 {
     use HasFactory, HasUlids;
 
@@ -19,18 +19,12 @@ class RackLocation extends Model
 
     protected $keyType = 'string';
 
-    public function rack(): BelongsTo
-    {
-        return $this->belongsTo(RackWarehouse::class, 'rack_id');    
+    public function unit(): BelongsTo {
+        return $this->belongsTo(Unit::class, 'unit_id');
     }
 
-    public function batch(): BelongsTo
+    public function location(): BelongsTo
     {
-        return $this->belongsTo(Batch::class, 'batch_id');    
+        return $this->belongsTo(RackLocation::class, 'location_id');    
     }
-    
-    // public function capacities(): HasMany
-    // {
-    //     return $this->hasMany(RackLocationCapacity::class, 'location_id');    
-    // }
 }

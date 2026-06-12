@@ -116,6 +116,7 @@ class ProductReceivingService
                         : null,
                     'price' => $poItem->unit_price,
                     'condition' => $i['condition'] ?? null,
+                    'racks' => $i['racks'],
                 ];
             }
 
@@ -162,6 +163,8 @@ class ProductReceivingService
                         ]);
 
                         $this->batchService->generateBarcode($batch);
+
+                        $this->batchService->assignLocation($batch, $item['racks']);
 
                         $this->mutationRepository->create([
                             'id' => (string) Str::ulid(),
