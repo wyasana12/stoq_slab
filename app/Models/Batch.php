@@ -59,4 +59,9 @@ class Batch extends Model
     {
         return $this->hasMany(AlertLog::class, 'batch_id');    
     }
+    
+    public function locations(): HasMany
+    {
+        return $this->hasMany(RackLocation::class, 'batch_id');    
+    }
 }

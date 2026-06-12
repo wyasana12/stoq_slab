@@ -4,11 +4,14 @@ namespace App\Services;
 
 use App\Models\Batch;
 use App\Repositories\BatchRepository;
+use App\Repositories\RackRepository;
 use BaconQrCode\Writer;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use InvalidArgumentException;
 
 class BatchService
 {
@@ -17,10 +20,12 @@ class BatchService
      */
 
     protected BatchRepository $batchRepository;
+    protected RackRepository $rackRepository;
 
-    public function __construct(BatchRepository $batchRepository)
+    public function __construct(BatchRepository $batchRepository, RackRepository $rackRepository)
     {
         $this->batchRepository = $batchRepository;
+        $this->rackRepository = $rackRepository;
     }
 
     public function getAllBatches(int $batchPage = 10, array $filters)
@@ -31,6 +36,79 @@ class BatchService
     public function getBatchDetail(Batch $batch): Batch
     {
         return $this->batchRepository->getById($batch);
+    }
+
+    public function assignLocation(Batch $batch, array $data): void
+    {
+        DB::transaction(function () use ($batch, $data) {
+            if (empty($data)) {
+                throw new InvalidArgumentException('Please select at least one rack location.');
+            }
+
+            $remaining = $batch->current_quantity;
+
+            $locations = collect($data)->map(function ($item) {
+                return $this->rackRepository
+                    ->locationById($item['location_id']);
+            });
+
+            $first = $locations->first();
+
+            $available = max(
+                0,
+                $first->capacity - $first->used,
+            );
+
+            if ($available >= $remaining && count($data) > 1) {
+                throw new InvalidArgumentException("Please choose only one bin because the first bin has sufficient capacity.");
+            }
+
+            $totalAvailable = 0;
+
+            foreach ($locations as $location) {
+                if (
+                    $location->batch_id !== null &&
+                    $location->batch_id !== $batch->id
+                ) {
+                    throw new InvalidArgumentException(
+                        "Bin {$location->location_code} is already occupied."
+                    );
+                }
+
+                $totalAvailable += max(
+                    0,
+                    $location->capacity - $location->used
+                );
+            }
+
+            foreach ($locations as $location) {
+                if ($remaining < 0) break;
+
+                $available = max(
+                    0,
+                    $location->capacity - $location->used,
+                );
+
+                if ($available === 0) continue;
+
+                $qty = min($remaining, $available);
+
+                $location->batch_id = $batch->id;
+                $location->used += $qty;
+
+                if ($location->used >= $location->capacity) {
+                    $location->status = 'FULL';
+                } elseif ($location->used > 0) {
+                    $location->status = 'PARTIAL';
+                } else {
+                    $location->status = 'AVAILABLE';
+                }
+
+                $this->rackRepository->save($location);
+
+                $remaining -= $qty;
+            }
+        });
     }
 
     public function generateBarcode(Batch $batch): Batch
@@ -68,6 +146,6 @@ class BatchService
 
     public function getSelectedForPrint(array $batchIds)
     {
-        return $this->batchRepository->getSelectedForPrint($batchIds);    
+        return $this->batchRepository->getSelectedForPrint($batchIds);
     }
 }

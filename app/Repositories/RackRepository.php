@@ -67,9 +67,14 @@ class RackRepository
         RackLocation::insert($data);
     }
 
-    public function update(RackLocation $location, array $data)
+    public function locationById(string $id): RackLocation
     {
-        return $location->update($data);
+        return RackLocation::lockForUpdate()->findOrFail($id);
+    }
+
+    public function save(RackLocation $location): void
+    {
+        $location->save();
     }
 
     public function deleteLocation(RackWarehouse $rack): void

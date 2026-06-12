@@ -33,6 +33,9 @@ class StoreandUpdateReceiveRequest extends FormRequest
             'items.*.production_date' => ['nullable', 'date', 'before_or_equal:today'],
             'items.*.expired_date' => ['nullable', 'date', 'after_or_equal:today'],
             'items.*.condition' => ['nullable', 'string', 'min:4'],
+
+            'items.*.racks' => ['required', 'array', 'min:1'],
+            'items.*.racks.*.location_id' => ['required', 'distinct', 'exists:rack_locations,id'],
         ];
     }
 
@@ -62,6 +65,12 @@ class StoreandUpdateReceiveRequest extends FormRequest
             'items.*.expired_date.after_or_equal' => 'Expired date cannot be a past date.',
 
             'items.*.condition.min' => 'Condition product cannot be less than 4 characters.',
+
+            'items.*.racks.required' => 'At least one rack is required.',
+            'items.*.racks.array' => 'The items must be an array format.',
+
+            'items.*.racks.*.location_id.required' => 'Rack is required.', 
+            'items.*.racks.*.location_id.exists' => 'One or more selected rack are invalid or do not exists.',
         ];
     }
 }
