@@ -69,6 +69,10 @@ Route::prefix('/admin')->middleware('auth:sanctum')->name('admin.')->group(funct
         })->name('mutations');
     });
 
+    Route::prefix('/product-changes')->name('product-changes.')->group(function () {
+        Route::get('', [App\Http\Controllers\Admin\ProductChangeController::class, 'index'])->name('index');
+    });
+
     Route::prefix('/racks')->name('rack.')->group(function () {
         Route::get('/statistics', [RackController::class, 'statistics'])->name('statistics');
         Route::get('', [RackController::class, 'index'])->name('index');

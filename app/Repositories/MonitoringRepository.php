@@ -392,8 +392,8 @@ class MonitoringRepository
         // 4. Ambil data total stok per gudang
         // Pastikan relasi di model Warehouse kamu bernama 'stocks' (atau sesuaikan jika berbeda)
         $warehouses = Warehouse::select('id', 'name')
-            ->withCount(['stocks as total_stock' => function ($q) {
-                $q->select(DB::raw('coalesce(sum(quantity), 0)'));
+            ->withCount(['batches as total_stock' => function ($q) {
+                $q->select(DB::raw('coalesce(sum(current_quantity), 0)'));
             }])
             ->get()
             ->map(function ($w) {
