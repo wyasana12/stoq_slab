@@ -444,14 +444,18 @@ class StockMutationSeeder extends Seeder
         $scenarioUnit = \App\Models\Unit::first();
         $scenarioSupplier = \App\Models\Supplier::first();
 
+        $foodNamesRestock = ['Indomie Goreng Spesial', 'Kopi Susu Aren', 'Teh Pucuk Harum 350ml', 'Roti Sisir Mentega', 'Beng-Beng Maxx', 'Oreo Supreme', 'Chitato Sapi Panggang 68g', 'Aqua Botol 600ml', 'Pocari Sweat 500ml', 'SilverQueen Cashew 62g'];
+        $foodNamesTransfer = ['Ultra Milk Coklat 1L', 'Mie Sedaap Kari Spesial', 'Kusuka Keripik Singkong Original', 'Tolak Angin Cair', 'Kopiko Candy', 'Bear Brand Susu Steril', 'Yakult 50ml', 'Sari Roti Tawar', 'Fruit Tea Apel 500ml', 'Good Time Chocochips'];
+
         foreach ($warehouses as $index => $wh) {
             $nextWh = $warehouses[($index + 1) % $warehouses->count()];
 
             // 1. Create 2 RESTOCK for $wh
             for ($i = 1; $i <= 2; $i++) {
+                $foodName = $foodNamesRestock[array_rand($foodNamesRestock)] . ' (' . $wh->name . ')';
                 $prod = \App\Models\Product::create([
                     'sku' => 'DSS-RES-' . $wh->warehouse_code . '-' . $i . '-' . time(),
-                    'name' => 'Produk Restok ' . $i . ' ' . $wh->name,
+                    'name' => $foodName,
                     'category_id' => $scenarioCategory->id,
                     'unit_id' => $scenarioUnit->id,
                 ]);
@@ -462,9 +466,10 @@ class StockMutationSeeder extends Seeder
 
             // 2. Create 2 TRANSFER_IN for $wh (which acts as TRANSFER_OUT for $nextWh)
             for ($i = 1; $i <= 2; $i++) {
+                $foodName = $foodNamesTransfer[array_rand($foodNamesTransfer)] . ' (' . $wh->name . ')';
                 $prod = \App\Models\Product::create([
                     'sku' => 'DSS-TRF-' . $wh->warehouse_code . '-' . $i . '-' . time(),
-                    'name' => 'Produk Transfer ' . $i . ' ke ' . $wh->name,
+                    'name' => $foodName,
                     'category_id' => $scenarioCategory->id,
                     'unit_id' => $scenarioUnit->id,
                 ]);

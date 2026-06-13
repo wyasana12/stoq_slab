@@ -128,17 +128,40 @@ class DistributionStatusController extends Controller
             default => ucfirst(strtolower($status->name)),
         };
     }
-    public function downloadSuratJalanTemplate()
+    public function downloadSuratJalan(StockDistributions $distribution)
     {
-        $path = storage_path('app/public/templates/surat_jalan.docx');
+        // Generate surat_jalan_no if not exists
+        if (empty($distribution->surat_jalan_no)) {
+            // Find the latest surat_jalan_no in this month to increment
+            $monthPrefix = 'SJ/' . now()->format('Y/m') . '/';
+            $latest = \App\Models\StockDistributions::where('surat_jalan_no', 'like', $monthPrefix . '%')
+                ->orderBy('surat_jalan_no', 'desc')
+                ->first();
 
-        if (! file_exists($path)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Template Surat Jalan tidak ditemukan.',
-            ], 404);
+            if ($latest && $latest->surat_jalan_no) {
+                $lastNumber = intval(substr($latest->surat_jalan_no, -4));
+                $newNumber = str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
+            } else {
+                $newNumber = '0001';
+            }
+
+            $suratJalanNo = $monthPrefix . $newNumber;
+
+            $distribution->update([
+                'surat_jalan_no' => $suratJalanNo,
+                'flag_print' => true
+            ]);
+        } else {
+            $distribution->update([
+                'flag_print' => true
+            ]);
         }
 
-        return response()->download($path, 'Surat Jalan Template.docx');
+        // Load the relationship for the view
+        $distribution->load(['warehouse', 'store', 'items.batch.product.unit']);
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.surat_jalan', compact('distribution'));
+
+        return $pdf->download('Surat_Jalan_' . str_replace('/', '_', $distribution->surat_jalan_no) . '.pdf');
     }
 }
