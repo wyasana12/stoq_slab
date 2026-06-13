@@ -427,65 +427,99 @@ class StockMutationSeeder extends Seeder
     }
 
     /**
-     * Skenario Terkontrol agar fitur DSS 100% muncul.
+     * Skenario Terkontrol agar fitur DSS 100% muncul sesuai kebutuhan testing (2 Transfer In, 2 Transfer Out, 2 Restock per gudang).
      */
     private function seedDssScenarios(): void
     {
-        $this->command->info('Membuat Skenario Khusus DSS (Transfer In/Out, Restock, Slow Moving)...');
+        $this->command->info('Membuat Skenario Khusus DSS (Transfer In/Out, Restock) untuk testing...');
 
-        $warehouses = \App\Models\Warehouse::take(3)->get();
-        if ($warehouses->count() < 2) return;
+        $warehouses = \App\Models\Warehouse::all();
+        if ($warehouses->count() < 2) {
+            $this->command->warn('Butuh minimal 2 gudang untuk membuat skenario transfer.');
+            return;
+        }
 
-        $whA = $warehouses[0];
-        $whB = $warehouses[1];
+        // Gunakan kategori dan supplier yang ada
+        $scenarioCategory = \App\Models\Category::firstOrCreate(['name' => 'DSS Scenario']);
+        $scenarioUnit = \App\Models\Unit::first();
+        $scenarioSupplier = \App\Models\Supplier::first();
 
-        $products = \App\Models\Product::take(3)->get();
-        if ($products->count() < 3) return;
+        foreach ($warehouses as $index => $wh) {
+            $nextWh = $warehouses[($index + 1) % $warehouses->count()];
 
-        // SCENARIO 1: TRANSFER IN / TRANSFER OUT
-        // Product 0: Fast Moving di whA, Slow Moving di whB
-        $prodTransfer = $products[0];
+            // 1. Create 2 RESTOCK for $wh
+            for ($i = 1; $i <= 2; $i++) {
+                $prod = \App\Models\Product::create([
+                    'sku' => 'DSS-RES-' . $wh->warehouse_code . '-' . $i . '-' . time(),
+                    'name' => 'Produk Restok ' . $i . ' ' . $wh->name,
+                    'category_id' => $scenarioCategory->id,
+                    'unit_id' => $scenarioUnit->id,
+                ]);
 
-        // Buat batch untuk Prod 0 di whA (Fast Moving: qty kecil, mutasi banyak)
-        $batchWhA = Batch::create([
+                // Create Fast Moving batch in $wh
+                $this->createFastMovingBatch($prod, $wh, 'DSS-BAT-RES-');
+            }
+
+            // 2. Create 2 TRANSFER_IN for $wh (which acts as TRANSFER_OUT for $nextWh)
+            for ($i = 1; $i <= 2; $i++) {
+                $prod = \App\Models\Product::create([
+                    'sku' => 'DSS-TRF-' . $wh->warehouse_code . '-' . $i . '-' . time(),
+                    'name' => 'Produk Transfer ' . $i . ' ke ' . $wh->name,
+                    'category_id' => $scenarioCategory->id,
+                    'unit_id' => $scenarioUnit->id,
+                ]);
+
+                // Fast Moving in $wh (Need Transfer In)
+                $this->createFastMovingBatch($prod, $wh, 'DSS-BAT-IN-');
+
+                // Slow Moving in $nextWh (Has excess, will be Transfer Out)
+                $this->createSlowMovingBatch($prod, $nextWh, 'DSS-BAT-OUT-');
+            }
+        }
+    }
+
+    private function createFastMovingBatch($product, $warehouse, $prefix) {
+        $batch = Batch::create([
             'id' => (string) Str::ulid(),
-            'batch_code' => 'DSS-TRANSFER-' . $whA->warehouse_code . '-FAST',
-            'product_id' => $prodTransfer->id,
-            'warehouse_id' => $whA->id,
-            'receiving_id' => \App\Models\ProductReceiving::first()->id ?? null,
-            'initial_quantity' => 100,
-            'current_quantity' => 5, // Sisa sangat kecil
+            'batch_code' => $prefix . $warehouse->warehouse_code . '-' . rand(1000, 9999),
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
+            'receiving_id' => \App\Models\ProductReceiving::first()->id ?? (string) Str::ulid(),
+            'initial_quantity' => 50,
+            'current_quantity' => 2, // Sisa sangat kecil
             'production_date' => now()->subMonths(2),
             'expired_date' => now()->addYear(),
             'price' => 15000,
             'condition' => 'GOOD',
         ]);
-        
-        for ($i = 1; $i <= 10; $i++) {
-            // 10 mutasi x 5 qty = 50 unit dalam 30 hari (velocity tinggi)
+
+        for ($i = 1; $i <= 5; $i++) {
+            // 5 mutasi x 5 qty = 25 unit dalam 30 hari (velocity tinggi)
             StockMutations::create([
                 'id' => (string) Str::ulid(),
-                'warehouse_id' => $whA->id,
-                'batch_id' => $batchWhA->id,
+                'warehouse_id' => $warehouse->id,
+                'batch_id' => $batch->id,
                 'change_quantity' => -5,
-                'before_quantity' => 10,
-                'after_quantity' => 5,
+                'before_quantity' => 7,
+                'after_quantity' => 2,
                 'reference_type' => 'DISTRIBUTION',
                 'reference_id' => (string) Str::ulid(),
-                'notes' => 'DSS SCENARIO: FAST MOVING OUT',
+                'notes' => 'DSS SCENARIO: FAST MOVING',
                 'status' => 'SUCCESS',
-                'created_at' => now()->subDays(rand(1, 15)),
-                'updated_at' => now()->subDays(rand(1, 15)),
+                'created_at' => now()->subDays(rand(1, 10)),
+                'updated_at' => now()->subDays(rand(1, 10)),
             ]);
         }
+        return $batch;
+    }
 
-        // Buat batch untuk Prod 0 di whB (Slow Moving: qty besar, mutasi nyaris nol)
-        $batchWhB = Batch::create([
+    private function createSlowMovingBatch($product, $warehouse, $prefix) {
+        $batch = Batch::create([
             'id' => (string) Str::ulid(),
-            'batch_code' => 'DSS-TRANSFER-' . $whB->warehouse_code . '-SLOW',
-            'product_id' => $prodTransfer->id,
-            'warehouse_id' => $whB->id,
-            'receiving_id' => \App\Models\ProductReceiving::first()->id ?? null,
+            'batch_code' => $prefix . $warehouse->warehouse_code . '-' . rand(1000, 9999),
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
+            'receiving_id' => \App\Models\ProductReceiving::first()->id ?? (string) Str::ulid(),
             'initial_quantity' => 300,
             'current_quantity' => 295, // Sisa sangat besar
             'production_date' => now()->subMonths(2),
@@ -496,76 +530,18 @@ class StockMutationSeeder extends Seeder
 
         StockMutations::create([
             'id' => (string) Str::ulid(),
-            'warehouse_id' => $whB->id,
-            'batch_id' => $batchWhB->id,
+            'warehouse_id' => $warehouse->id,
+            'batch_id' => $batch->id,
             'change_quantity' => -5,
             'before_quantity' => 300,
             'after_quantity' => 295,
             'reference_type' => 'DISTRIBUTION',
             'reference_id' => (string) Str::ulid(),
-            'notes' => 'DSS SCENARIO: SLOW MOVING OUT',
+            'notes' => 'DSS SCENARIO: SLOW MOVING',
             'status' => 'SUCCESS',
             'created_at' => now()->subDays(rand(15, 25)),
             'updated_at' => now()->subDays(rand(15, 25)),
         ]);
-
-        // SCENARIO 2: RESTOCK
-        // Product 1: Fast Moving di whA, tidak ada di gudang lain yang berlebih
-        $prodRestock = $products[1];
-        
-        $batchRestock = Batch::create([
-            'id' => (string) Str::ulid(),
-            'batch_code' => 'DSS-RESTOCK-' . $whA->warehouse_code,
-            'product_id' => $prodRestock->id,
-            'warehouse_id' => $whA->id,
-            'receiving_id' => \App\Models\ProductReceiving::first()->id ?? null,
-            'initial_quantity' => 50,
-            'current_quantity' => 2, // Sisa sangat kecil
-            'production_date' => now()->subMonths(2),
-            'expired_date' => now()->addYear(),
-            'price' => 20000,
-            'condition' => 'GOOD',
-        ]);
-
-        for ($i = 1; $i <= 5; $i++) {
-            // 5 mutasi x 5 qty = 25 unit dalam 30 hari (velocity tinggi)
-            StockMutations::create([
-                'id' => (string) Str::ulid(),
-                'warehouse_id' => $whA->id,
-                'batch_id' => $batchRestock->id,
-                'change_quantity' => -5,
-                'before_quantity' => 7,
-                'after_quantity' => 2,
-                'reference_type' => 'DISTRIBUTION',
-                'reference_id' => (string) Str::ulid(),
-                'notes' => 'DSS SCENARIO: RESTOCK FAST MOVING',
-                'status' => 'SUCCESS',
-                'created_at' => now()->subDays(rand(1, 10)),
-                'updated_at' => now()->subDays(rand(1, 10)),
-            ]);
-        }
-
-        // Hapus (atau minimalkan) batch product ini di whB agar tidak bisa ditarik
-        Batch::where('product_id', $prodRestock->id)->where('warehouse_id', '!=', $whA->id)->update(['current_quantity' => 0]);
-
-        // SCENARIO 3: SLOW MOVING ALERT
-        // Product 2: Stok banyak, mandek
-        $prodDead = $products[2];
-
-        $batchDead = Batch::create([
-            'id' => (string) Str::ulid(),
-            'batch_code' => 'DSS-DEAD-' . $whB->warehouse_code,
-            'product_id' => $prodDead->id,
-            'warehouse_id' => $whB->id,
-            'receiving_id' => \App\Models\ProductReceiving::first()->id ?? null,
-            'initial_quantity' => 500,
-            'current_quantity' => 500, // Utuh
-            'production_date' => now()->subMonths(4),
-            'expired_date' => now()->addYear(),
-            'price' => 25000,
-            'condition' => 'GOOD',
-        ]);
-        
-        // Sengaja tidak diberi mutasi keluar agar velocity = 0 (SLOW MOVING)
+        return $batch;
     }
 }
