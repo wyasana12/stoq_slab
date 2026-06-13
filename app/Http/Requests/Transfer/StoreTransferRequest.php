@@ -19,6 +19,9 @@ class StoreTransferRequest extends FormRequest
         return [
             'transfer_type' => ['required', 'in:in,out'],
 
+            'from_warehouse_id' => ['nullable', 'exists:warehouses,id'],
+            'to_warehouse_id' => ['nullable', 'exists:warehouses,id'],
+
             'product_id' => ['required', 'exists:products,id'],
             'requested_quantity' => ['required', 'integer', 'min:1'],
 

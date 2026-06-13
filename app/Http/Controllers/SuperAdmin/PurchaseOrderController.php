@@ -286,6 +286,7 @@ class PurchaseOrderController extends Controller
                 'messages' => $err->getMessage(),
             ], 403);
         } catch (\Exception $err) {
+            \Log::error('PO Create Error: ' . $err->getMessage() . ' Trace: ' . $err->getTraceAsString());
             return response()->json([
                 'success' => false,
                 'messages' => 'Failed to force deleted purchase order.',

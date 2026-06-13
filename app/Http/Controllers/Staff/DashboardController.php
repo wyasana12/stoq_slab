@@ -32,7 +32,7 @@ class DashboardController extends Controller
             ->count();
 
         // 2. Distribusi (Menunggu / Proses)
-        $distribusi = StockDistributions::where('origin_warehouse_id', $warehouseId)
+        $distribusi = StockDistributions::where('warehouse_id', $warehouseId)
             ->whereIn('status', ['DRAFT', 'PREPARING', 'SHIPPED']) // Sesuaikan dengan status yang relevan
             ->count();
 
@@ -53,8 +53,8 @@ class DashboardController extends Controller
 
         // 5. Tugas Saya (Distribusi Perlu Tindakan)
         // Misal distribusi yang draft/preparing
-        $tasks = StockDistributions::with(['destinationWarehouse', 'items'])
-            ->where('origin_warehouse_id', $warehouseId)
+        $tasks = StockDistributions::with(['store', 'items'])
+            ->where('warehouse_id', $warehouseId)
             ->whereIn('status', ['PREPARING', 'SHIPPED'])
             ->orderBy('created_at', 'desc')
             ->take(5)
@@ -64,7 +64,7 @@ class DashboardController extends Controller
                     'id' => $dist->id,
                     'distribution_code' => $dist->distribution_code,
                     'status' => $dist->status,
-                    'destination' => $dist->destinationWarehouse->name ?? '-',
+                    'destination' => $dist->store->name ?? '-',
                     'total_items' => $dist->items->count(),
                     'created_at' => $dist->created_at,
                 ];
