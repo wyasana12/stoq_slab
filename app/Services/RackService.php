@@ -18,9 +18,9 @@ class RackService
         $this->rackRepository = $rackRepository;
     }
 
-    public function getAllRack(int $perPage = 10, ?string $search = null, ?string $status = null)
+    public function getAllRack(int $perPage = 10, ?string $search = null, ?string $status = null, ?string $categoryId = null)
     {
-        return $this->rackRepository->getAllPaginated($perPage, $search, $status);
+        return $this->rackRepository->getAllPaginated($perPage, $search, $status, $categoryId);
     }
 
     public function create(array $data): RackWarehouse
@@ -32,6 +32,7 @@ class RackService
             $rack = $this->rackRepository->create([
                 'rack_code'    => $rackCode,
                 'warehouse_id' => $warehouseId,
+                'category_id'  => $data['category_id'],
                 'status'       => 'AVAILABLE',
             ]);
 

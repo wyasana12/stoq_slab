@@ -9,6 +9,7 @@ use App\Models\StockReturns;
 use App\Models\StockTransfers;
 use App\Models\Warehouse;
 use App\Models\ProductReceiving;
+use App\Models\RackWarehouse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -350,13 +351,14 @@ class MonitoringRepository
 
         // 2. Ambil data dari 4 tabel aktivitas. 
         // Kita gunakan perwakilan kolom 'quantity' (ganti jika nama kolom aslimu berbeda, misal 'qty' atau 'total')
-        $restocks = Restock::whereBetween('created_at', [$startDate, $endDate])
+        $restocks = Restock::with('item')
+            ->whereBetween('created_at', [$startDate, $endDate])
             ->get()
             ->map(function ($item) {
                 return [
                     'activity_at' => $item->created_at->toIso8601String(),
                     'type' => 'restock',
-                    'quantity' => (int) ($item->quantity ?? 0)
+                    'quantity' => (int) $item->item->sum('requested_quantity')
                 ];
             });
 
@@ -660,6 +662,53 @@ class MonitoringRepository
             }
         }
 
+        // Calculate Today's Stats
+        $today = Carbon::today();
+
+        $stokMasukHariIni = ProductReceiving::whereDate('created_at', $today)->sum(DB::raw('(SELECT SUM(quantity_accepted) FROM product_receiving_items WHERE product_receiving_items.receiving_id = product_receivings.id)'))
+            + Restock::whereDate('created_at', $today)->sum(DB::raw('(SELECT SUM(requested_quantity) FROM restock_items WHERE restock_items.restock_id = restocks.id)'))
+            + StockReturns::whereDate('created_at', $today)->sum('approved_quantity')
+            + StockTransfers::whereDate('created_at', $today)->when($userWarehouseId, fn($q) => $q->where('to_warehouse_id', $userWarehouseId))->sum('approved_quantity');
+
+        $stokKeluarHariIni = StockDistributions::whereDate('created_at', $today)->when($userWarehouseId, fn($q) => $q->where('warehouse_id', $userWarehouseId))->sum(DB::raw('(SELECT SUM(approved_quantity) FROM stock_distribution_items WHERE stock_distribution_items.distribution_id = stock_distributions.id)'))
+            + StockTransfers::whereDate('created_at', $today)->when($userWarehouseId, fn($q) => $q->where('from_warehouse_id', $userWarehouseId))->sum('approved_quantity');
+
+        $transaksiSelesaiHariIni = ProductReceiving::whereDate('created_at', $today)->where('status', 'COMPLETED')->count()
+            + Restock::whereDate('created_at', $today)->where('status', 'APPROVED')->count()
+            + StockReturns::whereDate('created_at', $today)->where('status', 'APPROVED')->count()
+            + StockTransfers::whereDate('created_at', $today)->where('status', 'APPROVED')->count()
+            + StockDistributions::whereDate('created_at', $today)->where('status', 'APPROVED')->count();
+
+        // Calculate Rack Capacities
+        $racks = RackWarehouse::with('locations')
+            ->when($userWarehouseId, fn($q) => $q->where('warehouse_id', $userWarehouseId))
+            ->get();
+
+        $rackCapacities = $racks->map(function ($rack) {
+            $capacity = $rack->locations->sum('capacity');
+            $filled = $rack->locations->sum('used');
+            $available = $capacity - $filled;
+            $utilizationPercent = $capacity > 0 ? round(($filled / $capacity) * 100) : 0;
+            
+            $status = 'optimal';
+            if ($utilizationPercent >= 90) {
+                $status = 'critical';
+            } elseif ($utilizationPercent >= 75) {
+                $status = 'warning';
+            }
+
+            return [
+                'id' => $rack->id,
+                'rakName' => $rack->rack_name,
+                'productName' => 'TBD', // Dynamic product detection can be added later
+                'capacity' => (int) $capacity,
+                'filled' => (int) $filled,
+                'available' => (int) $available,
+                'utilizationPercent' => $utilizationPercent,
+                'status' => $status
+            ];
+        });
+
         return [
             'total_sku' => $batches->count(),
             'stock_status' => [
@@ -673,6 +722,13 @@ class MonitoringRepository
                 ->values()
                 ->take(10)
                 ->all(),
+            'today_stats' => [
+                'stok_masuk' => (int) $stokMasukHariIni,
+                'stok_keluar' => (int) $stokKeluarHariIni,
+                'transaksi_selesai' => $transaksiSelesaiHariIni,
+                'avg_processing_time' => 0 // Dummy for now
+            ],
+            'rack_capacities' => $rackCapacities->values()->toArray()
         ];
     }
 

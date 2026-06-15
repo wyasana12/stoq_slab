@@ -76,4 +76,13 @@ class CategoryController extends Controller
             'message' => 'Category deleted successfully.'
         ]);
     }
+
+    public function dropdown(): JsonResponse
+    {
+        $categories = Category::select('id', 'name')->get();
+        return response()->json([
+            'success' => true,
+            'data' => $categories,
+        ]);
+    }
 }

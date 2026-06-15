@@ -26,19 +26,16 @@ class ExpiredConditionController extends Controller
         try {
             $payload = $request->validate([
                 'action' => ['required', 'in:return,destroy'],
+                'requested_quantity' => ['required', 'integer', 'min:1'],
+                'reason' => ['required', 'string', 'in:damaged,expired,production_defect'],
                 'notes' => ['nullable', 'string', 'max:1000'],
+                'damage_proof' => ['nullable', 'image', 'max:10240'],
             ]);
 
-            $requestedQuantity = (int) $batch->current_quantity;
+            $requestedQuantity = (int) $payload['requested_quantity'];
 
-            if ($requestedQuantity < 1) {
-                throw new InvalidArgumentException('Stok batch saat ini kosong.');
-            }
-
-            $daysUntilExpiry = $this->daysUntilExpiry($batch);
-
-            if ($daysUntilExpiry === null || $daysUntilExpiry > 7) {
-                throw new InvalidArgumentException('Aksi expired hanya tersedia untuk batch kritis atau expired.');
+            if ($requestedQuantity > $batch->current_quantity) {
+                throw new InvalidArgumentException('Kuantitas yang diminta melebihi stok saat ini.');
             }
 
             if ($request->user()?->warehouse_id && $request->user()->warehouse_id !== $batch->warehouse_id) {
@@ -55,16 +52,16 @@ class ExpiredConditionController extends Controller
                 ], 201);
             }
 
-            $result = DB::transaction(function () use ($batch, $payload) {
+            $result = DB::transaction(function () use ($batch, $payload, $request) {
                 $lockedBatch = Batch::query()
                     ->whereKey($batch->id)
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                $requestedQuantity = (int) $lockedBatch->current_quantity;
+                $requestedQuantity = (int) $payload['requested_quantity'];
 
-                if ($requestedQuantity < 1) {
-                    throw new InvalidArgumentException('Stok batch saat ini kosong.');
+                if ($requestedQuantity > $lockedBatch->current_quantity) {
+                    throw new InvalidArgumentException('Kuantitas musnah melebihi stok saat ini.');
                 }
 
                 $beforeQuantity = (int) $lockedBatch->current_quantity;
@@ -73,15 +70,21 @@ class ExpiredConditionController extends Controller
                 $lockedBatch->decrement('current_quantity', $decrement);
                 $lockedBatch->refresh();
 
+                // Handle file upload if any
+                $proofPath = null;
+                if ($request->hasFile('damage_proof')) {
+                    $proofPath = $request->file('damage_proof')->store('disposals', 'public');
+                }
+
                 $mutation = StockMutations::record(
                     $lockedBatch->warehouse_id,
                     $lockedBatch->id,
                     $beforeQuantity,
                     -$decrement,
-                    MutationStatus::from('EXPIRED_DISPOSAL'),
-                    'EXPIRED_DISPOSAL',
+                    MutationStatus::from(strtoupper($payload['reason']) . '_DISPOSAL'),
+                    'DISPOSAL',
                     $lockedBatch->id,
-                    $payload['notes'] ?? 'Pemusnahan batch expired ' . $lockedBatch->batch_code
+                    ($payload['notes'] ?? 'Pemusnahan batch: ' . $payload['reason'] . ' ' . $lockedBatch->batch_code) . ($proofPath ? " [Bukti: $proofPath]" : '')
                 );
 
                 return [
@@ -92,7 +95,7 @@ class ExpiredConditionController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Pemusnahan batch expired berhasil diproses.',
+                'message' => 'Pemusnahan batch berhasil diproses.',
                 'data' => [
                     'batch_id' => $result['batch']->id,
                     'batch_code' => $result['batch']->batch_code,

@@ -32,7 +32,7 @@ class BatchRepository
 
     public function getById(Batch $batch): Batch
     {
-        return $batch->load(['warehouse', 'receive.purchase.supplier']);
+        return $batch->load(['warehouse', 'receive.purchase.supplier', 'locations']);
     }
 
     public function create(array $data): Batch

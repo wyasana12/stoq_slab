@@ -98,6 +98,7 @@ Route::prefix('/suppliers')->middleware('auth:sanctum')->name('supplier.')->grou
 });
 
 Route::prefix('/categories')->middleware('auth:sanctum')->name('category.')->group(function () {
+    Route::get('/dropdown', [CategoryController::class, 'dropdown'])->name('dropdown');
     Route::get('', [CategoryController::class, 'index'])->middleware('permission:view_category')->name('index');
     Route::post('/create', [CategoryController::class, 'store'])->middleware('permission:create_category')->name('create');
     Route::put('/{category}', [CategoryController::class, 'update'])->middleware('permission:edit_category')->name('update');

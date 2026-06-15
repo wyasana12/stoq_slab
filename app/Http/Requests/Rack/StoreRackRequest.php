@@ -22,6 +22,7 @@ class StoreRackRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'category_id'    => ['required', 'string', 'exists:categories,id'],
             'levels'         => ['required', 'integer', 'min:1', 'max:10'],
             'bins_per_level' => ['required', 'integer', 'min:1', 'max:20'],
             'capacity'       => ['required', 'integer', 'min:1'],
@@ -31,6 +32,8 @@ class StoreRackRequest extends FormRequest
     public function messages()
     {
         return [
+            'category_id.required'    => 'Kategori wajib dipilih.',
+            'category_id.exists'      => 'Kategori tidak valid.',
             'levels.required'         => 'Jumlah Level wajib diisi.',
             'levels.integer'          => 'Jumlah Level harus berupa angka.',
             'levels.min'              => 'Jumlah Level minimal 1.',

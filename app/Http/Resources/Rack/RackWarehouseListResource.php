@@ -26,8 +26,7 @@ class RackWarehouseListResource extends JsonResource
         return [
             'id'              => $this->id,
             'code'            => $this->rack_code,
-            'zoneText'        => $this->warehouse?->name ?? 'N/A',
-            'zoneLink'        => '#',
+            'category_name'   => $this->category?->name ?? 'N/A',
             'statusLabel'     => ucfirst(strtolower($this->status ?? 'available')),
             'statusVariant'   => $this->mapStatusVariant($this->status),
             'capacityCurrent' => $capacityCurrent,
@@ -58,7 +57,6 @@ class RackWarehouseListResource extends JsonResource
         return match (strtoupper($status ?? '')) {
             'AVAILABLE'   => 'success',
             'FULL'        => 'danger',
-            'INACTIVE'    => 'warning',
             'MAINTENANCE' => 'maintenance',
             default       => 'info',
         };
