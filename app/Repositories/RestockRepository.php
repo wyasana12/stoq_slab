@@ -16,7 +16,7 @@ class RestockRepository
 {
     public function getAll(): Collection
     {
-        $query = Restock::with('item.product', 'warehouse', 'request', 'confirm');
+        $query = Restock::with('item.product', 'warehouse', 'supplier', 'request', 'confirm');
 
         if ($warehouseId = Auth::user()?->warehouse_id) {
             $query->where('warehouse_id', $warehouseId);
@@ -27,10 +27,18 @@ class RestockRepository
 
     public function create(array $data): Restock
     {
+        $totalAmount = collect($data['products'])->reduce(function ($carry, $item) {
+            $qty = $item['approved_quantity'] ?? $item['quantity_requested'] ?? $item['requested_quantity'] ?? $item['qty'] ?? 0;
+            $price = $item['unit_price'] ?? 0;
+            return $carry + ($qty * $price);
+        }, 0);
+
         $restock = Restock::create([
             'restock_code' => 'RC-' . now()->format('Ymd') . '-' . rand(1, 9999),
             'warehouse_id' => $data['warehouse_id'],
+            'supplier_id'  => $data['supplier_id'] ?? null,
             'requested_by' => $data['requested_by'],
+            'total_amount' => $totalAmount,
             'status'       => isset($data['status'])
                 ? RestockStatus::fromValue($data['status'])->value
                 : RestockStatus::REQUESTED->value,
@@ -38,10 +46,14 @@ class RestockRepository
         ]);
 
         foreach ($data['products'] as $item) {
+            $qty = $item['approved_quantity'] ?? $item['quantity_requested'] ?? $item['requested_quantity'] ?? $item['qty'] ?? 0;
+            $price = $item['unit_price'] ?? 0;
+            
             $restock->item()->create([
                 'id' => (string) Str::ulid(),
                 'product_id' => $item['id'],
-                'requested_quantity' => $item['approved_quantity'] ?? $item['quantity_requested'] ?? $item['requested_quantity'] ?? $item['qty'] ?? 0,
+                'requested_quantity' => $qty,
+                'unit_price' => $price,
             ]);
         }
 
@@ -64,13 +76,29 @@ class RestockRepository
                 $data['status'] = $newStatus->value;
             }
 
+            if (isset($data['products'])) {
+                $totalAmount = collect($data['products'])->reduce(function ($carry, $item) {
+                    $qty = $item['approved_quantity'] ?? $item['quantity_requested'] ?? $item['requested_quantity'] ?? $item['qty'] ?? 0;
+                    $price = $item['unit_price'] ?? 0;
+                    return $carry + ($qty * $price);
+                }, 0);
+                
+                $data['total_amount'] = $totalAmount;
+            }
+
             $restock->update($data);
 
             if (isset($data['products'])) {
                 foreach ($data['products'] as $item) {
+                    $qty = $item['approved_quantity'] ?? $item['quantity_requested'] ?? $item['requested_quantity'] ?? $item['qty'] ?? 0;
+                    $price = $item['unit_price'] ?? 0;
+
                     $restock->item()->updateOrCreate(
                         ['product_id' => $item['id']],
-                        ['requested_quantity' => $item['approved_quantity'] ?? $item['quantity_requested'] ?? $item['requested_quantity'] ?? $item['qty'] ?? 0]
+                        [
+                            'requested_quantity' => $qty,
+                            'unit_price' => $price,
+                        ]
                     );
                 }
             }

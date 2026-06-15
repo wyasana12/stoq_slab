@@ -12,6 +12,7 @@ use App\Models\ProductReceiving;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Services\DssEngine;
 use stdClass;
 
 class MonitoringRepository
@@ -148,12 +149,20 @@ class MonitoringRepository
                 ->get());
         }
 
-        return $warehouses->map(function (Warehouse $warehouse) use ($batchStats, $activityStats) {
+        $dssEngine = app(DssEngine::class);
+        $warehouseActivities = $dssEngine->getWarehouseActivities(30);
+
+        return $warehouses->map(function (Warehouse $warehouse) use ($batchStats, $activityStats, $warehouseActivities) {
             $batchStat = $batchStats->get($warehouse->id);
             $activityStat = $activityStats->get($warehouse->id, [
                 'activity_count' => 0,
                 'last_activity_at' => null,
             ]);
+
+            $dssActivity = $warehouseActivities[$warehouse->id] ?? [
+                'activity_score' => 0,
+                'warehouse_activity' => 'INACTIVE',
+            ];
 
             return [
                 'warehouse_id' => $warehouse->id,
@@ -163,6 +172,8 @@ class MonitoringRepository
                 'total_stock' => (int) ($batchStat->total_stock ?? 0),
                 'activity_count' => $activityStat['activity_count'],
                 'last_activity_at' => $activityStat['last_activity_at'] ?? $batchStat->last_batch_update_at ?? null,
+                'activity_score' => $dssActivity['activity_score'],
+                'warehouse_activity' => $dssActivity['warehouse_activity'],
             ];
         })->values();
     }
@@ -444,7 +455,7 @@ class MonitoringRepository
                     'batch_code' => $items->first()?->batch?->batch_code,
                     'product_id' => $items->first()?->batch?->product_id,
                     'product_name' => $items->first()?->batch?->product?->name,
-                    'status' => $distribution->status,
+                    'status' => $distribution->status?->value ?? $distribution->status,
                     'quantity' => (int) $items->sum('approved_quantity'),
                     'before_quantity' => null,
                     'after_quantity' => null,
@@ -494,7 +505,7 @@ class MonitoringRepository
                     'batch_code'      => null,
                     'product_id'      => $transfer->product_id,
                     'product_name'    => $transfer->products?->name,
-                    'status'          => $transfer->status,
+                    'status'          => $transfer->status?->value ?? $transfer->status,
                     'quantity'        => (int) ($transfer->approved_quantity ?? $transfer->requested_quantity ?? 0),
                     'before_quantity' => null,
                     'after_quantity'  => null,

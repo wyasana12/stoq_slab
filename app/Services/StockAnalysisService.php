@@ -62,6 +62,7 @@ class StockAnalysisService
                     'avg_daily_out'    => $avgDailyOut,
                     'days_of_stock'    => $daysOfStock,
                     'category'         => $category,
+                    'price'            => $batch->price ?? 0,
                     'reference_days'   => $historyDays,
                 ];
             })
@@ -83,6 +84,7 @@ class StockAnalysisService
                     'avg_daily_out'    => 0.0,
                     'days_of_stock'    => null,
                     'category'         => $this->resolveCategory(null, $thresholdFast, $thresholdSlow),
+                    'price'            => $batch->price ?? 0,
                     'reference_days'   => $historyDays,
                 ];
             })

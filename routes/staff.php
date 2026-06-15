@@ -16,8 +16,8 @@ Route::prefix('/staff')->middleware('auth:sanctum')->name('staff.')->group(funct
     Route::get('/distributions/{distribution}/status/allowed', [DistributionStatusController::class, 'allowedTransitions'])
         ->name('distribution.status.allowed');
 
-    Route::get('/distributions/template/surat-jalan', [DistributionStatusController::class, 'downloadSuratJalanTemplate'])
-        ->name('distribution.download.surat-jalan-template');
+    Route::get('/distributions/{distribution}/surat-jalan', [DistributionStatusController::class, 'downloadSuratJalan'])
+        ->name('distribution.download.surat-jalan');
 
     Route::get('/distributions/{distribution}/shipped-proof', [DistributionStatusController::class, 'downloadShippedProof'])
         ->name('distribution.download.shipped-proof');
