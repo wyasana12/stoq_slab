@@ -452,7 +452,7 @@ class StockMutationSeeder extends Seeder
 
             // 1. Create 2 RESTOCK for $wh
             for ($i = 1; $i <= 2; $i++) {
-                $foodName = $foodNamesRestock[array_rand($foodNamesRestock)] . ' (' . $wh->name . ')';
+                $foodName = $foodNamesRestock[array_rand($foodNamesRestock)];
                 $prod = \App\Models\Product::create([
                     'sku' => 'DSS-RES-' . $wh->warehouse_code . '-' . $i . '-' . time(),
                     'name' => $foodName,
@@ -466,7 +466,7 @@ class StockMutationSeeder extends Seeder
 
             // 2. Create 2 TRANSFER_IN for $wh (which acts as TRANSFER_OUT for $nextWh)
             for ($i = 1; $i <= 2; $i++) {
-                $foodName = $foodNamesTransfer[array_rand($foodNamesTransfer)] . ' (' . $wh->name . ')';
+                $foodName = $foodNamesTransfer[array_rand($foodNamesTransfer)];
                 $prod = \App\Models\Product::create([
                     'sku' => 'DSS-TRF-' . $wh->warehouse_code . '-' . $i . '-' . time(),
                     'name' => $foodName,
