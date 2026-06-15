@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignUlid('restock_id')->constrained('restocks')->cascadeOnDelete();
             $table->foreignUlid('product_id')->constrained('products')->cascadeOnDelete();
             $table->unsignedInteger('requested_quantity');
+            $table->decimal('unit_price', 12, 2)->default(0);
             $table->timestamps();
             $table->softDeletes();
         });

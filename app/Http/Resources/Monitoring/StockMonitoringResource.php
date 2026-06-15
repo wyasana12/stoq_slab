@@ -17,6 +17,8 @@ class StockMonitoringResource extends JsonResource
             'total_stock' => data_get($this->resource, 'total_stock', 0),
             'activity_count' => data_get($this->resource, 'activity_count', 0),
             'last_activity_at' => data_get($this->resource, 'last_activity_at'),
+            'warehouse_activity' => data_get($this->resource, 'warehouse_activity', 'INACTIVE'),
+            'activity_score' => data_get($this->resource, 'activity_score', 0),
         ];
     }
 }
