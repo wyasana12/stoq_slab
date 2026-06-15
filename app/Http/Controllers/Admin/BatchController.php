@@ -22,18 +22,14 @@ class BatchController extends Controller
         $this->batchService = $batchService;
     }
 
-    public function index(Request $request): JsonResponse
+    public function index(): JsonResponse
     {
         try {
-            $filters = $request->only('search');
-            $perPage = $request->query('per_page', 10);
-            $page = $request->query('page', 1);
-
-            $allBatches = $this->batchService->getAllBatches($perPage, $filters);
+            $allBatches = $this->batchService->getAllBatches();
 
             return response()->json([
                 'success' => true,
-                'data' => BatchListResource::collection($allBatches)->response()->getData(true)
+                'data' => BatchListResource::collection($allBatches)
             ], 200);
         } catch (\Exception $err) {
             return response()->json([

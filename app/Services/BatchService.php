@@ -28,9 +28,9 @@ class BatchService
         $this->rackRepository = $rackRepository;
     }
 
-    public function getAllBatches(int $batchPage = 10, array $filters)
+    public function getAllBatches()
     {
-        return $this->batchRepository->getAllPaginated($batchPage, $filters);
+        return $this->batchRepository->getAll();
     }
 
     public function getBatchDetail(Batch $batch): Batch

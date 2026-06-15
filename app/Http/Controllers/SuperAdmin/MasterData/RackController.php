@@ -4,14 +4,13 @@ namespace App\Http\Controllers\SuperAdmin\MasterData;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Rack\StoreRackRequest;
-use App\Http\Requests\Rack\UpdateRackLocationRequest;
-use App\Http\Resources\Rack\RackLocationListResource;
 use App\Http\Resources\Rack\RackWarehouseListResource;
 use App\Models\RackLocation;
 use App\Models\RackWarehouse;
 use App\Services\RackService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class RackController extends Controller
 {
@@ -19,7 +18,7 @@ class RackController extends Controller
 
     public function __construct(RackService $rackService)
     {
-        $this->rackService = $rackService;    
+        $this->rackService = $rackService;
     }
 
     /**
@@ -165,5 +164,51 @@ class RackController extends Controller
                 'error' => $err->getMessage(),
             ], 500);
         }
+    }
+
+    public function dropdownRack(): JsonResponse
+    {
+        $warehouseId = Auth::user()?->warehouse_id;
+
+        $racks = RackWarehouse::where('warehouse_id', $warehouseId)->select('id', 'rack_code')->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $racks
+        ]);
+    }
+
+    public function dropdownLevel(Request $request): JsonResponse
+    {
+        $request->validate(['rack_id' => 'required|exists:rack_warehouses,id']);
+
+        $levels = RackLocation::where('rack_id', $request->rack_id)
+            ->distinct()
+            ->orderBy('level', 'asc')
+            ->pluck('level')
+            ->map(fn($l) => ['id' => $l, 'level' => "Level $l"]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $levels
+        ]);
+    }
+
+    public function dropdownBin(Request $request): JsonResponse
+    {
+        $request->validate([
+            'rack_id' => 'required|exists:rack_warehouses,id',
+            'level'   => 'required|integer'
+        ]);
+
+        $bins = RackLocation::where('rack_id', $request->rack_id)
+            ->where('level', $request->level)
+            ->whereIn('status', ['AVAILABLE'])
+            ->get(['id', 'bin', 'location_code']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $bins
+        ]);
     }
 }

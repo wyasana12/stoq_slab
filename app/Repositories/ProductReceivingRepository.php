@@ -5,6 +5,9 @@ namespace App\Repositories;
 use App\Enums\ReceiveStatus;
 use App\Models\ProductReceiving;
 use App\Models\ProductReceivingItem;
+use App\Models\PurchaseOrder;
+use App\Models\Restock;
+use App\Models\StockTransfers;
 use Illuminate\Support\Facades\Auth;
 use InvalidArgumentException;
 use function Illuminate\Support\now;
@@ -12,39 +15,33 @@ use Illuminate\Support\Str;
 
 class ProductReceivingRepository
 {
-    public function getAllPaginated(int $perPage = 10, array $filters)
+    public function getAll()
     {
         $userId = Auth::user()->warehouse_id;
 
-        $query = ProductReceiving::with(['purchase.warehouse:id,name', 'purchase:id,po_code,order_date,warehouse_id', 'user:id,name'])->select('id', 'receiving_code', 'receiving_date', 'status', 'purchase_id', 'receiving_by');
+        $query = ProductReceiving::with(['receivable', 'user:id,name'])->select('id', 'receiving_code', 'receiving_date', 'status', 'receivable_type', 'receivable_id','receiving_by');
 
-        if(!empty($filters['search'])) {
-            $search = $filters['search'];
-            $query->where('receiving_code', 'like', "%{$search}%");
-        }
-
-        if(!empty($filters['status'])) {
-            $status = $filters['status'];
-            $query->where('status', $status);
-        }
-
-        return $query->whereHas('purchase', function ($q) use ($userId) {
-            $q->where('warehouse_id', $userId);
-        })
-            ->latest()
-            ->paginate($perPage);
+        return $query->whereHasMorph('receivable', [PurchaseOrder::class, StockTransfers::class, Restock::class],
+        function ($q, $type) use ($userId) {
+            if($type === StockTransfers::class) {
+                $q->where('to_warehouse_id', $userId);
+            } else {
+                $q->where('warehouse_id', $userId);
+            }
+        })->latest()->get();
     }
 
     public function getById(ProductReceiving $receive): ProductReceiving
     {
-        return $receive->load(['purchase.warehouse', 'user', 'items.products']);
+        return $receive->load(['receivable', 'user', 'items.products']);
     }
 
-    public function createReceive(array $data): ProductReceiving {
-        
+    public function createReceive(array $data): ProductReceiving
+    {
+
         return ProductReceiving::create($data);
     }
-    
+
     public function assignItems(ProductReceiving $receive, array $items): void
     {
         $insertData = [];
@@ -57,13 +54,16 @@ class ProductReceivingRepository
                 'quantity_accepted' => $i['quantity_accepted'],
                 'quantity_rejected' => $i['quantity_rejected'],
                 'notes' => $i['notes'],
+                'created_at' => now(),
+                'updated_at' => now(),
             ];
         }
 
         ProductReceivingItem::insert($insertData);
     }
 
-    public function deleteItems(ProductReceiving $receive) : void {
+    public function deleteItems(ProductReceiving $receive): void
+    {
         $receive->items()->delete();
     }
 
@@ -103,12 +103,12 @@ class ProductReceivingRepository
         $receive->delete();
     }
 
-    public function getTrashedPaginated(int $perPage = 10)
+    public function getTrashedPaginated()
     {
         return ProductReceiving::onlyTrashed()
-            ->with(['purchase:id,po_code,order_date', 'user:id,name', 'purchase.warehouse:id,name'])
+            ->with(['receivable', 'user:id,name'])
             ->latest('deleted_at')
-            ->paginate($perPage);
+            ->get();
     }
 
     public function restore(ProductReceiving $receive): void

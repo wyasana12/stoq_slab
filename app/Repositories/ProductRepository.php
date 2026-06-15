@@ -3,37 +3,17 @@
 namespace App\Repositories;
 
 use App\Models\Product;
-use App\Models\ProductSupplierItem;
 
 class ProductRepository
 {
-    public function getAllPaginated(array $filters, int $perPage = 10)
+    public function getAll()
     {
-        $query = ProductSupplierItem::with([
-            'product.category:id,name',
-            'product.unit:id,symbol',
-            'supplier:id,name'
+        $query = Product::with([
+            'category:id,name',
+            'unit:id,symbol',
         ]);
 
-        if (!empty($filters['search'])) {
-            $search = $filters['search'];
-            $query->whereHas('product', function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('sku', 'like', "%{$search}%");
-            });
-        }
-
-        if (!empty($filters['category_ids']) && is_array($filters['category_ids'])) {
-            $query->whereHas('product', function ($q) use ($filters) {
-                $q->whereIn('category_id', $filters['category_ids']);
-            });
-        }
-
-        if (!empty($filters['supplier_ids']) && is_array($filters['supplier_ids'])) {
-            $query->whereIn('supplier_id', $filters['supplier_ids']);
-        }
-
-        return $query->latest()->paginate($perPage)->withQueryString();
+        return $query->latest()->get();
     }
 
     public function create(array $data): Product
@@ -41,68 +21,21 @@ class ProductRepository
         return Product::create($data);
     }
 
-    public function assignSupplier(Product $product, array $suppliers): void
-    {
-        foreach ($suppliers as $supplier) {
-            $product->productItems()->create([
-                'supplier_id' => $supplier['supplier_id'],
-                'unit_price' => $supplier['unit_price'],
-                'min_order_quantity' => $supplier['min_order_quantity'],
-                'lead_time_days' => $supplier['lead_time_days'],
-                'return_limit_days' => $supplier['return_limit_days'],
-                'is_preferred' => $supplier['is_preferred'],
-            ]);
-        }
-    }
-
     public function update(Product $product, array $data)
     {
         return $product->update($data);
     }
 
-    public function syncSuppliers(Product $product, array $suppliers): void
-    {
-        $incomingIds = collect($suppliers)->pluck('supplier_id')->filter()->toArray();
-
-        if (!empty($incomingIds)) {
-            $product->productItems()
-                ->whereNotIn('supplier_id', $incomingIds)
-                ->forceDelete();
-        }
-
-        foreach ($suppliers as $s) {
-            $product->productItems()->updateOrCreate(
-                [
-                    'supplier_id' => $s['supplier_id']
-                ],
-                [
-                    'unit_price' => $s['unit_price'],
-                    'min_order_quantity' => $s['min_order_quantity'],
-                    'lead_time_days' => $s['lead_time_days'],
-                    'return_limit_days' => $s['return_limit_days'],
-                    'is_preferred' => $s['is_preferred'],
-                ]
-            );
-        }
-    }
-
-    public function getById(Product $product): Product
-    {
-        return $product->load(['category', 'unit', 'productItems.supplier']);
-    }
-
     public function softDelete(Product $product): void
     {
-        $product->productItems()->delete();
         $product->delete();
     }
 
-    public function getTrashedPaginated(int $perPage = 10)
+    public function getTrashedPaginated()
     {
         return Product::onlyTrashed()
-            ->with(['category:id,name', 'unit:id,symbol', 'productItems.supplier:id,name'])
-            ->latest('deleted_at')
-            ->paginate($perPage);
+            ->with(['category:id,name', 'unit:id,symbol'])
+            ->latest('deleted_at');
     }
 
     public function restore(Product $product): void
@@ -112,7 +45,6 @@ class ProductRepository
 
     public function forceDelete(Product $product): void
     {
-        $product->productItems()->forceDelete();
         $product->forceDelete();
     }
 }

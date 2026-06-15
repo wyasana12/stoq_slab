@@ -8,6 +8,7 @@ use App\Http\Resources\User\UserDetailResource;
 use App\Http\Resources\User\UserListResource;
 use App\Models\User;
 use App\Services\UserService;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\JsonResponse;
 
 class UserController extends Controller
@@ -90,5 +91,20 @@ class UserController extends Controller
                 'error' => $err->getMessage(),
             ], 500);
         }
+    }
+
+    public function dropdown(): JsonResponse
+    {
+        $user = Auth::user();
+
+        $users = User::select('id', 'name')->where('warehouse_id', $user->warehouse_id)
+        ->role('admin')
+        ->orderBy('name', 'asc')
+        ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $users
+        ]);
     }
 }

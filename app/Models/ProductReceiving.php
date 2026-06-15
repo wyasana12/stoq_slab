@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ProductReceiving extends Model
@@ -31,9 +32,9 @@ class ProductReceiving extends Model
         return $this->belongsTo(Batch::class, 'receiving_id');
     }
 
-    public function purchase(): BelongsTo
+    public function receivable(): MorphTo
     {
-        return $this->belongsTo(PurchaseOrder::class, 'purchase_id');
+        return $this->morphTo();
     }
 
     public function items(): HasMany
