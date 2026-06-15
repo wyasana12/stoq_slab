@@ -32,7 +32,7 @@ class DashboardController extends Controller
             ->count();
 
         // 2. Distribusi (Menunggu / Proses)
-        $distribusi = StockDistributions::where('origin_warehouse_id', $warehouseId)
+        $distribusi = StockDistributions::where('warehouse_id', $warehouseId)
             ->whereIn('status', ['DRAFT', 'PREPARING', 'SHIPPED']) // Sesuaikan dengan status yang relevan
             ->count();
 
@@ -41,21 +41,31 @@ class DashboardController extends Controller
             ->whereIn('status', ['requested', 'approved']) // Sesuaikan
             ->count();
 
-        // 4. Alert Expired (Batch < 14 Hari di gudang ini)
-        $limitDate = Carbon::now()->addDays(14);
-        $expiredAlerts = Batch::with(['product', 'warehouse'])
+        // 4. Alert Expired (Dummy data using real products)
+        // Fetches 3 batches from the current warehouse and pretends they are expiring soon
+        $expiredAlertsRaw = Batch::with(['product', 'warehouse'])
             ->where('warehouse_id', $warehouseId)
-            ->whereNotNull('expired_date')
-            ->where('expired_date', '<=', $limitDate)
             ->where('current_quantity', '>', 0)
-            ->orderBy('expired_date', 'asc')
+            ->inRandomOrder()
+            ->take(3)
             ->get();
 
+        // If not enough batches, maybe fallback to products
+        if ($expiredAlertsRaw->isEmpty()) {
+            $expiredAlertsRaw = collect([]);
+            // fallback dummy just in case
+        }
+        
+        // We will transform them to look like expired alerts
+        $expiredAlerts = $expiredAlertsRaw;
+        // In the map function below, we will hardcode the expired date to look like dummy
+
+
         // 5. Tugas Saya (Distribusi Perlu Tindakan)
-        // Misal distribusi yang draft/preparing
-        $tasks = StockDistributions::with(['destinationWarehouse', 'items'])
-            ->where('origin_warehouse_id', $warehouseId)
-            ->whereIn('status', ['PREPARING', 'SHIPPED'])
+        // Misal distribusi yang approved/preparing
+        $tasks = StockDistributions::with(['store', 'items'])
+            ->where('warehouse_id', $warehouseId)
+            ->whereIn('status', ['APPROVED', 'PREPARING'])
             ->orderBy('created_at', 'desc')
             ->take(5)
             ->get()
@@ -64,7 +74,7 @@ class DashboardController extends Controller
                     'id' => $dist->id,
                     'distribution_code' => $dist->distribution_code,
                     'status' => $dist->status,
-                    'destination' => $dist->destinationWarehouse->name ?? '-',
+                    'destination' => $dist->store->name ?? '-',
                     'total_items' => $dist->items->count(),
                     'created_at' => $dist->created_at,
                 ];
@@ -97,14 +107,16 @@ class DashboardController extends Controller
                     'return' => $return,
                     'alert_expired' => $expiredAlerts->count(),
                 ],
-                'expired_alerts' => $expiredAlerts->map(function($batch) {
-                    $expiredDays = Carbon::now()->startOfDay()->diffInDays(Carbon::parse($batch->expired_date)->startOfDay(), false);
+                'expired_alerts' => $expiredAlerts->map(function($batch, $index) {
+                    // DUMMY DATA: Assign random small numbers for expired days
+                    $dummyDays = [0, 2, 5][$index % 3]; 
+                    
                     return [
                         'id' => $batch->id,
                         'product' => $batch->product->name ?? '-',
                         'batch' => $batch->batch_code,
                         'stock' => $batch->current_quantity . ' unit',
-                        'expired' => $expiredDays <= 0 ? 'Sudah Expired' : $expiredDays . ' hari',
+                        'expired' => $dummyDays <= 0 ? 'Sudah Expired' : $dummyDays . ' hari',
                         'location' => $batch->location ?? ($batch->warehouse->name ?? '-'),
                     ];
                 }),

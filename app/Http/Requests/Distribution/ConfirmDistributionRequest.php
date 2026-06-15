@@ -32,6 +32,22 @@ class ConfirmDistributionRequest extends FormRequest
                 . '|file|mimes:jpg,jpeg,png,pdf|max:2048',
         ];
     }
+
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            $status = $this->input('status');
+            
+            if ($status === DistributionStatus::SHIPPED->value) {
+                $distribution = $this->route('distribution');
+                
+                if ($distribution && !$distribution->flag_print) {
+                    $validator->errors()->add('status', 'Surat jalan harus di-download (print) terlebih dahulu sebelum mengubah status menjadi Shipped.');
+                }
+            }
+        });
+    }
+
     public function messages(): array
     {
         return [

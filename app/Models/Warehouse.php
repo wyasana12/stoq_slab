@@ -50,4 +50,9 @@ class Warehouse extends Model
     {
         return $this->hasMany(User::class, 'warehouse_id')->role('staff');
     }
+
+    public function batches(): HasMany
+    {
+        return $this->hasMany(Batch::class, 'warehouse_id');
+    }
 }

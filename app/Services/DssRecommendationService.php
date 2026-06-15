@@ -18,11 +18,21 @@ class DssRecommendationService
         $historyDays = $historyDays ?: config('dss.default_history_days', 30);
         $warehouseActivities = $this->engine->getWarehouseActivities($historyDays);
 
-        return array_map(function (array $row) use ($historyDays, $warehouseActivities) {
+        $productIds = collect($this->analysisService->analyze($historyDays))->pluck('product_id')->unique()->toArray();
+        $supplierItems = \Illuminate\Support\Facades\DB::table('product_supplier_items')
+            ->whereIn('product_id', $productIds)
+            ->get()
+            ->groupBy('product_id');
+
+        return array_map(function (array $row) use ($historyDays, $warehouseActivities, $supplierItems) {
             $warehouseActivity = $warehouseActivities[$row['warehouse_id']] ?? [
                 'activity_score' => 0,
                 'warehouse_activity' => 'INACTIVE',
             ];
+            
+            $productSupplierIds = isset($supplierItems[$row['product_id']]) 
+                ? $supplierItems[$row['product_id']]->pluck('supplier_id')->toArray() 
+                : [];
 
             if ($row['category'] === StockAnalysisService::CATEGORY_FAST_MOVING) {
                 $source = $this->engine->findSlowMovingSource(
@@ -39,6 +49,9 @@ class DssRecommendationService
                     $suggestedQty = (int) min($targetQty, $donorLimit);
                 }
 
+                $isTransfer = $source && $suggestedQty > 0;
+                $restockQty = (int) max(($row['avg_daily_out'] * 30) - $row['current_quantity'], 0);
+
                 return [
                     'batch_id'           => $row['batch_id'],
                     'product_id'         => $row['product_id'],
@@ -48,10 +61,12 @@ class DssRecommendationService
                     'category'           => $row['category'],
                     'warehouse_activity' => $warehouseActivity['warehouse_activity'],
                     'activity_score'     => $warehouseActivity['activity_score'],
-                    'recommendation'     => $source ? 'TRANSFER_IN' : 'RESTOCK',
-                    'suggested_qty'      => $source ? $suggestedQty : (int) max(($row['avg_daily_out'] * 30) - $row['current_quantity'], 0),
-                    'from_warehouse'     => $source['warehouse_name'] ?? null,
-                    'from_warehouse_id'  => $source['warehouse_id'] ?? null,
+                    'price'              => $row['price'] ?? 0,
+                    'recommendation'     => $isTransfer ? 'TRANSFER_IN' : ($restockQty > 0 ? 'RESTOCK' : 'HOLD'),
+                    'suggested_qty'      => $isTransfer ? $suggestedQty : $restockQty,
+                    'from_warehouse'     => $isTransfer ? $source['warehouse_name'] : null,
+                    'from_warehouse_id'  => $isTransfer ? $source['warehouse_id'] : null,
+                    'supplier_ids'       => $productSupplierIds,
                 ];
             }
 
@@ -70,6 +85,27 @@ class DssRecommendationService
                     $suggestedQty = (int) min($sourceQty, $receiverNeed);
                 }
 
+                $isTransfer = $destination && $suggestedQty > 0;
+
+                if ($isTransfer) {
+                    return [
+                        'batch_id'           => $row['batch_id'],
+                        'product_id'         => $row['product_id'],
+                        'product_name'       => $row['product_name'],
+                        'warehouse_id'       => $row['warehouse_id'],
+                        'warehouse_name'     => $row['warehouse_name'],
+                        'category'           => $row['category'],
+                        'warehouse_activity' => $warehouseActivity['warehouse_activity'],
+                        'activity_score'     => $warehouseActivity['activity_score'],
+                        'price'              => $row['price'] ?? 0,
+                        'recommendation'     => 'TRANSFER_OUT',
+                        'suggested_qty'      => $suggestedQty,
+                        'to_warehouse'       => $destination['warehouse_name'] ?? null,
+                        'to_warehouse_id'    => $destination['warehouse_id'] ?? null,
+                        'supplier_ids'       => $productSupplierIds,
+                    ];
+                }
+
                 return [
                     'batch_id'           => $row['batch_id'],
                     'product_id'         => $row['product_id'],
@@ -79,10 +115,12 @@ class DssRecommendationService
                     'category'           => $row['category'],
                     'warehouse_activity' => $warehouseActivity['warehouse_activity'],
                     'activity_score'     => $warehouseActivity['activity_score'],
-                    'recommendation'     => $destination ? 'TRANSFER_OUT' : 'SLOW_MOVING_ALERT',
-                    'suggested_qty'      => $destination ? $suggestedQty : 0,
-                    'to_warehouse'       => $destination['warehouse_name'] ?? null,
-                    'to_warehouse_id'    => $destination['warehouse_id'] ?? null,
+                    'price'              => $row['price'] ?? 0,
+                    'recommendation'     => 'SLOW_MOVING_ALERT',
+                    'suggested_qty'      => 0,
+                    'to_warehouse'       => null,
+                    'to_warehouse_id'    => null,
+                    'supplier_ids'       => $productSupplierIds,
                 ];
             }
 
@@ -95,10 +133,12 @@ class DssRecommendationService
                 'category'           => $row['category'],
                 'warehouse_activity' => $warehouseActivity['warehouse_activity'],
                 'activity_score'     => $warehouseActivity['activity_score'],
+                'price'              => $row['price'] ?? 0,
                 'recommendation'     => 'HOLD',
                 'suggested_qty'      => 0,
                 'from_warehouse'     => null,
                 'to_warehouse'       => null,
+                'supplier_ids'       => $productSupplierIds,
             ];
         }, $this->analysisService->analyze($historyDays));
     }

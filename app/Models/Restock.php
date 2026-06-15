@@ -65,4 +65,9 @@ class Restock extends Model
     {
         return $this->morphMany(ProductReceiving::class, 'receivable');    
     }
+  
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class, 'supplier_id');
+    }
 }

@@ -18,7 +18,7 @@ class StoreStockReturnRequest extends FormRequest
             'receiving_id' => ['required', 'string', 'exists:product_receivings,id'],
             'product_id' => ['required', 'string', 'exists:products,id'],
             'requested_quantity' => ['required', 'integer', 'min:1'],
-            'reason' => ['required', Rule::in(['damaged', 'expired', 'mismatch_po'])],
+            'reason' => ['required', Rule::in(['damaged', 'expired', 'mismatch_po', 'production_defect'])],
             'notes' => ['nullable', 'string', 'max:1000'],
             'damage_proof' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:5120'],
         ];

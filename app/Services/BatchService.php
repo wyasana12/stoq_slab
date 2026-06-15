@@ -122,7 +122,7 @@ class BatchService
                 'current_quantity' => $batch->current_quantity,
                 'price' => $batch->price,
                 'condition' => $batch->condition,
-                'rack_location' => $batch->rack?->location_code ?? 'N/A',
+                'rack_location' => $batch->locations->first()?->location_code ?? 'N/A',
                 'production_date' => $batch->production_date ? $batch->production_date->format('l, d F Y') : 'N/A',
                 'expired_date' => $batch->expired_date ? $batch->expired_date->format('l, d F Y') : 'N/A',
             ],

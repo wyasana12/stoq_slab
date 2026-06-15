@@ -71,12 +71,12 @@ class PurchaseOrderService
 
                 if (!empty($data['supplier_id'])) {
                     if (!$supplierCatalog->has($productId) && $isSubmit) {
-                        throw new \InvalidArgumentException("One or more selected products are not supplied by the chosen supplier.");
+                        throw new \InvalidArgumentException("Satu atau lebih produk yang dipilih tidak disediakan oleh Supplier tersebut.");
                     }
 
                     $moq = $supplierCatalog[$productId]->min_order_quantity ?? 1;
                     if ($qtyOrdered < $moq && $isSubmit) {
-                        throw new \InvalidArgumentException("The order quantity for a product is below the required Minimum order quantity $moq");
+                        throw new \InvalidArgumentException("Jumlah pesanan untuk suatu produk masih di bawah Minimum Order Quantity (MOQ) yaitu $moq unit.");
                     }
                 }
 
