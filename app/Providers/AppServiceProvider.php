@@ -2,11 +2,16 @@
 
 namespace App\Providers;
 
+use App\Models\PurchaseOrder;
+use App\Models\Restock;
 use App\Models\StockMutations;
+use App\Models\StockTransfers;
+use App\Models\User;
 use App\Observers\StockMutationObserver;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -24,11 +29,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Scramble::afterOpenApiGenerated(function (OpenApi $openApi)
-        {
+        Relation::enforceMorphMap([
+            'purchase_order' => PurchaseOrder::class,
+            'transfer'       => StockTransfers::class,
+            'restock'        => Restock::class,
+            'user' => User::class,
+        ]);
+
+        Scramble::afterOpenApiGenerated(function (OpenApi $openApi) {
             $openApi->secure(
                 SecurityScheme::http('bearer')
-            ) ;
+            );
         });
 
         StockMutations::observe(StockMutationObserver::class);

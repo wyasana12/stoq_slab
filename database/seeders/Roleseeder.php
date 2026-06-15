@@ -53,7 +53,6 @@ class Roleseeder extends Seeder
             'menu_category',
             'menu_unit',
             'menu_product',
-            'menu_purchase',
             'menu_analyst',
             'menu_confirm_return',
             'menu_confirm_restock',
@@ -117,12 +116,14 @@ class Roleseeder extends Seeder
             'delete_products',
             'restore_products',
 
-            // Purchases
-            'view_purchase',
-            'create_purchase',
-            'edit_purchase',
-            'delete_purchase',
-            'restore_purchase',
+            // Supplier Products
+            'view_supplier_product',
+            'create_supplier_product',
+            'edit_supplier_product',
+            'delete_supplier_product',
+            'restore_and_force_supplier_product',
+
+            // Confirmation
             'confirm_purchase',
 
             'confirm_restock',
@@ -164,6 +165,13 @@ class Roleseeder extends Seeder
             'create_transfer',
             'edit_transfer',
             'delete_transfer',
+
+            // PO
+            'view_purchase',
+            'create_purchase',
+            'edit_purchase',
+            'delete_purchase',
+            'restore_and_force_purchase',
 
             // Receives
             'view_receive',

@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('product_receivings', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->string('receiving_code')->unique();
-            $table->foreignUlid('purchase_id')->constrained('purchase_orders')->cascadeOnDelete();
+            $table->ulidMorphs('receivable');
             $table->string('status');
             $table->date('receiving_date')->nullable();
             $table->foreignUlid('receiving_by')->nullable()->constrained('users')->nullOnDelete();

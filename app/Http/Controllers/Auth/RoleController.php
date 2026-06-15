@@ -35,13 +35,13 @@ class RoleController extends Controller
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'name' => ['required', 'string', Rule::unique('roles', 'name'), 'min:3', 'max:10'],
+            'name' => ['required', 'string', Rule::unique('roles', 'name'), 'min:3', 'max:255'],
             'permissions' => ['required', 'array', 'min:1'],
         ], [
             'name.required' => 'Role name is required.',
             'name.unique' => 'This role name has already been taken.',
-            'name.min' => 'Role name must be at least 3 characters and max 10 characters.',
-            'name.max' => 'Role name must be at least 3 characters and max 10 characters.',
+            'name.min' => 'Role name must be at least 3 characters.',
+            'name.max' => 'Role name must be max 255 characters.',
 
             'permissions.required' => 'At least one permission is required.',
             'permissions.min' => 'At least one permission must be selected.',
@@ -73,13 +73,13 @@ class RoleController extends Controller
     public function update(Request $request, Role $role): JsonResponse
     {
         $request->validate([
-            'name' => ['required', 'string', Rule::unique('roles', 'name')->ignore($role), 'min:3', 'max:10'],
+            'name' => ['required', 'string', Rule::unique('roles', 'name')->ignore($role), 'min:3', 'max:255'],
             'permissions' => ['required', 'array', 'min:1'],
         ], [
             'name.required' => 'Role name is required.',
             'name.unique' => 'This role name has already been taken.',
-            'name.min' => 'Role name must be at least 3 characters and max 10 characters.',
-            'name.max' => 'Role name must be at least 3 characters and max 10 characters.',
+            'name.min' => 'Role name must be at least 3 characters.',
+            'name.max' => 'Role name max 255 characters.',
 
             'permissions.required' => 'Permission is required.',
             'permissions.min' => 'At least one permission must be selected.',

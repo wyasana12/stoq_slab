@@ -17,32 +17,95 @@ class ReceiveDetailResource extends JsonResource
         return [
             'id' => $this->id,
             'receiving_code' => $this->receiving_code,
-            'warehouse' => [
-                'id' => $this->purchase->warehouse->id ?? 'N/A',
-                'name' => $this->purchase->warehouse->name ?? 'N/A',
+            
+            'warehouse' => $this->resolveWarehouse(),
+            
+            'source' => [
+                'type' => $this->receivable_type,
+                'id' => $this->receivable_id ?? 'N/A',
+                'code' => $this->resolveSourceDocumentCode(),
+                'date' => $this->resolveSourceDocumentDate(),
             ],
-            'purchase' => [
-                'id' => $this->purchase->id ?? 'N/A',
-                'po_code' => $this->purchase->po_code ?? 'N/A',
-                'order_date' => $this->purchase->order_date?->format('l, d F Y') ?? 'N/A',
-            ],
+            
             'products' => $this->items->map(function ($i) {
                 return [
-                    'id' => $i->products->id,
-                    'name' => $i->products->name,
+                    'item_id' => $i->id,
+                    'id' => $i->products->id ?? 'N/A',
+                    'name' => $i->products->name ?? 'N/A',
                     'quantity_accepted' => $i->quantity_accepted,
                     'quantity_rejected' => $i->quantity_rejected,
                     'notes' => $i->notes,
                 ];
             }),
+            
             'receiving' => [
                 'id' => $this->user->id ?? 'N/A',
                 'name' => $this->user->name ?? 'N/A',
                 'date' => $this->receiving_date?->format('l, d F Y') ?? 'N/A',
             ],
+            
             'status' => $this->status,
             'created_at' => $this->created_at?->format('l, d F Y') ?? 'N/A',
             'updated_at' => $this->updated_at?->format('l, d F Y') ?? 'N/A',
         ];
+    }
+
+    /**
+     * Mengambil warehouse secara dinamis (Transfer In menggunakan toWarehouse).
+     */
+    private function resolveWarehouse(): array
+    {
+        if (!$this->relationLoaded('receivable') || !$this->receivable) {
+            return [
+                'id' => 'N/A',
+                'name' => 'N/A',
+            ];
+        }
+
+        $warehouse = match ($this->receivable_type) {
+            'transfer' => $this->receivable->toWarehouse,
+            default    => $this->receivable->warehouse,
+        };
+
+        return [
+            'id' => $warehouse->id ?? 'N/A',
+            'name' => $warehouse->name ?? 'N/A',
+        ];
+    }
+
+    /**
+     * Mengambil kode dokumen secara dinamis.
+     */
+    private function resolveSourceDocumentCode(): string
+    {
+        if (!$this->relationLoaded('receivable') || !$this->receivable) {
+            return 'N/A';
+        }
+
+        return match ($this->receivable_type) {
+            'purchase_order' => $this->receivable->po_code ?? 'N/A',
+            'transfer'       => $this->receivable->transfer_code ?? 'N/A',
+            'restock'        => $this->receivable->restock_code ?? 'N/A',
+            default          => 'N/A',
+        };
+    }
+
+    /**
+     * Mengambil tanggal dokumen secara dinamis.
+     */
+    private function resolveSourceDocumentDate(): string
+    {
+        if (!$this->relationLoaded('receivable') || !$this->receivable) {
+            return 'N/A';
+        }
+
+        $date = match ($this->receivable_type) {
+            'purchase_order' => $this->receivable->order_date,
+            'transfer'       => $this->receivable->transfer_date ?? $this->receivable->created_at,
+            'restock'        => $this->receivable->restock_date ?? $this->receivable->created_at,
+            default          => null,
+        };
+
+        return $date ? $date->format('l, d F Y') : 'N/A';
     }
 }

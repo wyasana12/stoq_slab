@@ -43,9 +43,10 @@ class SupplierController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => array_merge(SupplierListResource::collection($suppliers)->response()->getData(true),
-                    ['summary' => $summary]
-                    )
+            'data' => array_merge(
+                SupplierListResource::collection($suppliers)->response()->getData(true),
+                ['summary' => $summary]
+            )
         ], 200);
     }
 
@@ -107,7 +108,8 @@ class SupplierController extends Controller
         ]);
     }
 
-    public function dropdown(): JsonResponse {
+    public function dropdown(): JsonResponse
+    {
         $suppliers = Supplier::select('id', 'name')->get();
 
         return response()->json([

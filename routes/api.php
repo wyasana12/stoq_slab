@@ -15,6 +15,7 @@ use App\Http\Controllers\SuperAdmin\ProductReceivingController;
 use App\Http\Controllers\SuperAdmin\PurchaseOrderController;
 use App\Http\Controllers\DssController;
 use App\Http\Controllers\SuperAdmin\AlertConfigController;
+use App\Http\Controllers\SuperAdmin\MasterData\ProductSupplierController;
 use App\Http\Controllers\SuperAdmin\MasterData\StoreController;
 use App\Http\Controllers\SuperAdmin\MasterData\RackController;
 use Illuminate\Support\Facades\Route;
@@ -24,7 +25,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/profile', [LoginController::class, 'update']);
 });
 
-Route::prefix('/stores')->middleware('auth:sanctum')->name('store.')->group(function (){
+Route::prefix('/stores')->middleware('auth:sanctum')->name('store.')->group(function () {
     Route::get('', [StoreController::class, 'index'])->middleware('permission:view_store')->name('index');
     Route::get('/dropdown', [StoreController::class, 'dropdown'])->name('dropdown');
     Route::post('/create', [StoreController::class, 'store'])->name('create');
@@ -33,8 +34,7 @@ Route::prefix('/stores')->middleware('auth:sanctum')->name('store.')->group(func
     Route::delete('/{store}', [StoreController::class, 'destroy'])->middleware('permission:delete_store')->name('delete');
 });
 
-Route::prefix('/configs')->middleware('auth:sanctum')->name('config.')->group(function ()
- {
+Route::prefix('/configs')->middleware('auth:sanctum')->name('config.')->group(function () {
     Route::get('/alerts', [AlertConfigController::class, 'index'])->name('alert.index');
     Route::post('/alerts/create', [AlertConfigController::class, 'store'])->name('alert.create');
     Route::put('/alerts/{alert}', [AlertConfigController::class, 'update'])->name('alert.update');
@@ -55,8 +55,9 @@ Route::prefix('/roles')->middleware(['auth:sanctum', 'role:super-admin'])->name(
     Route::post('/{role}/permissions', [RoleController::class, 'assignPermissions'])->middleware('permission:assign_permissions')->name('assignPermissions');
 });
 
-Route::prefix('/users')->middleware(['auth:sanctum', 'role:super-admin'])->name('user.')->group(function () {
+Route::prefix('/users')->middleware('auth:sanctum')->name('user.')->group(function () {
     Route::get('', [UserController::class, 'index'])->middleware('permission:view_user')->name('index');
+    Route::get('/dropdown', [UserController::class, 'dropdown'])->name('dropdown');
     Route::post('/create', [UserController::class, 'store'])->middleware('permission:create_user')->name('create');
     Route::get('/{user}', [UserController::class, 'show'])->middleware('permission:view_user');
     Route::put('/{user}', [UserController::class, 'update'])->middleware('permission:edit_user')->name('update');
@@ -81,6 +82,9 @@ Route::prefix('/warehouses')->middleware('auth:sanctum')->name('warehouse.')->gr
 Route::prefix('/racks')->middleware('auth:sanctum')->name('rack.')->group(function () {
     Route::get('/statistics', [RackController::class, 'statistics'])->name('statistics');
     Route::get('', [RackController::class, 'index'])->name('index');
+    Route::get('/options', [RackController::class, 'dropdownRack']);
+    Route::get('/levels', [RackController::class, 'dropdownLevel']);
+    Route::get('/bins', [RackController::class, 'dropdownBin']);
     Route::post('/create', [RackController::class, 'store'])->name('create');
     Route::get('/{rack}', [RackController::class, 'show'])->name('show');
     Route::put('/{rack}', [RackController::class, 'update'])->name('update');
@@ -114,6 +118,8 @@ Route::prefix('/units')->middleware('auth:sanctum')->name('unit.')->group(functi
 Route::prefix('/products')->middleware('auth:sanctum')->name('product.')->group(function () {
     Route::get('', [ProductController::class, 'index'])->middleware('permission:view_products')->name('index');
     Route::get('/trash', [ProductController::class, 'trashed'])->middleware('permission:restore_products')->name('trash');
+    Route::get('/options', [ProductController::class, 'optionTypes'])->name('dropdown.type');
+    Route::get('/dropdown', [ProductController::class, 'dropdown'])->name('dropdown');
     Route::post('/create', [ProductController::class, 'store'])->middleware('permission:create_products')->name('create');
     Route::get('/{product}', [ProductController::class, 'show'])->middleware('permission:view_products')->name('show');
     Route::put('/{product}', [ProductController::class, 'update'])->middleware('permission:edit_products')->name('update');
@@ -122,24 +128,36 @@ Route::prefix('/products')->middleware('auth:sanctum')->name('product.')->group(
     Route::delete('/{product}/force', [ProductController::class, 'forceDestroy'])->middleware('permission:delete_products')->name('force')->withTrashed();
 });
 
+Route::prefix('/supplierproducts')->middleware('auth:sanctum')->name('supplierproduct.')->group(function () {
+    Route::get('', [ProductSupplierController::class, 'index'])->middleware('permission:view_supplier_product')->name('index');
+    Route::get('/trashed', [ProductSupplierController::class, 'trashed'])->middleware('permission:restore_and_force_supplier_product')->name('trashed')->withTrashed();
+    Route::post('/create', [ProductSupplierController::class, 'store'])->middleware('permission:create_supplier_product')->name('create');
+    Route::put('/{productSupplier}/update', [ProductSupplierController::class, 'update'])->middleware('permission:edit_supplier_product')->name('update');
+    Route::delete('/{productSupplier}/soft', [ProductSupplierController::class, 'destroy'])->middleware('permission:delete_supplier_product')->name('destroy');
+    Route::patch('/{productSupplier}/restore', [ProductSupplierController::class, 'restore'])->middleware('permission:restore_and_force_supplier_product')->name('restore')->withTrashed();
+    Route::delete('/{productSupplier}/force', [ProductSupplierController::class, 'forceDestroy'])->middleware('permission:restore_and_force_supplier_product')->name('force')->withTrashed();
+    Route::delete('/supplier/{supplier}/soft', [ProductSupplierController::class, 'destroyBySupplier'])->middleware('permission:delete_supplier_product')->name('destroyBySupplier');
+});
+
 Route::prefix('/purchases')->middleware('auth:sanctum')->name('purchase.')->group(function () {
     Route::get('', [PurchaseOrderController::class, 'index'])->middleware('permission:view_purchase')->name('index');
     Route::get('/confirmation', [PurchaseOrderController::class, 'confirmation'])->middleware('permission:confirm_purchase')->name('confirmation');
     Route::get('/dropdown', [PurchaseOrderController::class, 'dropdown'])->name('dropdown');
-    Route::get('/trash', [PurchaseOrderController::class, 'trashed'])->middleware('permission:restore_purchase')->name('trash');
+    Route::get('/trash', [PurchaseOrderController::class, 'trashed'])->middleware('permission:restore_and_force_purchase')->name('trash');
     Route::post('/request', [PurchaseOrderController::class, 'request'])->middleware('permission:create_purchase')->name('create');
     Route::get('/{purchase}', [PurchaseOrderController::class, 'show'])->middleware('permission:view_purchase')->name('show');
     Route::get('/{purchase}/products', [ProductController::class, 'getProductbyPurchaseOrder'])->name('product.purchase');
     Route::put('/{purchase}/update', [PurchaseOrderController::class, 'update'])->middleware('permission:edit_purchase')->name('update');
     Route::patch('/{purchase}/status', [PurchaseOrderController::class, 'status'])->middleware('permission:confirm_purchase')->name('status');
     Route::delete('/{purchase}/soft', [PurchaseOrderController::class, 'destroy'])->middleware('permission:delete_purchase')->name('destroy');
-    Route::patch('/{purchase}/restore', [PurchaseOrderController::class, 'restore'])->middleware('permission:restore_purchase')->name('restore')->withTrashed();
-    Route::delete('/{purchase}/force', [PurchaseOrderController::class, 'forceDestroy'])->middleware('permission:delete_purchase')->name('force')->withTrashed();
+    Route::patch('/{purchase}/restore', [PurchaseOrderController::class, 'restore'])->middleware('permission:restore_and_force_purchase')->name('restore')->withTrashed();
+    Route::delete('/{purchase}/force', [PurchaseOrderController::class, 'forceDestroy'])->middleware('permission:restore_and_force_purchase')->name('force')->withTrashed();
 });
 
 Route::prefix('/receives')->middleware('auth:sanctum')->name('receive.')->group(function () {
     Route::get('', [ProductReceivingController::class, 'index'])->middleware('permission:view_receive')->name('index');
     Route::get('/trashed', [ProductReceivingController::class, 'trashed'])->middleware('permission:restore_receive')->name('trashed');
+    Route::get('/options', [ProductReceivingController::class, 'dropdownSource'])->middleware('permission:create_receive')->name('options');
     Route::post('/create', [ProductReceivingController::class, 'store'])->middleware('permission:create_receive');
     Route::get('/{receive}', [ProductReceivingController::class, 'show'])->middleware('permission:view_receive')->name('show');
     Route::patch('/{receive}/update', [ProductReceivingController::class, 'updateItemsAndStatus'])->middleware('permission:edit_receive')->name('update');
@@ -157,6 +175,7 @@ Route::prefix('/batches')->middleware('auth:sanctum')->name('batch.')->group(fun
     Route::get('/{batch}/qr/download', [BatchController::class, 'download'])->name('qr.download');
     Route::patch('/{batch}/status', [BatchController::class, 'updateStatus'])->name('status.update');
 });
+
 Route::prefix('/dss')->middleware('auth:sanctum')->name('dss.')->group(function () {
     Route::get('/analysis', [DssController::class, 'analysis'])->name('analysis');
     Route::get('/recommendations', [DssController::class, 'recommendations'])->name('recommendations');

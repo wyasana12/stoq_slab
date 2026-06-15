@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -24,7 +24,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read Warehouse|null $toWarehouse
  * @property-read User|null $request
  * @property-read User|null $confirm
- * @property-read \Illuminate\Database\Eloquent\Collection<int, StockTransferItem> $item
  * @property-read \Illuminate\Database\Eloquent\Collection<int, Batch> $batch
  */
 class StockTransfers extends Model
@@ -70,5 +69,10 @@ class StockTransfers extends Model
     public function batch(): BelongsToMany
     {
         return $this->belongsToMany(Batch::class, 'stock_transfer_items', 'transfer_id', 'batch_id');
+    }
+
+    public function receivings(): MorphMany
+    {
+        return $this->morphMany(ProductReceiving::class, 'receivable');    
     }
 }

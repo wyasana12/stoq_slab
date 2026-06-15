@@ -3,36 +3,49 @@
 namespace App\Repositories;
 
 use App\Models\Batch;
+use App\Models\PurchaseOrder;
+use App\Models\Restock;
+use App\Models\StockTransfers;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Facades\Auth;
 
 class BatchRepository
 {
-    public function getAllPaginated(int $perPage = 10, array $filters)
+    public function getAll()
     {
         $userId = Auth::user()->warehouse_id;
 
-        $query = Batch::with(['product:id,name', 'receive.purchase.supplier:id,name'])
-            ->select(['id', 'batch_code', 'product_id', 'warehouse_id', 'receiving_id', 'current_quantity', 'price', 'production_date', 'expired_date', 'created_at', 'updated_at', 'barcode']);
-
-
-        if (!empty($filters['search'])) {
-            $search = $filters['search'];
-            $query->where(function ($q) use ($search) {
-                $q->where('batch_code', 'like', "%{$search}%")
-                    ->orWhereHas('product', function ($productQuery) use ($search) {
-                        $productQuery->where('name', 'like', "%{$search}%");
-                    });
-            });
-        }
+        $query = Batch::with([
+            'product:id,name',
+            'receive.receivable' => function (MorphTo $morphTo) {
+                $morphTo->morphWith([
+                    PurchaseOrder::class => ['supplier:id,name'],
+                    StockTransfers::class => ['fromWarehouse:id,name'],
+                    Restock::class => ['supplier:id,name'],
+                ]);
+            }
+        ])
+            ->select(['id', 'batch_code', 'product_id', 'receiving_id', 'current_quantity', 'price', 'production_date', 'expired_date']);
 
         return $query->where('warehouse_id', $userId)
             ->latest()
-            ->paginate($perPage);;
+            ->get();;
     }
 
     public function getById(Batch $batch): Batch
     {
-        return $batch->load(['warehouse', 'receive.purchase.supplier']);
+        return $batch->load([
+            'warehouse',
+            'product:id,name',
+            'locations',
+            'receive.receivable' => function (MorphTo $morphTo) {
+                $morphTo->morphWith([
+                    PurchaseOrder::class => ['supplier:id,name'],
+                    StockTransfers::class => ['fromWarehouse:id,name'],
+                    Restock::class => ['supplier:id,name'],
+                ]);
+            }
+        ]);
     }
 
     public function create(array $data): Batch

@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('product_supplier_items', function (Blueprint $table) {
             $table->ulid('id')->primary();
+            $table->string('SPN')->unique();
             $table->foreignUlid('product_id')->constrained('products')->onDelete('cascade');
             $table->foreignUlid('supplier_id')->constrained('suppliers')->onDelete('cascade');
             $table->decimal('unit_price', 12, 2);

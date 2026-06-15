@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\ProductSupplierItem;
 use App\Models\Product;
+use App\Models\ProductSupplierItem;
 use App\Models\Supplier;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -15,78 +15,99 @@ class ProductSupplierSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Ambil data secara acak
+        // Ambil 2 produk dan 3 supplier secara acak
         $products = Product::inRandomOrder()->take(2)->get();
         $suppliers = Supplier::inRandomOrder()->take(3)->get();
 
-        // 2. Validasi jumlah data
+        // Validasi data
         if ($products->count() < 2 || $suppliers->count() < 3) {
-            $this->command->error('Gagal: Pastikan Anda sudah memiliki minimal 2 produk dan 3 supplier di database sebelum menjalankan seeder ini.');
+            $this->command->error(
+                'Seeder gagal. Pastikan terdapat minimal 2 produk dan 3 supplier.'
+            );
             return;
         }
 
-        $productId1 = $products[0]->id;
-        $productId2 = $products[1]->id;
+        $product1 = $products[0];
+        $product2 = $products[1];
 
-        $supplierId1 = $suppliers[0]->id;
-        $supplierId2 = $suppliers[1]->id;
-        $supplierId3 = $suppliers[2]->id;
+        $supplier1 = $suppliers[0];
+        $supplier2 = $suppliers[1];
+        $supplier3 = $suppliers[2];
 
-        // 3. Bungkus dalam 1 transaksi (tidak perlu nested transaction)
-        DB::transaction(function () use ($productId1, $productId2, $supplierId1, $supplierId2, $supplierId3) {
-            
-            // Gunakan updateOrCreate untuk menghindari error unique constraint
+        /**
+         * Generator SPN
+         * Format:
+         * SPN-{SUPPLIER_CODE}-{SKU}
+         */
+        $makeSpn = fn (Supplier $supplier, Product $product): string =>
+            sprintf(
+                'SPN-%s-%s',
+                strtoupper(trim($supplier->supplier_code)),
+                strtoupper(trim($product->sku))
+            );
+
+        DB::transaction(function () use (
+            $product1,
+            $product2,
+            $supplier1,
+            $supplier2,
+            $supplier3,
+            $makeSpn
+        ) {
+
             ProductSupplierItem::updateOrCreate(
                 [
-                    'product_id' => $productId1,
-                    'supplier_id' => $supplierId1,
+                    'product_id' => $product1->id,
+                    'supplier_id' => $supplier1->id,
                 ],
                 [
+                    'SPN' => $makeSpn($supplier1, $product1),
                     'unit_price' => 120000.00,
                     'min_order_quantity' => 10,
                     'lead_time_days' => 3,
+                    'return_limit_days' => 7,
                     'is_preferred' => false,
                 ]
             );
 
             ProductSupplierItem::updateOrCreate(
                 [
-                    'product_id' => $productId1,
-                    'supplier_id' => $supplierId2,
+                    'product_id' => $product1->id,
+                    'supplier_id' => $supplier2->id,
                 ],
                 [
+                    'SPN' => $makeSpn($supplier2, $product1),
                     'unit_price' => 115000.00,
                     'min_order_quantity' => 50,
                     'lead_time_days' => 5,
+                    'return_limit_days' => 14,
                     'is_preferred' => true,
                 ]
             );
 
-            // Simulasi update is_preferred (otomatis memicu event booted di Model)
-            $supplierA = ProductSupplierItem::where('product_id', $productId1)
-                ->where('supplier_id', $supplierId1)
-                ->first();
-
-            if ($supplierA) {
-                // Gunakan update() ketimbang save() agar lebih konsisten dan bersih
-                $supplierA->update(['is_preferred' => true]);
-            }
+            // Simulasi perubahan preferred supplier
+            ProductSupplierItem::where('product_id', $product1->id)
+                ->where('supplier_id', $supplier1->id)
+                ->update([
+                    'is_preferred' => true,
+                ]);
 
             ProductSupplierItem::updateOrCreate(
                 [
-                    'product_id' => $productId2,
-                    'supplier_id' => $supplierId3,
+                    'product_id' => $product2->id,
+                    'supplier_id' => $supplier3->id,
                 ],
                 [
+                    'SPN' => $makeSpn($supplier3, $product2),
                     'unit_price' => 15000.00,
                     'min_order_quantity' => 100,
                     'lead_time_days' => 2,
+                    'return_limit_days' => 30,
                     'is_preferred' => true,
                 ]
             );
         });
 
-        // Pindahkan notifikasi keluar dari transaksi
-        $this->command->info('Seeder ProductSupplierItem berhasil dijalankan secara aman!');
+        $this->command->info('ProductSupplierSeeder berhasil dijalankan.');
     }
 }

@@ -3,24 +3,27 @@
 namespace App\Services;
 
 use App\Models\Product;
+use App\Models\PurchaseOrder;
+use App\Models\Restock;
+use App\Models\StockTransfers;
 use App\Repositories\ProductRepository;
 use Illuminate\Support\Facades\DB;
 
 class ProductService
 {
-    protected $productRepository;
+    protected ProductRepository $productRepository;
 
     public function __construct(ProductRepository $productRepository)
     {
         $this->productRepository = $productRepository;
     }
 
-    public function getAllProducts(array $filters, int $productPage = 10)
+    public function getAllProducts()
     {
-        return $this->productRepository->getAllPaginated($filters, $productPage);
+        return $this->productRepository->getAll();
     }
 
-    public function createProduct(array $data): Product
+    public function create(array $data): Product
     {
         return DB::transaction(function () use ($data) {
             $product = $this->productRepository->create([
@@ -29,10 +32,6 @@ class ProductService
                 'category_id' => $data['category_id'],
                 'unit_id' => $data['unit_id'],
             ]);
-
-            if (!empty($data['items'])) {
-                $this->productRepository->assignSupplier($product, $data['items']);
-            }
 
             return $product;
         });
@@ -48,22 +47,13 @@ class ProductService
                 'unit_id' => $data['unit_id'],
             ]);
 
-            if (isset($data['items'])) {
-                $this->productRepository->syncSuppliers($product, $data['items']);
-            }
-
-            return $product->fresh(['unit', 'category', 'productItems.supplier']);
+            return $product->fresh(['unit', 'category']);
         });
     }
 
-    public function getProductDetail(Product $product): Product
+    public function getTrashedProduct()
     {
-        return $this->productRepository->getById($product);
-    }
-
-    public function getTrashedProduct(int $perPage)
-    {
-        return $this->productRepository->getTrashedPaginated($perPage);    
+        return $this->productRepository->getTrashedPaginated();
     }
 
     public function softDeleteProduct(Product $product): void
@@ -75,11 +65,36 @@ class ProductService
     {
         $this->productRepository->restore($product);
 
-        return $product->fresh(['unit', 'category', 'productItems.supplier']);
+        return $product->fresh(['unit', 'category']);
     }
 
     public function forceDeleteProduct(Product $product)
     {
-        $this->productRepository->forceDelete($product);    
+        $this->productRepository->forceDelete($product);
+    }
+
+    public function getProductsBySource(string $type, string $id)
+    {
+        return match ($type) {
+            'purchase_order' => PurchaseOrder::with('items.product')->findOrFail($id)->items->map(fn($item) => [
+                'id' => $item->product_id,
+                'name' => $item->product->name,
+                'quantity_ordered' => $item->quantity_ordered,
+            ]),
+
+            'transfer' => collect([StockTransfers::with('products')->findOrFail($id)])->map(fn($item) => [
+                'id' => $item->product_id,
+                'name' => $item->products->name,
+                'quantity_ordered' => $item->approved_quantity,
+            ]),
+
+            'restock' => Restock::with('item.product')->findOrFail($id)->item->map(fn($item) => [
+                'id' => $item->product_id,
+                'name' => $item->product->name,
+                'quantity_ordered' => $item->requested_quantity,
+            ]),
+
+            default => collect([]),
+        };
     }
 }

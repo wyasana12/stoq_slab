@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Receive;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreandUpdateReceiveRequest extends FormRequest
 {
@@ -21,8 +22,20 @@ class StoreandUpdateReceiveRequest extends FormRequest
      */
     public function rules(): array
     {
+        $table = match ($this->input('receivable_type')) {
+            'purchase_order' => 'purchase_orders',
+            'transfer'       => 'stock_transfers',
+            'restock'        => 'restocks',
+            default          => null,
+        };
+
         return [
-            'purchase_id' => ['required', 'string','exists:purchase_orders,id'],
+            'receivable_type' => ['required', 'string', Rule::in(['purchase_order', 'transfer', 'restock'])],
+            'receivable_id'   => [
+                'required',
+                'string',
+                $table ? Rule::exists($table, 'id') : '',
+            ],
 
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'exists:products,id'],
@@ -42,11 +55,11 @@ class StoreandUpdateReceiveRequest extends FormRequest
     public function messages()
     {
         return [
-            'purchase_id.required' => 'Purchase Order is required.',
-            'purchase_id.exists' => 'This selected purchase is invalid.',
+            'receivable_type.required' => 'The document source type is required.',
+            'receivable_type.in'       => 'The document source type must be either purchase_order, transfer, or restock.',
+            'receivable_id.required'   => 'The document source ID is required.',
+            'receivable_id.exists'     => 'The selected source document is invalid or does not exist.',
 
-            'status.required' => 'Status receive is required.',
-            
             'items.required' => 'At least one product is required.',
             'items.array' => 'The items must be an array format.',
             'items.*.product_id.required' => 'Product is required.',
@@ -60,7 +73,7 @@ class StoreandUpdateReceiveRequest extends FormRequest
 
             'items.*.production_date.date' => 'Production date must be a valid date.',
             'items.*.production_date.before_or_equal' => 'Production date cannot be a future date.',
-            
+
             'items.*.expired_date.date' => 'Expired date must be a valid date.',
             'items.*.expired_date.after_or_equal' => 'Expired date cannot be a past date.',
 
@@ -69,7 +82,7 @@ class StoreandUpdateReceiveRequest extends FormRequest
             'items.*.racks.required' => 'At least one rack is required.',
             'items.*.racks.array' => 'The items must be an array format.',
 
-            'items.*.racks.*.location_id.required' => 'Rack is required.', 
+            'items.*.racks.*.location_id.required' => 'Rack is required.',
             'items.*.racks.*.location_id.exists' => 'One or more selected rack are invalid or do not exists.',
         ];
     }

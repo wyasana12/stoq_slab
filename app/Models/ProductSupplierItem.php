@@ -32,12 +32,12 @@ class ProductSupplierItem extends Pivot
         });
     }
 
-    public function product(): BelongsTo
+    public function products(): BelongsTo
     {
         return $this->belongsTo(Product::class, 'product_id');
     }
 
-    public function supplier(): BelongsTo
+    public function suppliers(): BelongsTo
     {
         return $this->belongsTo(Supplier::class, 'supplier_id');
     }
