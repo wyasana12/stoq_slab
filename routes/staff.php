@@ -3,6 +3,7 @@
 use App\Http\Controllers\Staff\DashboardController;
 use App\Http\Controllers\Staff\DistributionStatusController;
 use App\Http\Controllers\Staff\ExpiredConditionController;
+use App\Http\Controllers\Staff\DisposalController;
 use App\Http\Controllers\ReturnController;
 use Illuminate\Support\Facades\Route;
 
@@ -35,5 +36,11 @@ Route::prefix('/staff')->middleware('auth:sanctum')->name('staff.')->group(funct
         Route::get('/{stockReturn}', [ReturnController::class, 'show'])->name('show');
         Route::put('/{stockReturn}', [ReturnController::class, 'update'])->name('update');
         Route::delete('/{stockReturn}', [ReturnController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('/disposals')->name('disposal.')->group(function () {
+        Route::get('/', [DisposalController::class, 'index'])->name('index');
+        Route::post('/', [DisposalController::class, 'store'])->name('store');
+        Route::get('/{stockDisposal}', [DisposalController::class, 'show'])->name('show');
     });
 });

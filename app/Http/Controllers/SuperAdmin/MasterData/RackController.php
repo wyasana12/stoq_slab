@@ -31,8 +31,9 @@ class RackController extends Controller
             $perPage = $request->query('per_page', 10);
             $search  = $request->query('search');
             $status  = $request->query('status');
+            $categoryId = $request->query('category_id');
 
-            $allRacks = $this->rackService->getAllRack($perPage, $search, $status);
+            $allRacks = $this->rackService->getAllRack($perPage, $search, $status, $categoryId);
 
             return response()->json([
                 'success' => true,
@@ -124,7 +125,7 @@ class RackController extends Controller
     {
         try {
             $validated = $request->validate([
-                'status' => 'required|in:AVAILABLE,FULL,INACTIVE,MAINTENANCE'
+                'status' => 'required|in:AVAILABLE,FULL,MAINTENANCE'
             ]);
 
             $rack->update(['status' => $validated['status']]);

@@ -133,10 +133,12 @@ class MonitoringController extends Controller
             'success' => true,
             'message' => 'Dashboard summary and chart data retrieved successfully.',
             'data' => [
-                // Langsung pasang 'stock_status' di tingkat atas agar dibaca 'props.dashboardSummary.stock_status' di Vue
-                'stock_status' => $stockStatus,
-                'activities'   => $chartData['activities'] ?? [],
-                'warehouses'   => $chartData['warehouses'] ?? [],
+                'total_sku'       => $dashboardSummary['total_sku'] ?? 0,
+                'stock_status'    => $stockStatus,
+                'today_stats'     => $dashboardSummary['today_stats'] ?? [],
+                'rack_capacities' => $dashboardSummary['rack_capacities'] ?? [],
+                'activities'      => $chartData['activities'] ?? [],
+                'warehouses'      => $chartData['warehouses'] ?? [],
             ],
         ]);
     }

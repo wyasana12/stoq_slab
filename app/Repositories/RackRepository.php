@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 
 class RackRepository
 {
-    public function getAllPaginated(int $perPage = 10, ?string $search = null, ?string $status = null)
+    public function getAllPaginated(int $perPage = 10, ?string $search = null, ?string $status = null, ?string $categoryId = null)
     {
         $warehouseId = Auth::user()->warehouse_id;
 
@@ -22,6 +22,10 @@ class RackRepository
 
         if ($status) {
             $query->where('status', strtoupper($status));
+        }
+
+        if ($categoryId) {
+            $query->where('category_id', $categoryId);
         }
 
         return $query->latest()->paginate($perPage);

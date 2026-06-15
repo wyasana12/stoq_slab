@@ -17,6 +17,7 @@ class BatchListResource extends JsonResource
         return [
             'id' => $this->id,
             'batch_code' => $this->batch_code,
+            'receiving_id' => $this->receiving_id,
             'product' => [
                 'id' => $this->product?->id ?? 'N/A',
                 'name' => $this->product?->name ?? 'N/A',
