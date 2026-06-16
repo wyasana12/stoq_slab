@@ -27,10 +27,12 @@ class ProductReceivingController extends Controller
     {
         try {
             $allReceives = $this->productReceivingService->getAllReceives();
+            $summary = $this->productReceivingService->getStats();
 
             return response()->json([
                 'success' => true,
-                'data' => ReceiveListResource::collection($allReceives)->response()->getData(true),
+                'summary' => $summary,
+                'data' => ReceiveListResource::collection($allReceives),
             ], 200);
         } catch (\Exception $err) {
             return response()->json([

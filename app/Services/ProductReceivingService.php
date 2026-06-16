@@ -40,6 +40,11 @@ class ProductReceivingService
         $this->batchService = $batchService;
     }
 
+    public function getStats()
+    {
+        return $this->productRecivingRepository->getStats();
+    }
+
     public function getAllReceives()
     {
         return $this->productRecivingRepository->getAll();

@@ -8,6 +8,7 @@ use App\Http\Resources\Warehouse\WarehouseDetailResource;
 use App\Http\Resources\Warehouse\WarehouseListResource;
 use App\Models\Warehouse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 
 class WarehouseController extends Controller
 {
@@ -65,9 +66,18 @@ class WarehouseController extends Controller
      */
     public function update(StoreAndUpdateWarehouseRequest $request, Warehouse $warehouse): JsonResponse
     {
+        $oldStatus = $warehouse->status;
+        
         $warehouse->update($request->validated());
 
         $warehouse->load('region');
+
+        if ($oldStatus == true && $warehouse->status == false) {
+            $warehouse->users()->each(function ($user) {
+                $user->tokens()->delete();
+                Cache::forget("auth_user_{$user->id}");
+            });
+        }
 
         return response()->json([
             'success' => true,

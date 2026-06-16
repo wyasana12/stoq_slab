@@ -30,7 +30,7 @@ class BatchService
 
     public function getSummary()
     {
-        return $this->batchRepository->getSummary();    
+        return $this->batchRepository->getSummary();
     }
 
     public function getAllBatches()
@@ -86,8 +86,14 @@ class BatchService
                 );
             }
 
+            if ($totalAvailable < $remaining) {
+                throw new InvalidArgumentException(
+                    "Kapasitas bin tidak mencukupi. Qty barang: {$remaining}, Total kapasitas tersedia: {$totalAvailable}. Silakan tambah lokasi bin."
+                );
+            }
+
             foreach ($locations as $location) {
-                if ($remaining < 0) break;
+                if ($remaining <= 0) break;
 
                 $available = max(
                     0,

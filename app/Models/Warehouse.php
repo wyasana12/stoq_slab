@@ -22,6 +22,10 @@ class Warehouse extends Model
         'id'
     ];
 
+    protected $casts = [
+        'status' => 'boolean'
+    ];
+
     public $incrementing = false;
 
     protected $keyType = 'string';
