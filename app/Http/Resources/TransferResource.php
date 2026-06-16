@@ -13,6 +13,8 @@ class TransferResource extends JsonResource
             'id' => $this->id,
             'transfer_code' => $this->transfer_code,
             'transfer_type' => $this->transfer_type,
+            'from_warehouse_id' => $this->from_warehouse_id,
+            'to_warehouse_id' => $this->to_warehouse_id,
             'from_warehouse' => $this->when($this->relationLoaded('fromWarehouse'), $this->fromWarehouse?->name),
             'to_warehouse' => $this->when($this->relationLoaded('toWarehouse'), $this->toWarehouse?->name),
             'requested_by' => $this->request->name ?? null,
@@ -41,6 +43,7 @@ class TransferResource extends JsonResource
                 return [
                     [
                         'id' => $prod?->id ?? $this->product_id,
+                        'sku' => $prod?->sku ?? null,
                         'name' => $prod?->name ?? null,
                         'qty' => ($statusValue !== 'draft' && $this->approved_quantity > 0) ? $this->approved_quantity : ($this->requested_quantity ?? 0),
                     ],

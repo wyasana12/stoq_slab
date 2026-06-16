@@ -43,7 +43,6 @@ enum TransferStatus: string
             self::DRAFT => in_array($newStatus, [
                 self::APPROVED,
                 self::REJECTED,
-                self::COMPLETED,
                 self::CANCELLED,
             ], true),
             self::APPROVED => in_array($newStatus, [

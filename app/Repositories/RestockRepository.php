@@ -103,7 +103,7 @@ class RestockRepository
                 }
             }
 
-            if (isset($data['status']) && $data['status'] === RestockStatus::RESTOCKED->value) {
+            if (isset($data['status']) && $data['status'] === RestockStatus::COMPLETED->value) {
                 $this->applyStockMutation($restock->refresh());
             }
 
@@ -154,7 +154,7 @@ class RestockRepository
     {
         return DB::transaction(function () use ($restock, $userId) {
             $currentStatus = RestockStatus::fromValue($restock->status instanceof RestockStatus ? $restock->status->value : $restock->status);
-            $nextStatus = RestockStatus::RESTOCKED;
+            $nextStatus = RestockStatus::COMPLETED;
 
             if (! $currentStatus->canTransition($nextStatus)) {
                 throw new \InvalidArgumentException(
