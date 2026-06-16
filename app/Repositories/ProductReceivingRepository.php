@@ -15,20 +15,51 @@ use Illuminate\Support\Str;
 
 class ProductReceivingRepository
 {
+    public function getStats(): array
+    {
+        $userId = Auth::user()->warehouse_id;
+
+        $baseQuery = ProductReceiving::whereHasMorph(
+            'receivable',
+            [PurchaseOrder::class, StockTransfers::class, Restock::class],
+            function ($q, $type) use ($userId) {
+                if ($type === StockTransfers::class) {
+                    $q->where('to_warehouse_id', $userId);
+                } else {
+                    $q->where('warehouse_id', $userId);
+                }
+            }
+        );
+
+        $pendingStats =
+            PurchaseOrder::where('warehouse_id', $userId)->where('status', 'ordered')->count() +
+            StockTransfers::where('to_warehouse_id', $userId)->where('status', 'on_delivery')->count() +
+            Restock::where('warehouse_id', $userId)->where('status', 'on_delivery')->count();
+
+        return [
+            'total_receive' => (clone $baseQuery)->count(),
+            'receive_in_fully' => (clone $baseQuery)->where('status', ReceiveStatus::FULL)->count(),
+            'receive_in_partially' => (clone $baseQuery)->where('status', ReceiveStatus::PARTIAL)->count(),
+            'pending_documents' => $pendingStats
+        ];
+    }
     public function getAll()
     {
         $userId = Auth::user()->warehouse_id;
 
-        $query = ProductReceiving::with(['receivable', 'user:id,name'])->select('id', 'receiving_code', 'receiving_date', 'status', 'receivable_type', 'receivable_id','receiving_by');
+        $query = ProductReceiving::with(['receivable', 'user:id,name'])->select('id', 'receiving_code', 'receiving_date', 'status', 'receivable_type', 'receivable_id', 'receiving_by');
 
-        return $query->whereHasMorph('receivable', [PurchaseOrder::class, StockTransfers::class, Restock::class],
-        function ($q, $type) use ($userId) {
-            if($type === StockTransfers::class) {
-                $q->where('to_warehouse_id', $userId);
-            } else {
-                $q->where('warehouse_id', $userId);
+        return $query->whereHasMorph(
+            'receivable',
+            [PurchaseOrder::class, StockTransfers::class, Restock::class],
+            function ($q, $type) use ($userId) {
+                if ($type === StockTransfers::class) {
+                    $q->where('to_warehouse_id', $userId);
+                } else {
+                    $q->where('warehouse_id', $userId);
+                }
             }
-        })->latest()->get();
+        )->latest()->get();
     }
 
     public function getById(ProductReceiving $receive): ProductReceiving

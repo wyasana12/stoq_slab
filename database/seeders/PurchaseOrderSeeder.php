@@ -74,7 +74,7 @@ class PurchaseOrderSeeder extends Seeder
                         'purchase_id' => $po->id,
                         'product_id' => $psItem->product_id,
                         'quantity_ordered' => $qty,
-                        'quantity_received' => $qty,
+                        'quantity_approved' => $qty,
                         'unit_price' => $price,
                         'subtotal' => $subtotal,
                     ]);

@@ -20,7 +20,7 @@ class LoginController extends Controller
     {
         $this->userService = $userService;
     }
-    
+
     public function login(Request $request): JsonResponse
     {
         $request->validate([
@@ -38,21 +38,28 @@ class LoginController extends Controller
             $loginType = 'username';
         }
 
-        $user = User::where($loginType, $request->login)->first();
+        $user = User::with('warehouse')->where($loginType, $request->login)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Login Failed. Please check your credentials.'
+                'message' => 'Login gagal. Cek kembali email, username, no telepon atau password.'
             ], 401);
         }
 
         if (!$user->is_active) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Akun Anda telah dinonaktifkan. Silakan hubungi admin.'
-        ], 403);
-    }
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun Anda telah dinonaktifkan. Silakan hubungi admin.'
+            ], 403);
+        }
+
+        if ($user->warehouse && !$user->warehouse->status) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gudang Anda saat ini tidak aktif. Silakan hubungi admin.'
+            ], 403);
+        }
 
         $user->tokens()->delete();
 
