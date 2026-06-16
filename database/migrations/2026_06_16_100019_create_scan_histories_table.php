@@ -1,0 +1,34 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('scan_histories', function (Blueprint $table) {
+            $table->ulid('id')->primary();
+            $table->foreignUlid('user_id')->constrained('users')->onDelete('cascade');
+            $table->string('batch_code')->nullable();
+            $table->string('product_name')->nullable();
+            $table->string('activity');
+            $table->string('qty')->nullable();
+            $table->string('status')->nullable();
+            $table->longText('raw_result')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('scan_histories');
+    }
+};
