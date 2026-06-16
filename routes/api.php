@@ -18,11 +18,17 @@ use App\Http\Controllers\SuperAdmin\AlertConfigController;
 use App\Http\Controllers\SuperAdmin\MasterData\ProductSupplierController;
 use App\Http\Controllers\SuperAdmin\MasterData\StoreController;
 use App\Http\Controllers\SuperAdmin\MasterData\RackController;
+use App\Http\Controllers\ScanHistoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [LoginController::class, 'me']);
     Route::put('/profile', [LoginController::class, 'update']);
+});
+
+Route::prefix('/scan-histories')->middleware('auth:sanctum')->name('scan-history.')->group(function () {
+    Route::get('', [ScanHistoryController::class, 'index'])->name('index');
+    Route::post('/create', [ScanHistoryController::class, 'store'])->name('create');
 });
 
 Route::prefix('/stores')->middleware('auth:sanctum')->name('store.')->group(function () {
