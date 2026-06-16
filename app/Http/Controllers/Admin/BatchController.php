@@ -161,7 +161,25 @@ class BatchController extends Controller
                         'message' => 'Lokasi rak tidak ditemukan.',
                     ], 404);
                 }
-                $updateData['rack_id'] = $rackLocation->id;
+                
+                // Kosongkan lokasi rak lama milik batch ini
+                \App\Models\RackLocation::where('batch_id', $batch->id)->update([
+                    'batch_id' => null,
+                    'used' => 0,
+                    'status' => 'AVAILABLE'
+                ]);
+
+                // Update lokasi rak yang baru
+                $rackLocation->batch_id = $batch->id;
+                $rackLocation->used = min($batch->current_quantity, $rackLocation->capacity);
+                if ($rackLocation->used >= $rackLocation->capacity) {
+                    $rackLocation->status = 'FULL';
+                } elseif ($rackLocation->used > 0) {
+                    $rackLocation->status = 'PARTIAL';
+                } else {
+                    $rackLocation->status = 'AVAILABLE';
+                }
+                $rackLocation->save();
             }
 
             if (!empty($updateData)) {

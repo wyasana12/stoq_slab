@@ -149,6 +149,10 @@ class ProductReceivingService
             $this->productRecivingRepository->assignItems($receive, $receiveItemsData);
 
             if (in_array($calculatedStatus, [ReceiveStatus::FULL, ReceiveStatus::PARTIAL])) {
+                if ($data['receivable_type'] === 'transfer') {
+                    $sourceModel->update(['status' => TransferStatus::COMPLETED]);
+                }
+
                 foreach ($receiveItemsData as $item) {
                     if ((int) $item['quantity_accepted'] > 0) {
                         $batch = $this->batchRepository->create([
@@ -232,7 +236,7 @@ class ProductReceivingService
                 ->get(['id', 'po_code as label']),
 
             'transfer' => StockTransfers::where('to_warehouse_id', $warehouseId)
-                ->where('status', 'completed')
+                ->where('status', 'on_delivery')
                 ->get(['id', 'transfer_code as label']),
 
             'restock' => Restock::where('warehouse_id', $warehouseId)
@@ -271,8 +275,8 @@ class ProductReceivingService
             case 'transfer':
                 $model = StockTransfers::with('toWarehouse', 'products')->findOrFail($id);
 
-                if ($model->status !== TransferStatus::COMPLETED) {
-                    throw new InvalidArgumentException("Transfers must be completed to be received.");
+                if ($model->status !== TransferStatus::ON_DELIVERY) {
+                    throw new InvalidArgumentException("Transfers must be on delivery to be received.");
                 }
 
                 $items = collect([$model])->mapWithKeys(fn($item) => [$item->product_id => (object)[

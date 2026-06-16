@@ -7,6 +7,7 @@ enum TransferStatus: string
     case DRAFT = 'draft';
     case APPROVED = 'approved';
     case REJECTED = 'rejected';
+    case ON_DELIVERY = 'on_delivery';
     case RECEIVED = 'received';
     case COMPLETED = 'completed';
     case CANCELLED = 'cancelled';
@@ -19,6 +20,7 @@ enum TransferStatus: string
             'draft' => self::DRAFT,
             'approved' => self::APPROVED,
             'rejected' => self::REJECTED,
+            'on-delivery', 'on_delivery' => self::ON_DELIVERY,
             'received' => self::RECEIVED,
             'completed' => self::COMPLETED,
             'cancelled', 'canceled' => self::CANCELLED,
@@ -45,8 +47,15 @@ enum TransferStatus: string
                 self::CANCELLED,
             ], true),
             self::APPROVED => in_array($newStatus, [
+                self::ON_DELIVERY,
                 self::RECEIVED,
                 self::COMPLETED,
+                self::CANCELLED,
+            ], true),
+            self::ON_DELIVERY => in_array($newStatus, [
+                self::RECEIVED,
+                self::COMPLETED,
+                self::CANCELLED,
             ], true),
             default => false,
         };

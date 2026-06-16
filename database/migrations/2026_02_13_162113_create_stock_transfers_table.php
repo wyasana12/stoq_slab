@@ -23,6 +23,7 @@ return new class extends Migration
             $table->foreignUlid('requested_by')->constrained('users')->cascadeOnDelete();
             $table->foreignUlid('confirmed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->string('notes')->nullable();
+            $table->string('reason')->nullable();
             $table->string('status');
             $table->timestamps();
             $table->softDeletes();

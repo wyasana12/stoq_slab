@@ -18,6 +18,7 @@ class TransferResource extends JsonResource
             'requested_by' => $this->request->name ?? null,
             'confirmed_by' => $this->confirm?->name,
             'status' => $this->status instanceof \App\Enums\TransferStatus ? $this->status->value : $this->status,
+            'reason' => $this->reason,
             'notes' => $this->notes,
             'requested_quantity' => $this->requested_quantity,
             'approved_quantity' => $this->approved_quantity,
