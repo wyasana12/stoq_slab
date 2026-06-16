@@ -24,7 +24,7 @@ class PermissionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Permission cannot be deleted because it is used by roles.'
-            ]);
+            ], 400);
         }
 
         $permission->delete();

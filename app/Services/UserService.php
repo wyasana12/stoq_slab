@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Repositories\UserRepository;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
@@ -20,9 +22,9 @@ class UserService
         $this->userRepository = $userRepository;
     }
 
-    public function getAllUsers(int $userPage = 10)
+    public function getAllUsers()
     {
-        return $this->userRepository->getAllPaginated($userPage);
+        return $this->userRepository->getAllPaginated();
     }
 
     public function createUser(array $data): User
@@ -67,6 +69,35 @@ class UserService
 
             return $user;
         });
+    }
+
+    public function toggleUserStatus(User $user, bool $status)
+    {
+        if ($user->trashed()) {
+            throw new \Exception("Tidak bisa mengubah status user yang sudah dihapus.");
+        }
+
+        if (!$status) {
+            $user->tokens()->delete();
+            Cache::forget("auth_user_{$user->id}");
+        }
+
+        return $this->userRepository->status($user, $status);
+    }
+
+    public function removeUsers(User $user)
+    {
+        $user = $user->fresh();
+
+        if ((bool) $user->is_active === true) {
+            throw new \Exception("User sedang aktif dan tidak dapat dihapus. Nonaktifkan terlebih dahulu.");
+        }
+
+        if (Auth::id() === $user->id) {
+            throw new \Exception("Anda tidak dapat menghapus akun Anda sendiri.");
+        }
+
+        return $this->userRepository->destroy($user);
     }
 
     public function getUserDetail(User $user): User

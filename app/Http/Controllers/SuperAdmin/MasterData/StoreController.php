@@ -8,31 +8,13 @@ use App\Http\Resources\Store\StoreDetailResource;
 use App\Http\Resources\Store\StoreListResource;
 use App\Models\Store;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class StoreController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(): JsonResponse
     {
-        $perPage = $request->query('per_page', 10);
-        $page = $request->query('page', 1);
-        $query = Store::with('warehouse:id,name')->select('id', 'name', 'contact_person', 'phone_number', 'email', 'status', 'store_code', 'warehouse_id');
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('store_code', 'like', "%{$search}%");
-            });
-        }
-
-        if ($request->has('status')) {
-            $query->where('status', filter_var($request->status, FILTER_VALIDATE_BOOLEAN));
-        }
-
-        $stores = $query->paginate($perPage);
+        $stores = Store::with('warehouse:id,name')->select('id', 'name', 'contact_person', 'phone_number', 'email', 'status', 'store_code', 'warehouse_id')->get();
 
         $summary = [
             'total_stores'    => Store::count(),
@@ -42,10 +24,8 @@ class StoreController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => array_merge(
-                StoreListResource::collection($stores)->response()->getData(true),
-                ['summary' => $summary]
-                ),
+            'summary' => $summary,
+            'data' => StoreListResource::collection($stores)
         ], 200);
     }
 

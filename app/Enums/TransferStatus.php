@@ -48,6 +48,9 @@ enum TransferStatus: string
                 self::RECEIVED,
                 self::COMPLETED,
             ], true),
+            self::COMPLETED => in_array($newStatus, [
+                self::RECEIVED,
+            ], true),
             default => false,
         };
     }

@@ -11,6 +11,37 @@ use Illuminate\Support\Facades\Auth;
 
 class BatchRepository
 {
+    public function getSummary()
+    {
+        $warehouseId = Auth::user()->warehouse_id;
+        
+        $query = Batch::where('warehouse_id', $warehouseId);
+
+        $lowStock = 10;
+
+        return [
+            'total_batch' => (clone $query)->count(),
+            
+            'available_batch' => (clone $query)
+                ->where('current_quantity', '>', 0)
+                ->count(),
+                
+            'empty_batch' => (clone $query)
+                ->where('current_quantity', '=', 0)
+                ->count(),
+                
+            'low_stock_batch' => (clone $query)
+                ->where('current_quantity', '=', 0)
+                ->where('current_quantity', '<=', $lowStock)
+                ->count(),
+                
+            'expiring_soon_batch' => (clone $query)
+                ->whereNotNull('expired_date')
+                ->whereDate('expired_date', '>=', now())
+                ->whereDate('expired_date', '<=', now()->addDays(30))
+                ->count(),
+        ];
+    }
     public function getAll()
     {
         $userId = Auth::user()->warehouse_id;

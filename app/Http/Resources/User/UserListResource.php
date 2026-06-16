@@ -17,6 +17,7 @@ class UserListResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'is_active' => $this->is_active,
             'warehouse' => [
                 'id' => $this->warehouse?->id ?? 'N/A',
                 'name' => $this->warehouse?->name ?? 'N/A',

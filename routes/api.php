@@ -61,6 +61,8 @@ Route::prefix('/users')->middleware('auth:sanctum')->name('user.')->group(functi
     Route::post('/create', [UserController::class, 'store'])->middleware('permission:create_user')->name('create');
     Route::get('/{user}', [UserController::class, 'show'])->middleware('permission:view_user');
     Route::put('/{user}', [UserController::class, 'update'])->middleware('permission:edit_user')->name('update');
+    Route::patch('/{user}', [UserController::class, 'status'])->middleware('permission:edit_user')->name('status');
+    Route::delete('/{user}', [UserController::class, 'destroy'])->middleware('permission:delete_user')->name('delete');
 });
 
 Route::prefix('/regions')->group(function () {
