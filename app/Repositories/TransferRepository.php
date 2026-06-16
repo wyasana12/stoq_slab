@@ -74,6 +74,7 @@ class TransferRepository
             'approved_quantity' => $data['approved_quantity'] ?? 0,
             'requested_by' => $data['requested_by'],
             'confirmed_by' => $data['confirmed_by'] ?? null,
+            'reason' => $data['reason'] ?? null,
             'notes' => $data['notes'] ?? null,
             'status' => $data['status'] ?? TransferStatus::DRAFT->value,
         ]);
@@ -114,18 +115,19 @@ class TransferRepository
                 : null;
 
             $transfer->update([
-                'from_warehouse_id' => $data['from_warehouse_id'] ?? null,
-                'to_warehouse_id' => $data['to_warehouse_id'] ?? null,
-                'approved_quantity' => $data['approved_quantity'] ?? null,
+                'from_warehouse_id' => $data['from_warehouse_id'] ?? $transfer->from_warehouse_id,
+                'to_warehouse_id' => $data['to_warehouse_id'] ?? $transfer->to_warehouse_id,
+                'approved_quantity' => $data['approved_quantity'] ?? $transfer->approved_quantity,
                 'confirmed_by' => $data['confirmed_by'],
+                'reason' => array_key_exists('reason', $data) ? $data['reason'] : $transfer->reason,
                 'notes' => $data['notes'] ?? $transfer->notes,
                 'status' => $data['status'],
             ]);
 
             $transfer->refresh();
 
-            if ($newStatus === TransferStatus::COMPLETED && $currentStatus !== TransferStatus::COMPLETED) {
-                $this->applyStockMutation($transfer);
+            if ($newStatus === TransferStatus::ON_DELIVERY && $currentStatus !== TransferStatus::ON_DELIVERY) {
+                $this->deductSourceStock($transfer);
                 $transfer->refresh();
             }
 
@@ -139,12 +141,12 @@ class TransferRepository
         });
     }
 
-    private function applyStockMutation(StockTransfers $transfer): void
+    private function deductSourceStock(StockTransfers $transfer): void
     {
-        $transfer->loadMissing('products', 'fromWarehouse', 'toWarehouse');
+        $transfer->loadMissing('products', 'fromWarehouse');
 
-        if (! $transfer->to_warehouse_id) {
-            throw new \InvalidArgumentException('Gudang tujuan belum ditentukan untuk transfer ini.');
+        if (! $transfer->from_warehouse_id) {
+            throw new \InvalidArgumentException('Gudang asal belum ditentukan untuk transfer ini.');
         }
 
         $product = $transfer->products;
@@ -155,19 +157,24 @@ class TransferRepository
 
         $quantity = $transfer->approved_quantity > 0 ? $transfer->approved_quantity : $transfer->requested_quantity;
 
+        $existingMutation = StockMutations::where('reference_type', 'TRANSFER')
+            ->where('reference_id', $transfer->id)
+            ->where('warehouse_id', $transfer->from_warehouse_id)
+            ->exists();
+            
+        if ($existingMutation) {
+            return;
+        }
+
         $sourceBatch = Batch::query()
             ->where('warehouse_id', $transfer->from_warehouse_id)
             ->where('product_id', $transfer->product_id)
-            ->where('current_quantity', '>', 0)
+            ->where('current_quantity', '>=', $quantity)
             ->orderBy('expired_date')
             ->first();
 
         if (! $sourceBatch) {
-            throw new \InvalidArgumentException('Batch sumber tidak ditemukan untuk produk transfer.');
-        }
-
-        if ($sourceBatch->current_quantity < $quantity) {
-            throw new \InvalidArgumentException('Stok batch tidak cukup untuk menyelesaikan transfer.');
+            throw new \InvalidArgumentException('Batch sumber dengan stok mencukupi tidak ditemukan.');
         }
 
         $sourceBefore = $sourceBatch->current_quantity;
@@ -177,7 +184,7 @@ class TransferRepository
             ->update(['current_quantity' => DB::raw('current_quantity - ' . (int) $quantity)]);
 
         if ($updated !== 1) {
-            throw new \InvalidArgumentException('Stok batch tidak cukup untuk menyelesaikan transfer.');
+            throw new \InvalidArgumentException('Gagal memotong stok dari batch sumber.');
         }
 
         $sourceBatch->refresh();
@@ -190,50 +197,11 @@ class TransferRepository
             'after_quantity' => $sourceBatch->current_quantity,
             'reference_type' => 'TRANSFER',
             'reference_id' => $transfer->id,
-            'notes' => 'Kirim transfer ke ' . $transfer->toWarehouse->name,
-            'status' => MutationStatus::TRANSFER_COMPLETED->value,
-        ]);
-
-        $destinationBatch = Batch::query()
-            ->where('warehouse_id', $transfer->to_warehouse_id)
-            ->where('product_id', $transfer->product_id)
-            ->where('production_date', $sourceBatch->production_date)
-            ->where('expired_date', $sourceBatch->expired_date)
-            ->first();
-
-        if (! $destinationBatch) {
-            $destinationBefore = 0;
-            $destinationBatch = Batch::create([
-                'batch_code' => 'BTCH-' . now()->format('Ymd') . '-' . rand(1000, 9999),
-                'product_id' => $transfer->product_id,
-                'warehouse_id' => $transfer->to_warehouse_id,
-                'receiving_id' => $sourceBatch->receiving_id,
-                'production_date' => $sourceBatch->production_date,
-                'expired_date' => $sourceBatch->expired_date,
-                'initial_quantity' => $quantity,
-                'current_quantity' => $quantity,
-                'price' => $sourceBatch->price,
-                'rack_location' => $sourceBatch->rack_location,
-                'condition' => $sourceBatch->condition,
-                'barcode' => $sourceBatch->barcode,
-            ]);
-        } else {
-            $destinationBefore = $destinationBatch->current_quantity;
-            $destinationBatch->increment('current_quantity', $quantity);
-        }
-
-        StockMutations::create([
-            'warehouse_id' => $transfer->to_warehouse_id,
-            'batch_id' => $destinationBatch->id,
-            'change_quantity' => $quantity,
-            'before_quantity' => $destinationBefore,
-            'after_quantity' => $destinationBatch->current_quantity,
-            'reference_type' => 'TRANSFER',
-            'reference_id' => $transfer->id,
-            'notes' => 'Terima transfer dari ' . $transfer->fromWarehouse->name,
+            'notes' => 'Kirim transfer ke ' . ($transfer->toWarehouse->name ?? 'Gudang Tujuan'),
             'status' => MutationStatus::TRANSFER_COMPLETED->value,
         ]);
     }
+
 
     public function delete(StockTransfers $transfer): bool
     {

@@ -93,6 +93,24 @@ class BatchSeeder extends Seeder
 
                 $qty = $qtyVariants[array_rand($qtyVariants)];
 
+                $existsInReceiving = \Illuminate\Support\Facades\DB::table('product_receiving_items')
+                    ->where('receiving_id', $dummyReceiving->id)
+                    ->where('product_id', $product->id)
+                    ->exists();
+
+                if (!$existsInReceiving) {
+                    \Illuminate\Support\Facades\DB::table('product_receiving_items')->insert([
+                        'id' => (string) Str::ulid(),
+                        'receiving_id' => $dummyReceiving->id,
+                        'product_id' => $product->id,
+                        'quantity_accepted' => $qty * 2,
+                        'quantity_rejected' => 0,
+                        'notes' => 'Dummy item for extra batches',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+
                 $batch = Batch::create([
                     'id' => (string) Str::ulid(),
                     'batch_code' => 'BCH-' . $warehouse->warehouse_code . '-' . strtoupper(Str::random(6)),
