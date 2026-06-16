@@ -81,6 +81,26 @@ class StoreController extends Controller
         $warehouse_id = $user->warehouse_id ?? null;
 
         $query = Store::with('warehouse:id,name')
+            ->select('id', 'store_code', 'name', 'warehouse_id', 'street', 'phone_number')->where('status', true);
+
+        if ($warehouse_id) {
+            $query->where('warehouse_id', $warehouse_id);
+        }
+
+        $store = $query->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $store
+        ]);
+    }
+
+    public function filter(): JsonResponse
+    {
+        $user = Auth::user();
+        $warehouse_id = $user->warehouse_id ?? null;
+
+        $query = Store::with('warehouse:id,name')
             ->select('id', 'store_code', 'name', 'warehouse_id', 'street', 'phone_number');
 
         if ($warehouse_id) {

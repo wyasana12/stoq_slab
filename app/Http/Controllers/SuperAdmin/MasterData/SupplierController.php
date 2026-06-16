@@ -92,6 +92,16 @@ class SupplierController extends Controller
 
     public function dropdown(): JsonResponse
     {
+        $suppliers = Supplier::select('id', 'name')->where('status', true)->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $suppliers
+        ]);
+    }
+
+    public function filter(): JsonResponse
+    {
         $suppliers = Supplier::select('id', 'name')->get();
 
         return response()->json([

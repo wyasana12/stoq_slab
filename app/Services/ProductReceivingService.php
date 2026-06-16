@@ -263,7 +263,7 @@ class ProductReceivingService
                 }
 
                 $items = $model->items->mapWithKeys(fn($item) => [$item->product_id => (object)[
-                    'expected_quantity' => $item->quantity_ordered,
+                    'expected_quantity' => $item->quantity_approved,
                     'received_quantity' => $item->quantity_received ?? 0,
                     'price'             => $item->unit_price,
                     'original_model'    => $item

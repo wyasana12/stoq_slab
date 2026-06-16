@@ -28,6 +28,7 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::prefix('/stores')->middleware('auth:sanctum')->name('store.')->group(function () {
     Route::get('', [StoreController::class, 'index'])->middleware('permission:view_store')->name('index');
     Route::get('/dropdown', [StoreController::class, 'dropdown'])->name('dropdown');
+    Route::get('/filter', [StoreController::class, 'filter'])->name('filter');
     Route::post('/create', [StoreController::class, 'store'])->name('create');
     Route::get('/{store}', [StoreController::class, 'show'])->middleware('permission:view_store')->name('show');
     Route::put('/{store}', [StoreController::class, 'update'])->middleware('permission:edit_store')->name('update');
@@ -75,6 +76,7 @@ Route::prefix('/regions')->group(function () {
 Route::prefix('/warehouses')->middleware('auth:sanctum')->name('warehouse.')->group(function () {
     Route::get('', [WarehouseController::class, 'index'])->middleware('permission:view_warehouse')->name('index');
     Route::get('/dropdown', [WarehouseController::class, 'dropdown'])->name('dropdown');
+    Route::get('/filter', [WarehouseController::class, 'filter'])->name('filter');
     Route::post('/create', [WarehouseController::class, 'store'])->middleware('permission:create_warehouse')->name('create');
     Route::get('/{warehouse}', [WarehouseController::class, 'show'])->middleware('permission:view_warehouse')->name('show');
     Route::put('/{warehouse}', [WarehouseController::class, 'update'])->middleware('permission:edit_warehouse')->name('update');
@@ -96,6 +98,7 @@ Route::prefix('/racks')->middleware('auth:sanctum')->name('rack.')->group(functi
 Route::prefix('/suppliers')->middleware('auth:sanctum')->name('supplier.')->group(function () {
     Route::get('', [SupplierController::class, 'index'])->middleware('permission:view_supplier')->name('index');
     Route::get('/dropdown', [SupplierController::class, 'dropdown'])->name('dropdown');
+    Route::get('/filter', [SupplierController::class, 'filter'])->name('filter');
     Route::post('/create', [SupplierController::class, 'store'])->middleware('permission:create_supplier')->name('create');
     Route::get('/{supplier}', [SupplierController::class, 'show'])->middleware('permission:view_supplier')->name('show');
     Route::put('/{supplier}', [SupplierController::class, 'update'])->middleware('permission:edit_supplier')->name('update');
@@ -148,7 +151,7 @@ Route::prefix('/purchases')->middleware('auth:sanctum')->name('purchase.')->grou
     Route::get('/dropdown', [PurchaseOrderController::class, 'dropdown'])->name('dropdown');
     Route::get('/trash', [PurchaseOrderController::class, 'trashed'])->middleware('permission:restore_and_force_purchase')->name('trash');
     Route::post('/request', [PurchaseOrderController::class, 'request'])->middleware('permission:create_purchase')->name('create');
-    Route::get('/{purchase}', [PurchaseOrderController::class, 'show'])->middleware('permission:view_purchase')->name('show');
+    Route::get('/{purchase}', [PurchaseOrderController::class, 'show'])->middleware('permission:view_purchase|confirm_purchase')->name('show');
     Route::get('/{purchase}/products', [ProductController::class, 'getProductbyPurchaseOrder'])->name('product.purchase');
     Route::put('/{purchase}/update', [PurchaseOrderController::class, 'update'])->middleware('permission:edit_purchase')->name('update');
     Route::patch('/{purchase}/status', [PurchaseOrderController::class, 'status'])->middleware('permission:confirm_purchase')->name('status');

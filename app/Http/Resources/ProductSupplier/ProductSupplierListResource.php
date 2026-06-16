@@ -25,6 +25,7 @@ class ProductSupplierListResource extends ResourceCollection
                     'id' => $supplier->id,
                     'name' => $supplier->name,
                     'supplier_code' => $supplier->supplier_code,
+                    'status' => $supplier->status,
                 ],
                 'items' => $items->map(function ($item) {
                     return [

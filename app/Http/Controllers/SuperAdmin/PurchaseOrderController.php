@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
@@ -29,18 +28,16 @@ class PurchaseOrderController extends Controller
      * @queryParam page int Example: 1
      * @queryParam per_page int Example: 10
      */
-    public function index(Request $request): JsonResponse
+    public function index(): JsonResponse
     {
         try {
-            $userId = $request->user()->id;
-            $perPage = $request->query('per_page', 10);
-            $page = $request->query('page', 1);
-
-            $allPurchaseOrders = $this->purchaseOrderService->getAllPurchaseOrders($perPage, $userId);
+            $allPurchaseOrders = $this->purchaseOrderService->getAllPurchaseOrders();
+            $summary = $this->purchaseOrderService->getSummary();
 
             return response()->json([
                 'success' => true,
-                'data' => PurchaseOrderListResource::collection($allPurchaseOrders)->response()->getData(true),
+                'summary' => $summary,
+                'data' => PurchaseOrderListResource::collection($allPurchaseOrders),
             ], 200);
         } catch (\Exception $err) {
             return response()->json([
@@ -111,17 +108,14 @@ class PurchaseOrderController extends Controller
         }
     }
 
-    public function confirmation(Request $request): JsonResponse
+    public function confirmation(): JsonResponse
     {
         try {
-            $perPage = $request->query('per_page', 10);
-            $page = $request->query('page', 1);
-
-            $allConfirmations = $this->purchaseOrderService->getAllConfirmations($perPage);
+            $allConfirmations = $this->purchaseOrderService->getAllConfirmations();
 
             return response()->json([
                 'success' => true,
-                'data' => PurchaseOrderListResource::collection($allConfirmations)->response()->getData(true),
+                'data' => PurchaseOrderListResource::collection($allConfirmations),
             ], 200);
         } catch (\Exception $err) {
             return response()->json([
@@ -221,18 +215,14 @@ class PurchaseOrderController extends Controller
         }
     }
 
-    public function trashed(Request $request): JsonResponse
+    public function trashed(): JsonResponse
     {
         try {
-            $userId = $request->user()->id;
-            $perPage = $request->query('per_page', 10);
-            $page = $request->query('page', 1);
-
-            $trashedPurchases = $this->purchaseOrderService->getTrashedPurchaseOrder($perPage, $userId);
+            $trashedPurchases = $this->purchaseOrderService->getTrashedPurchaseOrder();
 
             return response()->json([
                 'success' => true,
-                'data' => PurchaseOrderListResource::collection($trashedPurchases)->response()->getData(true),
+                'data' => PurchaseOrderListResource::collection($trashedPurchases),
             ], 200);
         } catch (\Exception $err) {
             return response()->json([
@@ -286,7 +276,6 @@ class PurchaseOrderController extends Controller
                 'messages' => $err->getMessage(),
             ], 403);
         } catch (\Exception $err) {
-            \Log::error('PO Create Error: ' . $err->getMessage() . ' Trace: ' . $err->getTraceAsString());
             return response()->json([
                 'success' => false,
                 'messages' => 'Failed to force deleted purchase order.',
