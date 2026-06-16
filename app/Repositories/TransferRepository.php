@@ -28,7 +28,7 @@ class TransferRepository
         if ($transferType) {
             if ($transferType === 'in_request') {
                 $query->where('transfer_type', 'in');
-            } else {
+            } elseif ($transferType !== 'incoming') {
                 $query->where('transfer_type', $transferType);
             }
         }
@@ -40,6 +40,8 @@ class TransferRepository
                 $query->where('from_warehouse_id', $warehouseId);
             } elseif ($transferType === 'in_request') {
                 $query->where('from_warehouse_id', $warehouseId);
+            } elseif ($transferType === 'incoming') {
+                $query->where('to_warehouse_id', $warehouseId);
             } else {
                 // default behaviour: scope to user's from_warehouse
                 $query->where('from_warehouse_id', $warehouseId);
