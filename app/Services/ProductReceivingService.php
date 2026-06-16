@@ -199,7 +199,7 @@ class ProductReceivingService
             } elseif ($data['receivable_type'] === 'transfer') {
                 $sourceModel->update(['status' => TransferStatus::COMPLETED]);
             } elseif ($data['receivable_type'] === 'restock') {
-                $sourceModel->update(['status' => RestockStatus::RESTOCKED]);
+                $sourceModel->update(['status' => RestockStatus::COMPLETED]);
             }
 
             return $receive;
@@ -249,7 +249,7 @@ class ProductReceivingService
                 ->get(['id', 'transfer_code as label']),
 
             'restock' => Restock::where('warehouse_id', $warehouseId)
-                ->where('status', 'in_progress')
+                ->where('status', 'on_delivery')
                 ->get(['id', 'restock_code as label']),
 
             default => collect([]),
@@ -315,7 +315,7 @@ class ProductReceivingService
             case 'restock':
                 $model = Restock::with('warehouse', 'item.product')->findOrFail($id);
 
-                if ($model->status !== RestockStatus::IN_PROGRESS) {
+                if ($model->status !== RestockStatus::ON_DELIVERY) {
                     throw new InvalidArgumentException("Restocks must be completed to be received.");
                 }
 

@@ -6,8 +6,8 @@ enum RestockStatus: string
 {
     case REQUESTED = 'requested';
     case APPROVED = 'approved';
-    case IN_PROGRESS = 'in-progress';
-    case RESTOCKED = 'restocked';
+    case ON_DELIVERY = 'on_delivery';
+    case COMPLETED = 'completed';
     case FAILED = 'failed';
     case CANCELLED = 'cancelled';
 
@@ -18,8 +18,8 @@ enum RestockStatus: string
         return match ($normalized) {
             'requested', 'pending' => self::REQUESTED,
             'approved' => self::APPROVED,
-            'in-progress', 'in_progress' => self::IN_PROGRESS,
-            'restocked', 'success' => self::RESTOCKED,
+            'on_delivery', 'on-delivery', 'in-progress', 'in_progress' => self::ON_DELIVERY,
+            'completed', 'restocked', 'success' => self::COMPLETED,
             'failed' => self::FAILED,
             'cancelled', 'canceled' => self::CANCELLED,
             default => throw new \ValueError("Invalid RestockStatus value: {$value}"),
@@ -34,7 +34,7 @@ enum RestockStatus: string
     public function isFinal(): bool
     {
         return in_array($this, [
-            self::RESTOCKED,
+            self::COMPLETED,
             self::FAILED,
             self::CANCELLED,
         ], true);
@@ -45,16 +45,15 @@ enum RestockStatus: string
         return match ($this) {
             self::REQUESTED => in_array($newStatus, [
                 self::APPROVED,
-                self::IN_PROGRESS,
                 self::FAILED,
                 self::CANCELLED,
             ], true),
             self::APPROVED => in_array($newStatus, [
-                self::IN_PROGRESS,
-                self::RESTOCKED,
+                self::ON_DELIVERY,
+                self::COMPLETED,
             ], true),
-            self::IN_PROGRESS => in_array($newStatus, [
-                self::RESTOCKED,
+            self::ON_DELIVERY => in_array($newStatus, [
+                self::COMPLETED,
             ], true),
             default => false,
         };
