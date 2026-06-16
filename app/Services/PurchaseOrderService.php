@@ -27,14 +27,19 @@ class PurchaseOrderService
         $this->purchaseOrderRepository = $purchaseOrderRepository;
     }
 
-    public function getAllPurchaseOrders(int $purchasePage = 10, string $userId)
+    public function getSummary()
     {
-        return $this->purchaseOrderRepository->getAllPaginated($purchasePage, $userId);
+        return $this->purchaseOrderRepository->getSummary();
     }
 
-    public function getAllConfirmations(int $purchasePage = 10)
+    public function getAllPurchaseOrders()
     {
-        return $this->purchaseOrderRepository->getAllConfirmation($purchasePage);
+        return $this->purchaseOrderRepository->getAllPaginated();
+    }
+
+    public function getAllConfirmations()
+    {
+        return $this->purchaseOrderRepository->getAllConfirmation();
     }
 
     public function createRequestPurchaseOrder(array $data, string $userId): PurchaseOrder
@@ -179,7 +184,7 @@ class PurchaseOrderService
                 : $purchase->status;
 
             if ($newStatus !== $purchase->status) {
-                $this->purchaseOrderRepository->updateStatus($purchase, $newStatus);
+                $this->purchaseOrderRepository->updateStatus($purchase, $newStatus, $data);
             }
 
             $this->purchaseOrderRepository->updateRequest($purchase, [
@@ -209,12 +214,10 @@ class PurchaseOrderService
         }
 
         $updatedPurchase = DB::transaction(function () use ($purchase, $newStatus, $data) {
-            $this->purchaseOrderRepository->updateStatus($purchase, $newStatus);
+            $this->purchaseOrderRepository->updateStatus($purchase, $newStatus, $data);
 
             if (array_key_exists('notes', $data)) {
-                $purchase->update([
-                    'notes' => $data['notes']
-                ]);
+                $purchase->update(['notes' => $data['notes']]);
             }
 
             return $purchase->fresh(['warehouse', 'supplier', 'items.product', 'user']);
@@ -241,11 +244,13 @@ class PurchaseOrderService
             throw new AuthorizationException("You are not permitted to delete this Purchase Order.");
         }
 
-        $isDraft = $purchase->status === PurchaseOrderStatus::DRAFT;
-        $isFinal = $purchase->status->isFinal();
-
-        if (!($isDraft || !$isFinal)) {
-            throw new InvalidArgumentException("The deletion rejected. The purchase order must have a DRAFT status or FINAL Transition.");
+        if (
+            $purchase->status !== PurchaseOrderStatus::DRAFT &&
+            !$purchase->status->isFinal()
+        ) {
+            throw new InvalidArgumentException(
+                'Purchase Order can only be deleted when its status is Draft or Final.'
+            );
         }
 
         $this->purchaseOrderRepository->softDelete($purchase);
@@ -271,9 +276,9 @@ class PurchaseOrderService
         $this->purchaseOrderRepository->forceDelete($purchase);
     }
 
-    public function getTrashedPurchaseOrder(int $perPage, string $userId)
+    public function getTrashedPurchaseOrder()
     {
-        return $this->purchaseOrderRepository->getTrashedPaginated($perPage, $userId);
+        return $this->purchaseOrderRepository->getTrashedPaginated();
     }
 
     protected function sendPurchaseOrderNotification(PurchaseOrder $purchase, PurchaseOrderStatus $newStatus): void

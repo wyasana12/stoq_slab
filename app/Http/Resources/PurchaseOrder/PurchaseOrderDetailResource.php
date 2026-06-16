@@ -31,9 +31,10 @@ class PurchaseOrderDetailResource extends JsonResource
                     'product_id' => $item->product_id,
                     'name' => $item->product->name,
                     'quantity_ordered' => $item->quantity_ordered,
-                    'quantity_received' => $item->quantity_received,
+                    'quantity_approved' => $item->quantity_approved,
                     'unit_price' => $item->unit_price,
                     'subtotal' => $item->subtotal,
+                    'min_order_quantity' => $item->product?->min_order_quantity ?? 1,
                 ];
             }),
             'total_amount' => $this->total_amount,
@@ -41,8 +42,9 @@ class PurchaseOrderDetailResource extends JsonResource
                 'id' => $this->user?->id,
                 'name' => $this->user?->name,
             ],
-            'approved_at' => $this->approved_at?->format('l, d F Y'),
-            'order_date' =>  $this->order_date?->format('l, d F Y'),
+            'approved_at' => $this->approved_at?->format('l, d F Y') ?? 'N/A',
+            'order_date' =>  $this->order_date?->format('l, d F Y') ?? 'N/A',
+            'expected_date' => $this->expected_date?->format('l, d F Y') ?? 'N/A',
             'status' => $this->status,
             'notes' => $this->notes,
         ];

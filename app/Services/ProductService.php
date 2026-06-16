@@ -79,7 +79,7 @@ class ProductService
             'purchase_order' => PurchaseOrder::with('items.product')->findOrFail($id)->items->map(fn($item) => [
                 'id' => $item->product_id,
                 'name' => $item->product->name,
-                'quantity_ordered' => $item->quantity_ordered,
+                'quantity_approved' => $item->quantity_approved,
             ]),
 
             'transfer' => collect([StockTransfers::with('products')->findOrFail($id)])->map(fn($item) => [

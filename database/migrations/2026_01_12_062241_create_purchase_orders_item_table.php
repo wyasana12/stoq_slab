@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignUlid('purchase_id')->constrained('purchase_orders')->onDelete('cascade');
             $table->foreignUlid('product_id')->constrained('products')->onDelete('cascade');
             $table->unsignedInteger('quantity_ordered');
+            $table->unsignedInteger('quantity_approved')->default(0);
             $table->unsignedInteger('quantity_received')->default(0);
             $table->decimal('unit_price', 10, 2);
             $table->decimal('subtotal', 10, 2);

@@ -23,6 +23,8 @@ class PurchaseOrder extends Model
     protected $casts = [
         'approved_at' => 'datetime',
         'order_date' => 'datetime',
+        'expected_date' => 'datetime',
+        'created_at' => 'datetime',
         'status' => PurchaseOrderStatus::class,
     ];
 

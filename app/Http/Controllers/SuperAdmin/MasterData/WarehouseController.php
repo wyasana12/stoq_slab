@@ -91,6 +91,16 @@ class WarehouseController extends Controller
 
     public function dropdown(): JsonResponse
     {
+        $warehouses = Warehouse::select('id', 'name')->where('status', true)->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $warehouses
+        ]);
+    }
+
+    public function filter(): JsonResponse
+    {
         $warehouses = Warehouse::select('id', 'name')->get();
 
         return response()->json([

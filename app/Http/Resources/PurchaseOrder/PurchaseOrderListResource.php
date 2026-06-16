@@ -28,13 +28,13 @@ class PurchaseOrderListResource extends JsonResource
             'total_amount' => $this->total_amount,
             'status' => $this->status,
             'order_date' => $this->order_date?->format('l, d F Y') ?? 'N/A',
+            'expected_date' => $this->expected_date?->format('l, d F Y') ?? 'N/A',
             'approved_at' => $this->approved_at?->format('l, d F Y') ?? 'N/A',
             'created' => [
                 'id' => $this->user->id ?? 'N/A',
                 'name' => $this->user->name ?? 'N/A',
             ],
             'created_at' => $this->created_at?->format('l, d F Y'),
-            'updated_at' => $this->updated_at?->format('l, d F Y'),
         ];
     }
 }
