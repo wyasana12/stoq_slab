@@ -43,6 +43,9 @@ class RackRepository
 
     public function assignLocation(RackWarehouse $rack, int $levels, int $bins_per_level, string $capacity_unit, int $capacity): void
     {
+        $warehouse = \App\Models\Warehouse::find($rack->warehouse_id);
+        $whCode = $warehouse ? $warehouse->warehouse_code : 'WH';
+
         $data = [];
 
         for ($level = 1; $level <= $levels; $level++) {
@@ -53,7 +56,8 @@ class RackRepository
                     'level' => $level,
                     'bin' => $bin,
                     'location_code' => sprintf(
-                        '%s-L%02d-B%02d',
+                        '%s-%s-L%02d-B%02d',
+                        $whCode,
                         $rack->rack_code,
                         $level,
                         $bin

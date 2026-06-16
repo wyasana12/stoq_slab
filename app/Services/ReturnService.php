@@ -184,6 +184,7 @@ class ReturnService
                             'created_by' => $userId,
                             'supplier_id' => $originalPo->supplier_id,
                             'warehouse_id' => $stockReturns->warehouse_id,
+                            'order_date' => now(),
                             'total_amount' => $totalAmount,
                             'status' => PurchaseOrderStatus::ORDERED->value,
                             'notes' => 'PO Pengganti otomatis dari Return: ' . $stockReturns->return_code,

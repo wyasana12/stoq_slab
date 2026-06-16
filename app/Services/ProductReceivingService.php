@@ -152,6 +152,8 @@ class ProductReceivingService
             if (in_array($calculatedStatus, [ReceiveStatus::FULL, ReceiveStatus::PARTIAL])) {
                 if ($data['receivable_type'] === 'transfer') {
                     $sourceModel->update(['status' => TransferStatus::COMPLETED]);
+                } elseif ($data['receivable_type'] === 'restock') {
+                    $sourceModel->update(['status' => RestockStatus::COMPLETED]);
                 }
 
                 foreach ($receiveItemsData as $item) {

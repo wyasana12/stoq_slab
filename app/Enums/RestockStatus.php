@@ -51,6 +51,7 @@ enum RestockStatus: string
             self::APPROVED => in_array($newStatus, [
                 self::ON_DELIVERY,
                 self::COMPLETED,
+                self::CANCELLED,
             ], true),
             self::ON_DELIVERY => in_array($newStatus, [
                 self::COMPLETED,
