@@ -9,6 +9,9 @@ use App\Models\Batch;
 use App\Models\ProductReceiving;
 use App\Models\StockMutations;
 use App\Models\StockReturns;
+use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderItem;
+use App\Enums\PurchaseOrderStatus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -50,12 +53,33 @@ class ReturnService
                 throw new InvalidArgumentException('Tidak ada item yang di-reject pada receiving ini.');
             }
 
-            if ($data['requested_quantity'] > $receivingItem->quantity_rejected) {
-                throw new InvalidArgumentException('Jumlah return melebihi kuantitas produk yang di-reject.');
+            $alreadyReturned = DB::table('stock_returns')
+                ->where('receiving_id', $data['receiving_id'])
+                ->where('product_id', $data['product_id'])
+                ->where('reason', 'mismatch_po')
+                ->whereIn('status', [ReturnStatus::REQUESTED->value, ReturnStatus::APPROVED->value])
+                ->sum('requested_quantity');
+
+            if (($data['requested_quantity'] + $alreadyReturned) > $receivingItem->quantity_rejected) {
+                $sisa = max(0, $receivingItem->quantity_rejected - $alreadyReturned);
+                throw new InvalidArgumentException("Jumlah return melebihi sisa kuantitas reject yang dapat direturn ({$sisa} item).");
             }
         } else {
-            if ($data['requested_quantity'] > $receivingItem->quantity_accepted) {
-                throw new InvalidArgumentException('Jumlah return melebihi kuantitas produk yang diterima.');
+            $totalStock = DB::table('batches')
+                ->where('product_id', $data['product_id'])
+                ->where('warehouse_id', $data['warehouse_id'])
+                ->sum('current_quantity');
+
+            $alreadyReturned = DB::table('stock_returns')
+                ->where('product_id', $data['product_id'])
+                ->where('warehouse_id', $data['warehouse_id'])
+                ->where('reason', '!=', 'mismatch_po')
+                ->where('status', ReturnStatus::REQUESTED->value)
+                ->sum('requested_quantity');
+
+            if (($data['requested_quantity'] + $alreadyReturned) > $totalStock) {
+                $sisa = max(0, $totalStock - $alreadyReturned);
+                throw new InvalidArgumentException("Jumlah return melebihi sisa stok fisik yang tersedia di gudang ({$sisa} item).");
             }
         }
 
@@ -92,42 +116,44 @@ class ReturnService
             if ($newStatus === ReturnStatus::APPROVED) {
                 $approvedQuantity = (int) $data['approved_quantity'];
 
-                $batches = Batch::query()
-                    ->where('product_id', $stockReturns->product_id)
-                    ->where('warehouse_id', $stockReturns->warehouse_id)
-                    ->where('current_quantity', '>', 0)
-                    ->orderBy('created_at')
-                    ->lockForUpdate()
-                    ->get();
+                if ($stockReturns->reason !== 'mismatch_po') {
+                    $batches = Batch::query()
+                        ->where('product_id', $stockReturns->product_id)
+                        ->where('warehouse_id', $stockReturns->warehouse_id)
+                        ->where('current_quantity', '>', 0)
+                        ->orderBy('created_at')
+                        ->lockForUpdate()
+                        ->get();
 
-                $availableQuantity = $batches->sum('current_quantity');
-                if ($availableQuantity < $approvedQuantity) {
-                    throw new InvalidArgumentException('Stok tidak mencukupi untuk return ini.');
-                }
-
-                $remaining = $approvedQuantity;
-                foreach ($batches as $batch) {
-                    if ($remaining <= 0) {
-                        break;
+                    $availableQuantity = $batches->sum('current_quantity');
+                    if ($availableQuantity < $approvedQuantity) {
+                        throw new InvalidArgumentException('Stok tidak mencukupi untuk return ini.');
                     }
 
-                    $decrement = min($batch->current_quantity, $remaining);
-                    $before = $batch->current_quantity;
-                    $batch->decrement('current_quantity', $decrement);
-                    $batch->refresh();
+                    $remaining = $approvedQuantity;
+                    foreach ($batches as $batch) {
+                        if ($remaining <= 0) {
+                            break;
+                        }
 
-                    StockMutations::record(
-                        $batch->warehouse_id,
-                        $batch->id,
-                        $before,
-                        -$decrement,
-                        MutationStatus::RETURN_COMPLETED,
-                        'RETURN',
-                        $stockReturns->id,
-                        'Return approved ' . $stockReturns->return_code
-                    );
+                        $decrement = min($batch->current_quantity, $remaining);
+                        $before = $batch->current_quantity;
+                        $batch->decrement('current_quantity', $decrement);
+                        $batch->refresh();
 
-                    $remaining -= $decrement;
+                        StockMutations::record(
+                            $batch->warehouse_id,
+                            $batch->id,
+                            $before,
+                            -$decrement,
+                            MutationStatus::RETURN_COMPLETED,
+                            'RETURN',
+                            $stockReturns->id,
+                            'Return approved ' . $stockReturns->return_code
+                        );
+
+                        $remaining -= $decrement;
+                    }
                 }
 
                 $stockReturns->update([
@@ -136,6 +162,42 @@ class ReturnService
                     'confirmed_by' => $userId,
                     'notes' => $data['notes'] ?? $stockReturns->notes,
                 ]);
+
+                // Create replacement PO automatically
+                $receiving = ProductReceiving::find($stockReturns->receiving_id);
+                if ($receiving && $receiving->receivable_type === 'purchase_order' && $receiving->receivable_id) {
+                    $originalPo = PurchaseOrder::find($receiving->receivable_id);
+                    if ($originalPo) {
+                        $warehouse = DB::table('warehouses')->where('id', $stockReturns->warehouse_id)->first();
+                        $warehouseCode = $warehouse ? strtoupper($warehouse->warehouse_code) : 'WHS';
+                        $poCode = 'PO-RET-' . $warehouseCode . '-' . strtoupper(Str::random(6));
+
+                        $originalPoItem = PurchaseOrderItem::where('purchase_id', $originalPo->id)
+                            ->where('product_id', $stockReturns->product_id)
+                            ->first();
+
+                        $unitPrice = $originalPoItem ? $originalPoItem->unit_price : 0;
+                        $totalAmount = $approvedQuantity * $unitPrice;
+
+                        $newPo = PurchaseOrder::create([
+                            'po_code' => $poCode,
+                            'created_by' => $userId,
+                            'supplier_id' => $originalPo->supplier_id,
+                            'warehouse_id' => $stockReturns->warehouse_id,
+                            'total_amount' => $totalAmount,
+                            'status' => PurchaseOrderStatus::ORDERED->value,
+                            'notes' => 'PO Pengganti otomatis dari Return: ' . $stockReturns->return_code,
+                        ]);
+
+                        PurchaseOrderItem::create([
+                            'purchase_id' => $newPo->id,
+                            'product_id' => $stockReturns->product_id,
+                            'quantity_ordered' => $approvedQuantity,
+                            'unit_price' => $unitPrice,
+                            'subtotal' => $totalAmount,
+                        ]);
+                    }
+                }
             } else {
                 $stockReturns->update([
                     'status' => $newStatus->value,
@@ -186,12 +248,35 @@ class ReturnService
                 throw new InvalidArgumentException('Tidak ada item yang di-reject pada receiving ini.');
             }
 
-            if ($quantityToCheck > $receivingItem->quantity_rejected) {
-                throw new InvalidArgumentException('Jumlah return melebihi kuantitas produk yang di-reject.');
+            $alreadyReturned = DB::table('stock_returns')
+                ->where('receiving_id', $stockReturns->receiving_id)
+                ->where('product_id', $stockReturns->product_id)
+                ->where('reason', 'mismatch_po')
+                ->whereIn('status', [ReturnStatus::REQUESTED->value, ReturnStatus::APPROVED->value])
+                ->where('id', '!=', $stockReturns->id)
+                ->sum('requested_quantity');
+
+            if (($quantityToCheck + $alreadyReturned) > $receivingItem->quantity_rejected) {
+                $sisa = max(0, $receivingItem->quantity_rejected - $alreadyReturned);
+                throw new InvalidArgumentException("Jumlah return melebihi sisa kuantitas reject yang dapat direturn ({$sisa} item).");
             }
         } else {
-            if ($quantityToCheck > $receivingItem->quantity_accepted) {
-                throw new InvalidArgumentException('Jumlah return melebihi kuantitas produk yang diterima.');
+            $totalStock = DB::table('batches')
+                ->where('product_id', $stockReturns->product_id)
+                ->where('warehouse_id', $stockReturns->warehouse_id)
+                ->sum('current_quantity');
+
+            $alreadyReturned = DB::table('stock_returns')
+                ->where('product_id', $stockReturns->product_id)
+                ->where('warehouse_id', $stockReturns->warehouse_id)
+                ->where('reason', '!=', 'mismatch_po')
+                ->where('status', ReturnStatus::REQUESTED->value)
+                ->where('id', '!=', $stockReturns->id)
+                ->sum('requested_quantity');
+
+            if (($quantityToCheck + $alreadyReturned) > $totalStock) {
+                $sisa = max(0, $totalStock - $alreadyReturned);
+                throw new InvalidArgumentException("Jumlah return melebihi sisa stok fisik yang tersedia di gudang ({$sisa} item).");
             }
         }
 

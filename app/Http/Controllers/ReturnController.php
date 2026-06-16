@@ -139,6 +139,14 @@ class ReturnController extends Controller
 
             $stockReturn = $this->returnService->storeReturn($payload, $request->user()->id);
         } catch (InvalidArgumentException $exception) {
+            \Illuminate\Support\Facades\Log::error('Return Store Failed', [
+                'msg' => $exception->getMessage(),
+                'payload' => $payload,
+                'receivingItem_qty' => \Illuminate\Support\Facades\DB::table('product_receiving_items')
+                    ->where('receiving_id', $payload['receiving_id'])
+                    ->where('product_id', $payload['product_id'])
+                    ->value('quantity_accepted')
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => $exception->getMessage(),
