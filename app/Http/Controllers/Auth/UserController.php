@@ -9,7 +9,8 @@ use App\Http\Resources\User\UserListResource;
 use App\Models\User;
 use App\Services\UserService;
 use Illuminate\Support\Facades\Auth;
-use Symfony\Component\HttpFoundation\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 
 class UserController extends Controller
 {
@@ -23,7 +24,7 @@ class UserController extends Controller
     public function index(): JsonResponse
     {
         try {
-            $allUsers = $this->userService->getAllUsers(10);
+            $allUsers = $this->userService->getAllUsers();
 
             return response()->json([
                 'success' => true,
@@ -57,7 +58,8 @@ class UserController extends Controller
         }
     }
 
-    public function show(User $user): JsonResponse {
+    public function show(User $user): JsonResponse
+    {
         try {
             $userDetail = $this->userService->getUserDetail($user);
 
@@ -93,14 +95,53 @@ class UserController extends Controller
         }
     }
 
+    public function status(User $user, Request $request): JsonResponse
+    {
+        $statusInput = $request->input('status');
+        $newStatus = filter_var($statusInput, FILTER_VALIDATE_BOOLEAN);
+
+        try {
+            $this->userService->toggleUserStatus($user, $newStatus);
+
+            return response()->json([
+                'success' => true,
+                'messages' => 'User status updated successful.'
+            ], 201);
+        } catch (\Exception $err) {
+            return response()->json([
+                'success' => false,
+                'messages' => 'Failed to updated user status.',
+                'error' => $err->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function destroy(User $user): JsonResponse
+    {
+        try {
+            $this->userService->removeUsers($user);
+
+            return response()->json([
+                'success' => true,
+                'messages' => 'Soft delete user successful.'
+            ], 201);
+        } catch (\Exception $err) {
+            return response()->json([
+                'success' => false,
+                'messages' => 'Failed to soft delete user.',
+                'error' => $err->getMessage(),
+            ], 500);
+        }
+    }
+
     public function dropdown(): JsonResponse
     {
         $user = Auth::user();
 
         $users = User::select('id', 'name')->where('warehouse_id', $user->warehouse_id)
-        ->role('admin')
-        ->orderBy('name', 'asc')
-        ->get();
+            ->role('admin')
+            ->orderBy('name', 'asc')
+            ->get();
 
         return response()->json([
             'success' => true,

@@ -47,6 +47,13 @@ class LoginController extends Controller
             ], 401);
         }
 
+        if (!$user->is_active) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Akun Anda telah dinonaktifkan. Silakan hubungi admin.'
+        ], 403);
+    }
+
         $user->tokens()->delete();
 
         $token = $user->createToken('auth_token', [$user->getRoleNames()->toArray()])->plainTextToken;

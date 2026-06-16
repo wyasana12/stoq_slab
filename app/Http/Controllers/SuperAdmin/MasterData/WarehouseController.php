@@ -7,34 +7,16 @@ use App\Http\Requests\StoreAndUpdateWarehouseRequest;
 use App\Http\Resources\Warehouse\WarehouseDetailResource;
 use App\Http\Resources\Warehouse\WarehouseListResource;
 use App\Models\Warehouse;
-use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\JsonResponse;
+use Illuminate\Http\JsonResponse;
 
 class WarehouseController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request): JsonResponse
+    public function index(): JsonResponse
     {
-        $perPage = $request->query('per_page', 10);
-        $page = $request->query('page', 1);
-        $query = Warehouse::select('id', 'name', 'contact_person', 'phone_number', 'email', 'status', 'warehouse_code');
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('warehouse_code', 'like', "%{$search}%");
-            });
-        }
-
-        if ($request->has('status')) {
-            $query->where('status', filter_var($request->status, FILTER_VALIDATE_BOOLEAN));
-        }
-
-        $warehouses = $query->paginate($perPage);
+        $warehouses = Warehouse::select('id', 'name', 'contact_person', 'phone_number', 'email', 'status', 'warehouse_code')->get();
 
         $summary = [
             'total_warehouses'    => Warehouse::count(),
@@ -44,10 +26,8 @@ class WarehouseController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => array_merge(
-                WarehouseListResource::collection($warehouses)->response()->getData(true),
-                ['summary' => $summary]
-                ),
+            'summary' => $summary,
+            'data' => WarehouseListResource::collection($warehouses),
         ], 200);
     }
 
@@ -112,7 +92,7 @@ class WarehouseController extends Controller
     public function dropdown(): JsonResponse
     {
         $warehouses = Warehouse::select('id', 'name')->get();
-        
+
         return response()->json([
             'success' => true,
             'data' => $warehouses

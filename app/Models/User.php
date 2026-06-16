@@ -7,6 +7,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
@@ -15,7 +16,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasUlids, HasRoles, HasApiTokens;
+    use HasFactory, Notifiable, HasUlids, HasRoles, HasApiTokens, SoftDeletes;
 
     protected string $guard_name = 'sanctum';
 
@@ -37,6 +38,7 @@ class User extends Authenticatable
         'postal_code', 
         'birth_date',  
         'warehouse_id',
+        'is_active'
     ];
 
     /**
@@ -57,6 +59,7 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
+            'is_active' => 'boolean',
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'birth_date' => 'datetime'

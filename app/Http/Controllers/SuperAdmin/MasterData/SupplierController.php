@@ -8,32 +8,15 @@ use App\Http\Resources\Supplier\SupplierDetailResource;
 use App\Http\Resources\Supplier\SupplierListResource;
 use App\Models\Supplier;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class SupplierController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request): JsonResponse
+    public function index(): JsonResponse
     {
-        $perPage = $request->query('per_page', 10);
-        $page = $request->query('page', 1);
-        $query = Supplier::select('id', 'name', 'contact_person', 'phone_number', 'status', 'email', 'supplier_code');
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%");
-            });
-        }
-
-        if ($request->has('status')) {
-            $query->where('status', filter_var($request->status, FILTER_VALIDATE_BOOLEAN));
-        }
-
-        $suppliers = $query->paginate(10);
+        $suppliers = Supplier::select('id', 'name', 'contact_person', 'phone_number', 'status', 'email', 'supplier_code')->get();
 
         $summary = [
             'total_suppliers'    => Supplier::count(),
@@ -43,10 +26,9 @@ class SupplierController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => array_merge(
-                SupplierListResource::collection($suppliers)->response()->getData(true),
-                ['summary' => $summary]
-            )
+            'summary' => $summary,
+            'data' => SupplierListResource::collection($suppliers),
+
         ], 200);
     }
 

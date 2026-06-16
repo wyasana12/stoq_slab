@@ -41,7 +41,7 @@ class RoleController extends Controller
             'name.required' => 'Role name is required.',
             'name.unique' => 'This role name has already been taken.',
             'name.min' => 'Role name must be at least 3 characters.',
-            'name.max' => 'Role name must be max 255 characters.',
+            'name.max' => 'Role name must be most 255 characters.',
 
             'permissions.required' => 'At least one permission is required.',
             'permissions.min' => 'At least one permission must be selected.',
@@ -79,7 +79,7 @@ class RoleController extends Controller
             'name.required' => 'Role name is required.',
             'name.unique' => 'This role name has already been taken.',
             'name.min' => 'Role name must be at least 3 characters.',
-            'name.max' => 'Role name max 255 characters.',
+            'name.max' => 'Role name must be at most 255 characters.',
 
             'permissions.required' => 'Permission is required.',
             'permissions.min' => 'At least one permission must be selected.',

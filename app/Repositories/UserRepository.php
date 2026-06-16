@@ -8,9 +8,9 @@ use Spatie\Permission\Models\Role;
 
 class UserRepository
 {
-    public function getAllPaginated(int $perPage = 10)
+    public function getAllPaginated()
     {
-        return User::with(['warehouse:id,name', 'roles:id,name'])->select(['id', 'name', 'warehouse_id'])->latest()->paginate($perPage);
+        return User::with(['warehouse:id,name', 'roles:id,name'])->select(['id', 'name', 'warehouse_id', 'is_active'])->latest()->get();
     }
     public function create(array $data): User
     {
@@ -29,6 +29,16 @@ class UserRepository
     public function update(User $user, array $data)
     {
         return $user->update($data);
+    }
+
+    public function status(User $user, bool $status)
+    { 
+        return $user->update(['is_active' => $status]);
+    }
+
+    public function destroy(User $user)
+    {
+        return $user->delete();    
     }
 
     public function getById(User $user): User

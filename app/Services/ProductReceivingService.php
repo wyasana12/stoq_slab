@@ -6,6 +6,7 @@ use App\Enums\PurchaseOrderStatus;
 use App\Enums\ReceiveStatus;
 use App\Enums\RestockStatus;
 use App\Enums\TransferStatus;
+use App\Models\Batch;
 use App\Models\ProductReceiving;
 use App\Models\PurchaseOrder;
 use App\Models\Restock;
@@ -193,6 +194,14 @@ class ProductReceivingService
                 }
             }
 
+            if ($data['receivable_type'] === 'purchase_order') {
+                $sourceModel->update(['status' => PurchaseOrderStatus::CLOSED]);
+            } elseif ($data['receivable_type'] === 'transfer') {
+                $sourceModel->update(['status' => TransferStatus::COMPLETED]);
+            } elseif ($data['receivable_type'] === 'restock') {
+                $sourceModel->update(['status' => RestockStatus::RESTOCKED]);
+            }
+
             return $receive;
         });
     }
@@ -240,7 +249,7 @@ class ProductReceivingService
                 ->get(['id', 'transfer_code as label']),
 
             'restock' => Restock::where('warehouse_id', $warehouseId)
-                ->where('status', 'restocked')
+                ->where('status', 'in_progress')
                 ->get(['id', 'restock_code as label']),
 
             default => collect([]),
@@ -279,12 +288,21 @@ class ProductReceivingService
                     throw new InvalidArgumentException("Transfers must be on delivery to be received.");
                 }
 
-                $items = collect([$model])->mapWithKeys(fn($item) => [$item->product_id => (object)[
-                    'expected_quantity' => $item->approved_quantity,
-                    'received_quantity' => 0,
-                    'price'             => 0,
-                    'original_model'    => $item
-                ]]);
+                $items = collect([$model])->mapWithKeys(function ($item) use ($model) {
+                    $previousBatch = Batch::where('product_id', $item->product_id)
+                        ->where('warehouse_id', $model->from_warehouse_id)
+                        ->latest('created_at')
+                        ->first();
+
+                    $transferPrice = $previousBatch ? $previousBatch->price : 0;
+
+                    return [$item->product_id => (object)[
+                        'expected_quantity' => $item->approved_quantity,
+                        'received_quantity' => 0,
+                        'price'             => $transferPrice,
+                        'original_model'    => $item
+                    ]];
+                });
 
                 return [
                     'model'          => $model,
@@ -297,14 +315,14 @@ class ProductReceivingService
             case 'restock':
                 $model = Restock::with('warehouse', 'item.product')->findOrFail($id);
 
-                if ($model->status !== RestockStatus::RESTOCKED) {
+                if ($model->status !== RestockStatus::IN_PROGRESS) {
                     throw new InvalidArgumentException("Restocks must be completed to be received.");
                 }
 
                 $items = $model->item->mapWithKeys(fn($item) => [$item->product_id => (object)[
                     'expected_quantity' => $item->requested_quantity,
                     'received_quantity' => 0,
-                    'price'             => 0,
+                    'price'             => $item->unit_price,
                     'original_model'    => $item
                 ]]);
 

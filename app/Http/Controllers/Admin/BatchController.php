@@ -26,9 +26,11 @@ class BatchController extends Controller
     {
         try {
             $allBatches = $this->batchService->getAllBatches();
+            $summary = $this->batchService->getSummary();
 
             return response()->json([
                 'success' => true,
+                'summary' => $summary,
                 'data' => BatchListResource::collection($allBatches)
             ], 200);
         } catch (\Exception $err) {

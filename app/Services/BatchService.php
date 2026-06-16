@@ -28,6 +28,11 @@ class BatchService
         $this->rackRepository = $rackRepository;
     }
 
+    public function getSummary()
+    {
+        return $this->batchRepository->getSummary();    
+    }
+
     public function getAllBatches()
     {
         return $this->batchRepository->getAll();

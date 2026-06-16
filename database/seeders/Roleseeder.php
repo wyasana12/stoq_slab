@@ -84,6 +84,7 @@ class Roleseeder extends Seeder
             'view_user',
             'create_user',
             'edit_user',
+            'delete_user',
 
             // Warehouses
             'view_warehouse',
