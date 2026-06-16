@@ -35,12 +35,18 @@ class RestockStatusController extends Controller
             ], 422);
         }
 
-        // Update the status and record mutation if restocked
-        $restock = $this->repository->update($restock, [
+        $data = [
             'status' => $newStatus->value,
             'confirmed_by' => $userId,
             'products' => $request->getProducts(),
-        ]);
+        ];
+
+        if ($request->getSupplierId()) {
+            $data['supplier_id'] = $request->getSupplierId();
+        }
+
+        // Update the status and record mutation if restocked
+        $restock = $this->repository->update($restock, $data);
 
         return response()->json([
             'success' => true,

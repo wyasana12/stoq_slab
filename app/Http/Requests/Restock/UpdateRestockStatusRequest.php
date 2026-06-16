@@ -17,9 +17,11 @@ class UpdateRestockStatusRequest extends FormRequest
     {
         return [
             'status' => ['required', new Enum(RestockStatus::class)],
+            'supplier_id' => ['nullable', 'string', 'exists:suppliers,id'],
             'products' => ['sometimes', 'array', 'min:1'],
             'products.*.id' => ['required_with:products', 'exists:products,id'],
             'products.*.approved_quantity' => ['required_with:products', 'integer', 'min:0'],
+            'products.*.unit_price' => ['sometimes', 'numeric', 'min:0'],
         ];
     }
 
@@ -55,5 +57,17 @@ class UpdateRestockStatusRequest extends FormRequest
         return isset($validated['products']) && is_array($validated['products'])
             ? $validated['products']
             : [];
+    }
+
+    /**
+     * Get validated supplier_id for restock confirmation.
+     *
+     * @return string|null
+     */
+    public function getSupplierId(): ?string
+    {
+        $validated = $this->validated();
+
+        return $validated['supplier_id'] ?? null;
     }
 }

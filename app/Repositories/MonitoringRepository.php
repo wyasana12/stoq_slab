@@ -91,7 +91,10 @@ class MonitoringRepository
         }
         if ($hasActivityType('receiving')) {
             $addActivityStats(ProductReceiving::query()
-                ->join('purchase_orders', 'product_receivings.purchase_id', '=', 'purchase_orders.id')
+                ->join('purchase_orders', function ($join) {
+                    $join->on('product_receivings.receivable_id', '=', 'purchase_orders.id')
+                         ->where('product_receivings.receivable_type', '=', \App\Models\PurchaseOrder::class);
+                })
                 ->selectRaw('purchase_orders.warehouse_id as warehouse_id, COUNT(*) as activity_count, MAX(product_receivings.created_at) as last_activity_at')
                 ->when($filters['warehouse_id'] ?? null, fn($query, $warehouseId) => $query->where('purchase_orders.warehouse_id', $warehouseId))
                 ->when($filters['product_id'] ?? null, fn($query, $productId) => $query->whereExists(function ($subQuery) use ($productId) {
@@ -293,9 +296,10 @@ class MonitoringRepository
     private function mapReceivings(array $filters = []): Collection
     {
         return ProductReceiving::query()
-            ->with(['purchase.warehouse', 'items.products', 'user'])
+            ->where('receivable_type', \App\Models\PurchaseOrder::class)
+            ->with(['receivable.warehouse', 'items.products', 'user'])
             ->when($filters['warehouse_id'] ?? null, function ($query, $warehouseId) {
-                $query->whereHas('purchase', function ($purchaseQuery) use ($warehouseId) {
+                $query->whereHasMorph('receivable', [\App\Models\PurchaseOrder::class], function ($purchaseQuery) use ($warehouseId) {
                     $purchaseQuery->where('warehouse_id', $warehouseId);
                 });
             })
@@ -320,8 +324,8 @@ class MonitoringRepository
                     'id' => $receive->id,
                     'activity_type' => 'receiving',
                     'title' => 'Receiving ' . $receive->receiving_code,
-                    'warehouse_id' => $receive->purchase?->warehouse_id,
-                    'warehouse_name' => $receive->purchase?->warehouse?->name,
+                    'warehouse_id' => $receive->receivable?->warehouse_id,
+                    'warehouse_name' => $receive->receivable?->warehouse?->name,
                     'batch_id' => null,
                     'batch_code' => null,
                     'product_id' => $product?->id,
@@ -336,7 +340,7 @@ class MonitoringRepository
                     'activity_at' => $receive->receiving_date ?? $receive->created_at,
                     'payload' => [
                         'receiving_code' => $receive->receiving_code,
-                        'purchase_order_code' => $receive->purchase?->po_code,
+                        'purchase_order_code' => $receive->receivable?->po_code,
                         'received_by' => $receive->user?->name,
                         'items_count' => $receive->items->count(),
                     ],
