@@ -194,6 +194,7 @@ class ReturnService
                             'purchase_id' => $newPo->id,
                             'product_id' => $stockReturns->product_id,
                             'quantity_ordered' => $approvedQuantity,
+                            'quantity_approved' => $approvedQuantity,
                             'unit_price' => $unitPrice,
                             'subtotal' => $totalAmount,
                         ]);

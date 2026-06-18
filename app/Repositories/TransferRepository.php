@@ -7,6 +7,7 @@ use App\Enums\TransferStatus;
 use App\Models\Batch;
 use App\Models\StockMutations;
 use App\Models\StockTransfers;
+use App\Services\BatchService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,8 @@ use InvalidArgumentException;
 
 class TransferRepository
 {
+    public function __construct(protected BatchService $batchService) {}
+
     public function getAll(?string $transferType = null): Collection
     {
         $query = StockTransfers::with([
@@ -190,6 +193,8 @@ class TransferRepository
         }
 
         $sourceBatch->refresh();
+
+        $this->batchService->releaseLocation($sourceBatch, $quantity);
 
         StockMutations::create([
             'warehouse_id' => $sourceBatch->warehouse_id,

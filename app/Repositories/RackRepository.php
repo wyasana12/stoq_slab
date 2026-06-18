@@ -33,7 +33,7 @@ class RackRepository
 
     public function getById(RackWarehouse $rackWarehouse): RackWarehouse
     {
-        return $rackWarehouse->load(['warehouse', 'locations']);
+        return $rackWarehouse->load(['warehouse', 'locations.batch.product']);
     }
 
     public function create(array $data): RackWarehouse
@@ -83,6 +83,11 @@ class RackRepository
     public function save(RackLocation $location): void
     {
         $location->save();
+    }
+
+    public function update(RackLocation $location): void
+    {
+        $location->update();
     }
 
     public function deleteLocation(RackWarehouse $rack): void

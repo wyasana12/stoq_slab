@@ -69,7 +69,7 @@ class ProductReceivingSeeder extends Seeder
 
             // Simpan data induk penerimaan dengan polymorphic keys
             $receiving = ProductReceiving::create([
-                'receiving_code' => "RCV-" . now()->format('Ymd') . "-" . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
+                'receiving_code' => "RCV-" . now()->format('Ymd') . "-" . str_pad($index + 1, 4, '0', STR_PAD_LEFT),
                 'receivable_type' => $type,
                 'receivable_id' => $model->id,
                 'status' => $currentStatus->value,
