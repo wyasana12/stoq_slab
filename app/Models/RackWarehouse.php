@@ -30,8 +30,4 @@ class RackWarehouse extends Model
         return $this->hasMany(RackLocation::class, 'rack_id');    
     }
 
-    public function category(): BelongsTo
-    {
-        return $this->belongsTo(Category::class, 'category_id');    
-    }
 }

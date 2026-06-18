@@ -122,6 +122,47 @@ class BatchService
         });
     }
 
+    public function releaseLocation(Batch $batch, int $qtyToRelease): void
+    {
+        DB::transaction(function () use ($batch, $qtyToRelease) {
+            if ($qtyToRelease <= 0) {
+                throw new InvalidArgumentException('Quantity to release must be greater than zero.');
+            }
+
+            // Dapatkan semua lokasi yang dipakai oleh batch ini, urutkan dari isinya yang paling sedikit (asc)
+            // Tujuannya agar bin yang sedikit isinya dikosongkan lebih dahulu, sehingga membebaskan bin secara utuh
+            $locations = $batch->locations()->orderBy('used', 'asc')->lockForUpdate()->get();
+
+            $totalUsed = $locations->sum('used');
+
+            if ($totalUsed < $qtyToRelease) {
+                throw new InvalidArgumentException("Kuantitas yang akan dikeluarkan ({$qtyToRelease}) melebihi total barang yang ada di rak ({$totalUsed}).");
+            }
+
+            $remainingToRelease = $qtyToRelease;
+
+            foreach ($locations as $location) {
+                if ($remainingToRelease <= 0) {
+                    break;
+                }
+
+                $qtyDeducted = min($location->used, $remainingToRelease);
+                
+                $location->used -= $qtyDeducted;
+                $remainingToRelease -= $qtyDeducted;
+
+                if ($location->used == 0) {
+                    $location->status = 'AVAILABLE';
+                    $location->batch_id = null;
+                } elseif ($location->used < $location->capacity) {
+                    $location->status = 'PARTIAL';
+                }
+
+                $this->rackRepository->save($location);
+            }
+        });
+    }
+
     public function generateBarcode(Batch $batch): Batch
     {
         $data = [

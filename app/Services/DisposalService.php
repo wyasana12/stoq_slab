@@ -9,9 +9,12 @@ use App\Models\StockMutations;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use App\Services\BatchService;
 
 class DisposalService
 {
+    public function __construct(protected BatchService $batchService) {}
+
     public function storeDisposal(array $data, string $userId): StockDisposal
     {
         $batch = Batch::findOrFail($data['batch_id']);
@@ -87,6 +90,8 @@ class DisposalService
                     $disposal->id,
                     'Pemusnahan disetujui ' . $disposal->disposal_code
                 );
+
+                $this->batchService->releaseLocation($batch, $approvedQuantity);
 
                 $disposal->update([
                     'status' => $newStatus,

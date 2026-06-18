@@ -333,6 +333,10 @@ class StockMutationSeeder extends Seeder
      */
     private function seedSpikeTransaction(Batch $batch, array $profile, int &$currentQty): int
     {
+        if ($currentQty <= 0) {
+            return 0;
+        }
+
         $spikeQty = rand(...($profile['spike_qty'] ?? [10, 20]));
         $spikeQty = min($spikeQty, max(1, $currentQty - 1));
 
