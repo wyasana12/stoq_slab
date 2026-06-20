@@ -14,6 +14,7 @@ use App\Http\Controllers\SuperAdmin\MasterData\UnitController;
 use App\Http\Controllers\SuperAdmin\ProductReceivingController;
 use App\Http\Controllers\SuperAdmin\PurchaseOrderController;
 use App\Http\Controllers\DssController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\SuperAdmin\AlertConfigController;
 use App\Http\Controllers\SuperAdmin\MasterData\ProductSupplierController;
 use App\Http\Controllers\SuperAdmin\MasterData\StoreController;
@@ -195,4 +196,11 @@ Route::prefix('/batches')->middleware('auth:sanctum')->name('batch.')->group(fun
 Route::prefix('/dss')->middleware('auth:sanctum')->name('dss.')->group(function () {
     Route::get('/analysis', [DssController::class, 'analysis'])->name('analysis');
     Route::get('/recommendations', [DssController::class, 'recommendations'])->name('recommendations');
+});
+
+Route::prefix('/notifications')->middleware('auth:sanctum')->name('notifications.')->group(function ()
+{
+    Route::get('/unread', [NotificationController::class, 'getUnread'])->name('unread');  
+    Route::post('/{id}/read', [NotificationController::class, 'markAsRead'])->name('markasread');
+    Route::post('/all-read', [NotificationController::class, 'markAllAsRead'])->name('markallread');  
 });
