@@ -26,7 +26,6 @@ class RackWarehouseListResource extends JsonResource
         return [
             'id'              => $this->id,
             'code'            => $this->rack_code,
-            'category_name'   => $this->category?->name ?? 'N/A',
             'statusLabel'     => ucfirst(strtolower($this->status ?? 'available')),
             'statusVariant'   => $this->mapStatusVariant($this->status),
             'capacityCurrent' => $capacityCurrent,
@@ -45,6 +44,14 @@ class RackWarehouseListResource extends JsonResource
                 'capacity'      => $loc->capacity,
                 'used'          => $loc->used,
                 'status'        => $loc->status,
+                'batch'         => $loc->relationLoaded('batch') && $loc->batch ? [
+                    'id' => $loc->batch->id,
+                    'batch_code' => $loc->batch->batch_code,
+                    'product' => $loc->batch->relationLoaded('product') && $loc->batch->product ? [
+                        'id' => $loc->batch->product->id,
+                        'name' => $loc->batch->product->name,
+                    ] : null,
+                ] : null,
             ])->values()->all(),
         ];
     }

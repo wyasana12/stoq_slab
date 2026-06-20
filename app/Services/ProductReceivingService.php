@@ -52,13 +52,14 @@ class ProductReceivingService
 
     public function getReceiveDetail(ProductReceiving $receive): ProductReceiving
     {
-        $userId = Auth::user()->warehouse_id;
+        $user = Auth::user();
+        $userId = $user->warehouse_id;
 
         $sourceWarehouseId = $receive->receivable_type === 'transfer'
             ? $receive->receivable->to_warehouse_id
             : $receive->receivable->warehouse_id;
 
-        if ($sourceWarehouseId !== $userId) {
+        if (!$user->hasRole('super-admin') && $sourceWarehouseId !== $userId) {
             throw new AuthorizationException(
                 "You are not permitted to view other warehouse."
             );
@@ -254,18 +255,26 @@ class ProductReceivingService
 
     public function getAvailableDocuments(string $type)
     {
-        $warehouseId = Auth::user()->warehouse_id;
+        $user = Auth::user();
+        $warehouseId = $user->warehouse_id;
+        $isSuperAdmin = $user->hasRole('super-admin');
 
         return match ($type) {
-            'purchase_order' => PurchaseOrder::where('warehouse_id', $warehouseId)
+            'purchase_order' => PurchaseOrder::when(!$isSuperAdmin, function ($query) use ($warehouseId) {
+                    $query->where('warehouse_id', $warehouseId);
+                })
                 ->where('status', 'ordered')
                 ->get(['id', 'po_code as label']),
 
-            'transfer' => StockTransfers::where('to_warehouse_id', $warehouseId)
+            'transfer' => StockTransfers::when(!$isSuperAdmin, function ($query) use ($warehouseId) {
+                    $query->where('to_warehouse_id', $warehouseId);
+                })
                 ->where('status', 'on_delivery')
                 ->get(['id', 'transfer_code as label']),
 
-            'restock' => Restock::where('warehouse_id', $warehouseId)
+            'restock' => Restock::when(!$isSuperAdmin, function ($query) use ($warehouseId) {
+                    $query->where('warehouse_id', $warehouseId);
+                })
                 ->where('status', 'on_delivery')
                 ->get(['id', 'restock_code as label']),
 

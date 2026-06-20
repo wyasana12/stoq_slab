@@ -77,9 +77,17 @@ class RestockRepository
             }
 
             if (isset($data['products'])) {
-                $totalAmount = collect($data['products'])->reduce(function ($carry, $item) {
+                $totalAmount = collect($data['products'])->reduce(function ($carry, $item) use ($restock) {
                     $qty = $item['approved_quantity'] ?? $item['quantity_requested'] ?? $item['requested_quantity'] ?? $item['qty'] ?? 0;
-                    $price = $item['unit_price'] ?? 0;
+                    
+                    $price = 0;
+                    if (isset($item['unit_price'])) {
+                        $price = $item['unit_price'];
+                    } else {
+                        $existingItem = $restock->item()->where('product_id', $item['id'])->first();
+                        $price = $existingItem ? $existingItem->unit_price : 0;
+                    }
+
                     return $carry + ($qty * $price);
                 }, 0);
                 
@@ -91,7 +99,9 @@ class RestockRepository
             if (isset($data['products'])) {
                 foreach ($data['products'] as $item) {
                     $qty = $item['approved_quantity'] ?? $item['quantity_requested'] ?? $item['requested_quantity'] ?? $item['qty'] ?? 0;
-                    $price = $item['unit_price'] ?? 0;
+                    
+                    $existingItem = $restock->item()->where('product_id', $item['id'])->first();
+                    $price = isset($item['unit_price']) ? $item['unit_price'] : ($existingItem ? $existingItem->unit_price : 0);
 
                     $restock->item()->updateOrCreate(
                         ['product_id' => $item['id']],

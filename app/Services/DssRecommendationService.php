@@ -34,6 +34,15 @@ class DssRecommendationService
                 ? $supplierItems[$row['product_id']]->pluck('supplier_id')->toArray() 
                 : [];
 
+            $supplierPrice = $row['price'] ?? 0;
+            if (isset($supplierItems[$row['product_id']]) && $supplierItems[$row['product_id']]->isNotEmpty()) {
+                $preferred = $supplierItems[$row['product_id']]->firstWhere('is_preferred', 1) 
+                          ?? $supplierItems[$row['product_id']]->first();
+                if ($preferred && isset($preferred->unit_price)) {
+                    $supplierPrice = $preferred->unit_price;
+                }
+            }
+
             if ($row['category'] === StockAnalysisService::CATEGORY_FAST_MOVING) {
                 $source = $this->engine->findSlowMovingSource(
                     $row['product_id'],
@@ -61,7 +70,7 @@ class DssRecommendationService
                     'category'           => $row['category'],
                     'warehouse_activity' => $warehouseActivity['warehouse_activity'],
                     'activity_score'     => $warehouseActivity['activity_score'],
-                    'price'              => $row['price'] ?? 0,
+                    'price'              => $supplierPrice,
                     'recommendation'     => $isTransfer ? 'TRANSFER_IN' : ($restockQty > 0 ? 'RESTOCK' : 'HOLD'),
                     'suggested_qty'      => $isTransfer ? $suggestedQty : $restockQty,
                     'from_warehouse'     => $isTransfer ? $source['warehouse_name'] : null,
@@ -97,7 +106,7 @@ class DssRecommendationService
                         'category'           => $row['category'],
                         'warehouse_activity' => $warehouseActivity['warehouse_activity'],
                         'activity_score'     => $warehouseActivity['activity_score'],
-                        'price'              => $row['price'] ?? 0,
+                        'price'              => $supplierPrice,
                         'recommendation'     => 'TRANSFER_OUT',
                         'suggested_qty'      => $suggestedQty,
                         'to_warehouse'       => $destination['warehouse_name'] ?? null,
@@ -115,7 +124,7 @@ class DssRecommendationService
                     'category'           => $row['category'],
                     'warehouse_activity' => $warehouseActivity['warehouse_activity'],
                     'activity_score'     => $warehouseActivity['activity_score'],
-                    'price'              => $row['price'] ?? 0,
+                    'price'              => $supplierPrice,
                     'recommendation'     => 'SLOW_MOVING_ALERT',
                     'suggested_qty'      => 0,
                     'to_warehouse'       => null,
@@ -133,7 +142,7 @@ class DssRecommendationService
                 'category'           => $row['category'],
                 'warehouse_activity' => $warehouseActivity['warehouse_activity'],
                 'activity_score'     => $warehouseActivity['activity_score'],
-                'price'              => $row['price'] ?? 0,
+                'price'              => $supplierPrice,
                 'recommendation'     => 'HOLD',
                 'suggested_qty'      => 0,
                 'from_warehouse'     => null,

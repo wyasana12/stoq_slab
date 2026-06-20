@@ -32,7 +32,6 @@ class RackService
             $rack = $this->rackRepository->create([
                 'rack_code'    => $rackCode,
                 'warehouse_id' => $warehouseId,
-                'category_id'  => $data['category_id'],
                 'status'       => 'AVAILABLE',
             ]);
 

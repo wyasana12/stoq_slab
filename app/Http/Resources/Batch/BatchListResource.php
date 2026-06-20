@@ -26,6 +26,9 @@ class BatchListResource extends JsonResource
                 'current_quantity' => $this->current_quantity,
                 'price' => $this->price,
                 'condition' => $this->condition,
+                'rack_location' => $this->locations && $this->locations->count() > 0 
+                    ? $this->locations->pluck('location_code')->implode(', ') 
+                    : 'N/A',
                 'production_date' => $this->production_date?->format('l, d F Y') ?? 'N/A',
                 'expired_date' => $this->expired_date?->format('l, d F Y') ?? 'N/A',
             ],
