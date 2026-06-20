@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Models\PurchaseOrder;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -18,7 +19,8 @@ class PurchaseOrderNotification extends Notification implements ShouldQueue
     public function __construct(
         public PurchaseOrder $purchase,
         public string $title,
-        public string $message
+        public string $message,
+        public string $type = 'info'
     ) {
         //
     }
@@ -30,7 +32,7 @@ class PurchaseOrderNotification extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        return ['mail', 'database', 'broadcast'];
     }
 
     /**
@@ -43,9 +45,34 @@ class PurchaseOrderNotification extends Notification implements ShouldQueue
             ->greeting('Halo, ')
             ->line($this->message)
             ->line("Kode PO: **{$this->purchase->po_code}**")
-            ->line("Status saat ini: **".strtoupper($this->purchase->status->value)."**")
+            ->line("Status saat ini: **" . strtoupper($this->purchase->status->value) . "**")
             ->action('Notification Action', url("/api/purchases/{$this->purchase->id}"))
             ->line('Notifikasi ini dikirim secara otomatis oleh sistem. Mohon tidak membalas email ini.');
+    }
+
+    public function toDatabase(object $notifiable): array
+    {
+        return [
+            'purchase_order_id' => $this->purchase->id,
+            'po_code'           => $this->purchase->po_code ?? null,
+            'title'             => $this->title,
+            'message'           => $this->message,
+            'status'            => $this->purchase->status->value ?? null,
+            'type'              => $this->type,
+        ];
+    }
+
+    public function toBroadcast(object $notifiable): BroadcastMessage
+    {
+        return new BroadcastMessage([
+            'purchase_order_id' => $this->purchase->id,
+            'po_code'           => $this->purchase->po_code ?? null,
+            'title'             => $this->title,
+            'message'           => $this->message,
+            'status'            => $this->purchase->status->value ?? null,
+            'type' => $this->type,
+            'created_at'              => now()->toDateTimeString()
+        ]);
     }
 
     /**
