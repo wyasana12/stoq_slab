@@ -9,6 +9,6 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('alerts:send-warehouse')->dailyAt('08:00');
+Schedule::command('app:send-warehouse')->dailyAt('08:00')->timezone('Asia/Jakarta');
 
-Schedule::job(new GenerateDssCacheJob())->dailyAt('08:00');
+Schedule::job(new GenerateDssCacheJob())->dailyAt('08:00')->timezone('Asia/Jakarta');

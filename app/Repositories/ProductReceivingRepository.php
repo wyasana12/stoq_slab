@@ -84,7 +84,6 @@ class ProductReceivingRepository
                 'product_id' => $i['product_id'],
                 'quantity_accepted' => $i['quantity_accepted'],
                 'quantity_rejected' => $i['quantity_rejected'],
-                'notes' => $i['notes'],
                 'created_at' => now(),
                 'updated_at' => now(),
             ];

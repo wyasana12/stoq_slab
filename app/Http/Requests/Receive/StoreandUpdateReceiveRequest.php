@@ -36,19 +36,13 @@ class StoreandUpdateReceiveRequest extends FormRequest
                 'string',
                 $table ? Rule::exists($table, 'id') : '',
             ],
+            'notes' => ['required', 'string', 'min:5'],
 
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'exists:products,id'],
             'items.*.quantity_accepted' => ['required', 'integer', 'min:0'],
-            'items.*.quantity_rejected' => ['required', 'integer', 'min:0'],
-            'items.*.notes' => ['required', 'string', 'min:5'],
-
-            'items.*.production_date' => ['nullable', 'date', 'before_or_equal:today'],
-            'items.*.expired_date' => ['nullable', 'date', 'after_or_equal:today'],
-            'items.*.condition' => ['nullable', 'string', 'min:4'],
-
-            'items.*.racks' => ['required', 'array', 'min:1'],
-            'items.*.racks.*.location_id' => ['required', 'distinct', 'exists:rack_locations,id'],
+            'items.*.production_date' => ['required', 'date', 'before_or_equal:today'],
+            'items.*.expired_date' => ['required', 'date', 'after_or_equal:today'],
         ];
     }
 
@@ -67,9 +61,6 @@ class StoreandUpdateReceiveRequest extends FormRequest
             'items.*.quantity_accepted.required' => 'Quantity accepted product is required.',
             'items.*.quantity_accepted.integer' => 'Quantity accepted product must be a number.',
             'items.*.quantity_accepted.min' => 'Quantity accepted product cannot be less than 0.',
-            'items.*.quantity_rejected.required' => 'Quantity rejected product is required.',
-            'items.*.quantity_rejected.integer' => 'Quantity rejected product must be a number.',
-            'items.*.quantity_rejected.min' => 'Quantity rejected cannot be less than 0.',
 
             'items.*.production_date.date' => 'Production date must be a valid date.',
             'items.*.production_date.before_or_equal' => 'Production date cannot be a future date.',
@@ -77,13 +68,8 @@ class StoreandUpdateReceiveRequest extends FormRequest
             'items.*.expired_date.date' => 'Expired date must be a valid date.',
             'items.*.expired_date.after_or_equal' => 'Expired date cannot be a past date.',
 
-            'items.*.condition.min' => 'Condition product cannot be less than 4 characters.',
-
             'items.*.racks.required' => 'At least one rack is required.',
             'items.*.racks.array' => 'The items must be an array format.',
-
-            'items.*.racks.*.location_id.required' => 'Rack is required.',
-            'items.*.racks.*.location_id.exists' => 'One or more selected rack are invalid or do not exists.',
         ];
     }
 }

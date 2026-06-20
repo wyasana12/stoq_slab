@@ -9,12 +9,12 @@ use App\Models\StockMutations;
 use App\Services\BatchService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class BatchSeeder extends Seeder
 {
     public function run(BatchService $batchService): void
     {
-        // 1. Load data dengan relasi polymorphic 'receivable'
         $receivingItems = ProductReceivingItem::with(['receiving.receivable'])->get();
 
         foreach ($receivingItems as $item) {
@@ -23,9 +23,8 @@ class BatchSeeder extends Seeder
             }
 
             $receiving = $item->receiving;
-            $source    = $receiving->receivable; // Ini adalah PO, Transfer, atau Restock
+            $source    = $receiving->receivable;
             
-            // 2. Resolve Warehouse ID dan Code secara dinamis
             $warehouseId = null;
             $warehouseCode = 'WH';
 
@@ -37,8 +36,6 @@ class BatchSeeder extends Seeder
                 $warehouseCode = $source->warehouse->warehouse_code ?? 'WH';
             }
 
-            // Dapatkan unit price dari item sumber (PO/Transfer/Restock)
-            // Jika model sumber memiliki relasi ke item-nya, kita akses dari sana
             $sourceItem = $source->items()->where('product_id', $item->product_id)->first();
 
             $batch = Batch::create([
@@ -52,7 +49,7 @@ class BatchSeeder extends Seeder
                 'production_date' => $item->production_date ?? now()->subMonth(),
                 'expired_date' => $item->expired_date ?? now()->addYear(),
                 'price' => $sourceItem?->unit_price ?? 0,
-                'condition' => $item->condition ?? 'GOOD',
+                'condition' => 'BAIK', 
                 'barcode' => null,
             ]);
 
@@ -67,7 +64,6 @@ class BatchSeeder extends Seeder
                 'after_quantity' => $item->quantity_accepted,
                 'reference_type' => 'RECEIVE',
                 'reference_id' => $receiving->id,
-                // Menggunakan ID dokumen sumber untuk notes
                 'notes' => "Received product to Warehouse {$warehouseCode}", 
                 'status' => 'SUCCESS',
             ]);
@@ -78,7 +74,6 @@ class BatchSeeder extends Seeder
 
     private function seedExtraBatches(BatchService $batchService): void
     {
-        // ... (Kode seedExtraBatches Anda sudah bagus, tidak perlu diubah) ...
         $warehouses = \App\Models\Warehouse::all();
         $products = \App\Models\Product::all();
         $dummyReceiving = ProductReceiving::first();
@@ -93,19 +88,18 @@ class BatchSeeder extends Seeder
 
                 $qty = $qtyVariants[array_rand($qtyVariants)];
 
-                $existsInReceiving = \Illuminate\Support\Facades\DB::table('product_receiving_items')
+                $existsInReceiving = DB::table('product_receiving_items')
                     ->where('receiving_id', $dummyReceiving->id)
                     ->where('product_id', $product->id)
                     ->exists();
 
                 if (!$existsInReceiving) {
-                    \Illuminate\Support\Facades\DB::table('product_receiving_items')->insert([
+                    DB::table('product_receiving_items')->insert([
                         'id' => (string) Str::ulid(),
                         'receiving_id' => $dummyReceiving->id,
                         'product_id' => $product->id,
                         'quantity_accepted' => $qty * 2,
                         'quantity_rejected' => 0,
-                        'notes' => 'Dummy item for extra batches',
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]);
@@ -122,12 +116,24 @@ class BatchSeeder extends Seeder
                     'production_date' => now()->subMonths(rand(1, 6)),
                     'expired_date' => now()->addMonths(rand(6, 24)),
                     'price' => rand(5000, 100000),
-                    'condition' => 'GOOD',
+                    'condition' => 'BAIK', 
                     'barcode' => null,
                 ]);
 
                 $batchService->generateBarcode($batch);
-                // ... (sisanya tetap sama)
+
+                StockMutations::create([
+                    'id' => (string) Str::ulid(),
+                    'warehouse_id' => $warehouse->id,
+                    'batch_id' => $batch->id,
+                    'change_quantity' => $qty,
+                    'before_quantity' => 0,
+                    'after_quantity' => $qty,
+                    'reference_type' => 'RECEIVE',
+                    'reference_id' => $dummyReceiving->id,
+                    'notes' => "Received dummy product to Warehouse {$warehouse->warehouse_code}", 
+                    'status' => 'SUCCESS',
+                ]);
             }
         }
     }

@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('status');
             $table->date('receiving_date')->nullable();
             $table->foreignUlid('receiving_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('notes')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

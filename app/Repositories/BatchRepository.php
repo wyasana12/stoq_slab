@@ -56,7 +56,7 @@ class BatchRepository
                 ]);
             }
         ])
-            ->select(['id', 'batch_code', 'product_id', 'receiving_id', 'current_quantity', 'price', 'production_date', 'expired_date']);
+            ->select(['id', 'batch_code', 'product_id', 'receiving_id', 'current_quantity', 'price', 'production_date', 'expired_date', 'condition']);
 
         return $query->where('warehouse_id', $userId)
             ->latest()
@@ -91,6 +91,11 @@ class BatchRepository
         ]);
 
         return $batch->fresh();
+    }
+
+    public function destroy(Batch $batch)
+    {
+        return $batch->delete();
     }
 
     public function getSelectedForPrint(array $batchIds)
