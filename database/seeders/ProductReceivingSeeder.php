@@ -56,7 +56,6 @@ class ProductReceivingSeeder extends Seeder
             ];
         }
 
-        // 2. Lakukan perulangan untuk membuat data penerimaan dari semua jenis dokumen
         foreach ($documents as $index => $docData) {
             $type = $docData['type'];
             $model = $docData['model'];
@@ -67,7 +66,6 @@ class ProductReceivingSeeder extends Seeder
             $staff = User::where('warehouse_id', $warehouseId)->first() ?? User::first();
             if (!$staff) continue; 
 
-            // Simpan data induk penerimaan dengan polymorphic keys
             $receiving = ProductReceiving::create([
                 'receiving_code' => "RCV-" . now()->format('Ymd') . "-" . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
                 'receivable_type' => $type,
@@ -80,7 +78,6 @@ class ProductReceivingSeeder extends Seeder
             $itemsToInsert = [];
 
             foreach ($model->items as $item) {
-                // Dinamis membaca kuantitas yang diharapkan (PO menggunakan quantity_ordered, lainnya quantity)
                 $expectedQuantity = $item->quantity_ordered ?? $item->quantity ?? 0;
 
                 if ($expectedQuantity <= 0) continue;
@@ -122,7 +119,6 @@ class ProductReceivingSeeder extends Seeder
                     'receiving_id' => $receiving->id,
                     'quantity_accepted' => $qtyAccepted,
                     'quantity_rejected' => $qtyRejected,
-                    'notes' => "Status: " . $currentStatus->name,
                     'created_at' => now(), 
                     'updated_at' => now(),
                 ];

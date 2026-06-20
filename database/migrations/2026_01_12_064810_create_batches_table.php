@@ -26,7 +26,7 @@ return new class extends Migration
             $table->unsignedInteger('current_quantity');
 
             $table->decimal('price', 12, 2);
-            $table->string('condition')->nullable();
+            $table->enum('condition', ['BAIK', 'RUSAK', 'CACAT', 'KADALUARSA', 'MENDEKATI_KADALUARSA'])->default('BAIK');
             $table->string('barcode')->nullable();
                 
             $table->timestamps();

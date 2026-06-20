@@ -211,4 +211,45 @@ class RackController extends Controller
             'data' => $bins
         ]);
     }
+
+    public function getAvailableLocationsForPreview()
+    {
+        $warehouseId = Auth::user()->warehouse_id;
+
+        $locations = RackLocation::select(
+            'rack_locations.id',
+            'rack_warehouses.rack_code',
+            'rack_locations.level',
+            'rack_locations.bin',
+            'rack_locations.capacity',
+            'rack_locations.used'
+        )
+            ->join('rack_warehouses', 'rack_warehouses.id', '=', 'rack_locations.rack_id')
+            ->where('rack_warehouses.warehouse_id', $warehouseId)
+            ->where(function ($q) {
+                $q->whereNull('rack_warehouses.status')
+                    ->orWhereNotIn('rack_warehouses.status', ['INACTIVE', 'MAINTENANCE']);
+            })
+            ->where(function ($q) {
+                $q->whereNull('rack_locations.status')
+                    ->orWhereNotIn('rack_locations.status', ['BLOCKED', 'MAINTENANCE']);
+            })
+            ->whereNull('rack_locations.batch_id')
+            ->whereRaw('rack_locations.capacity > rack_locations.used')
+            ->orderBy('rack_warehouses.rack_code', 'asc')
+            ->orderBy('rack_locations.level', 'asc')
+            ->orderBy('rack_locations.bin', 'asc')
+            ->get()
+            ->map(function ($loc) {
+                return [
+                    'id' => $loc->id,
+                    'rack_code' => $loc->rack_code,
+                    'level' => $loc->level,
+                    'bin' => $loc->bin,
+                    'available_capacity' => max(0, $loc->capacity - $loc->used)
+                ];
+            });
+
+        return response()->json(['data' => $locations]);
+    }
 }

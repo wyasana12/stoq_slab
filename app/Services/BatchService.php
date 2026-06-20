@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Batch;
+use App\Models\RackLocation;
 use App\Repositories\BatchRepository;
 use App\Repositories\RackRepository;
 use BaconQrCode\Writer;
@@ -43,81 +44,67 @@ class BatchService
         return $this->batchRepository->getById($batch);
     }
 
-    public function assignLocation(Batch $batch, array $data): void
+    public function assignLocation(Batch $batch): void
     {
-        DB::transaction(function () use ($batch, $data) {
-            if (empty($data)) {
-                throw new InvalidArgumentException('Please select at least one rack location.');
-            }
-
+        DB::transaction(function () use ($batch) {
             $remaining = $batch->current_quantity;
 
-            $locations = collect($data)->map(function ($item) {
-                return $this->rackRepository
-                    ->locationById($item['location_id']);
-            });
+            if ($remaining <= 0) return;
 
-            $first = $locations->first();
+            $availableLocations = RackLocation::select('rack_locations.*')
+                ->join('rack_warehouses', 'rack_warehouses.id', '=', 'rack_locations.rack_id')
+                ->where('rack_warehouses.warehouse_id', $batch->warehouse_id)
+                ->where(function ($q) {
+                    $q->whereNull('rack_warehouses.status')
+                        ->orWhereNotIn('rack_warehouses.status', ['INACTIVE', 'MAINTENANCE']);
+                })
+                ->where(function ($q) {
+                    $q->whereNull('rack_locations.status')
+                        ->orWhereNotIn('rack_locations.status', ['BLOCKED', 'MAINTENANCE']);
+                })
+                ->where(function ($query) use ($batch) {
+                    $query->whereNull('rack_locations.batch_id')
+                        ->orWhere('rack_locations.batch_id', $batch->id);
+                })
+                ->whereRaw('rack_locations.capacity > rack_locations.used')
+                ->orderBy('rack_warehouses.rack_code', 'asc')
+                ->orderBy('rack_locations.level', 'asc')
+                ->orderBy('rack_locations.bin', 'asc')
+                ->lockForUpdate()
+                ->get();
 
-            $available = max(
-                0,
-                $first->capacity - $first->used,
-            );
-
-            if ($available >= $remaining && count($data) > 1) {
-                throw new InvalidArgumentException("Please choose only one bin because the first bin has sufficient capacity.");
+            $totalCapacityAvailable = 0;
+            foreach ($availableLocations as $loc) {
+                $totalCapacityAvailable += max(0, $loc->capacity - $loc->used);
             }
 
-            $totalAvailable = 0;
-
-            foreach ($locations as $location) {
-                if (
-                    $location->batch_id !== null &&
-                    $location->batch_id !== $batch->id
-                ) {
-                    throw new InvalidArgumentException(
-                        "Bin {$location->location_code} is already occupied."
-                    );
-                }
-
-                $totalAvailable += max(
-                    0,
-                    $location->capacity - $location->used
-                );
-            }
-
-            if ($totalAvailable < $remaining) {
+            if ($totalCapacityAvailable < $remaining) {
                 throw new InvalidArgumentException(
-                    "Kapasitas bin tidak mencukupi. Qty barang: {$remaining}, Total kapasitas tersedia: {$totalAvailable}. Silakan tambah lokasi bin."
+                    "Kapasitas lokasi rak tidak mencukupi untuk Batch {$batch->batch_code}. Qty butuh: {$remaining}, Total kapasitas tersedia: {$totalCapacityAvailable}. Silakan tambah lokasi rak baru di gudang ini."
                 );
             }
 
-            foreach ($locations as $location) {
+            foreach ($availableLocations as $location) {
                 if ($remaining <= 0) break;
 
-                $available = max(
-                    0,
-                    $location->capacity - $location->used,
-                );
+                $availableSpace = max(0, $location->capacity - $location->used);
 
-                if ($available === 0) continue;
+                if ($availableSpace === 0) continue;
 
-                $qty = min($remaining, $available);
+                $qtyToStore = min($remaining, $availableSpace);
 
                 $location->batch_id = $batch->id;
-                $location->used += $qty;
+                $location->used += $qtyToStore;
 
                 if ($location->used >= $location->capacity) {
                     $location->status = 'FULL';
                 } elseif ($location->used > 0) {
                     $location->status = 'PARTIAL';
-                } else {
-                    $location->status = 'AVAILABLE';
                 }
 
                 $this->rackRepository->save($location);
 
-                $remaining -= $qty;
+                $remaining -= $qtyToStore;
             }
         });
     }
@@ -158,5 +145,14 @@ class BatchService
     public function getSelectedForPrint(array $batchIds)
     {
         return $this->batchRepository->getSelectedForPrint($batchIds);
+    }
+
+    public function destroy(Batch $batch)
+    {
+        $now = now();
+
+        if ($now < $batch->expired_date) {
+            throw new InvalidArgumentException("Batch tidak bisa dihapus jika kurang dari expired_date");
+        }
     }
 }

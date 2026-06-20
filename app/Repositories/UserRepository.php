@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Spatie\Permission\Models\Role;
 
@@ -10,8 +11,11 @@ class UserRepository
 {
     public function getAllPaginated()
     {
-        return User::with(['warehouse:id,name', 'roles:id,name'])->select(['id', 'name', 'warehouse_id', 'is_active'])->latest()->get();
+        $userId = Auth::id();
+
+        return User::with(['warehouse:id,name', 'roles:id,name'])->select(['id', 'name', 'warehouse_id', 'is_active', 'username', 'email', 'phone_number'])->where('id', '!=', $userId)->latest()->get();
     }
+
     public function create(array $data): User
     {
         return User::create($data);

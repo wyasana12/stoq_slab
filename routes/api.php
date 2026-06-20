@@ -49,27 +49,30 @@ Route::prefix('/configs')->middleware('auth:sanctum')->name('config.')->group(fu
 });
 
 Route::prefix('/permissions')->middleware(['auth:sanctum', 'role:super-admin'])->name('permission.')->group(function () {
-    Route::get('', [PermissionController::class, 'index'])->middleware('permission:view_permission')->name('index');
-    Route::delete('/{permission}', [PermissionController::class, 'destroy'])->middleware('permission:delete_permission')->name('delete');
+    Route::get('', [PermissionController::class, 'index'])->name('index');
+    Route::delete('/{permission}', [PermissionController::class, 'destroy'])->name('delete');
 });
 
 Route::prefix('/roles')->middleware(['auth:sanctum', 'role:super-admin'])->name('role.')->group(function () {
-    Route::get('', [RoleController::class, 'index'])->middleware('permission:view_role')->name('index');
-    Route::post('/create', [RoleController::class, 'store'])->middleware('permission:create_role')->name('create');
-    Route::get('/{role}', [RoleController::class, 'show'])->middleware('permission:view_role');
-    Route::put('/{role}', [RoleController::class, 'update'])->middleware('permission:edit_role')->name('update');
-    Route::delete('/{role}', [RoleController::class, 'destroy'])->middleware('permission:delete_role')->name('delete');
-    Route::post('/{role}/permissions', [RoleController::class, 'assignPermissions'])->middleware('permission:assign_permissions')->name('assignPermissions');
+    Route::get('', [RoleController::class, 'index'])->name('index');
+    Route::post('/create', [RoleController::class, 'store'])->name('create');
+    Route::get('/{role}', [RoleController::class, 'show']);
+    Route::put('/{role}', [RoleController::class, 'update'])->name('update');
+    Route::delete('/{role}', [RoleController::class, 'destroy'])->name('delete');
+    Route::post('/{role}/permissions', [RoleController::class, 'assignPermissions'])->name('assignPermissions');
 });
 
 Route::prefix('/users')->middleware('auth:sanctum')->name('user.')->group(function () {
-    Route::get('', [UserController::class, 'index'])->middleware('permission:view_user')->name('index');
     Route::get('/dropdown', [UserController::class, 'dropdown'])->name('dropdown');
-    Route::post('/create', [UserController::class, 'store'])->middleware('permission:create_user')->name('create');
-    Route::get('/{user}', [UserController::class, 'show'])->middleware('permission:view_user');
-    Route::put('/{user}', [UserController::class, 'update'])->middleware('permission:edit_user')->name('update');
-    Route::patch('/{user}', [UserController::class, 'status'])->middleware('permission:edit_user')->name('status');
-    Route::delete('/{user}', [UserController::class, 'destroy'])->middleware('permission:delete_user')->name('delete');
+
+    Route::middleware('role:super-admin')->group(function () {
+        Route::get('', [UserController::class, 'index'])->name('index');
+        Route::post('/create', [UserController::class, 'store'])->name('create');
+        Route::get('/{user}', [UserController::class, 'show']);
+        Route::put('/{user}', [UserController::class, 'update'])->name('update');
+        Route::patch('/{user}', [UserController::class, 'status'])->name('status');
+        Route::delete('/{user}', [UserController::class, 'destroy'])->name('delete');
+    });
 });
 
 Route::prefix('/regions')->group(function () {
@@ -95,6 +98,7 @@ Route::prefix('/racks')->middleware('auth:sanctum')->name('rack.')->group(functi
     Route::get('/options', [RackController::class, 'dropdownRack']);
     Route::get('/levels', [RackController::class, 'dropdownLevel']);
     Route::get('/bins', [RackController::class, 'dropdownBin']);
+    Route::get('/preview', [RackController::class, 'getAvailableLocationsForPreview']);
     Route::post('/create', [RackController::class, 'store'])->name('create');
     Route::get('/{rack}', [RackController::class, 'show'])->name('show');
     Route::put('/{rack}', [RackController::class, 'update'])->name('update');

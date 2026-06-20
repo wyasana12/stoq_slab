@@ -27,14 +27,14 @@ class ProductReceivingService
      * Create a new class instance.
      */
 
-    protected ProductReceivingRepository $productRecivingRepository;
+    protected ProductReceivingRepository $productReceivingRepository;
     protected BatchService $batchService;
     protected BatchRepository $batchRepository;
     protected MutationRepository $mutationRepository;
 
-    public function __construct(ProductReceivingRepository $productRecivingRepository, BatchRepository $batchRepository, BatchService $batchService, MutationRepository $mutationRepository)
+    public function __construct(ProductReceivingRepository $productReceivingRepository, BatchRepository $batchRepository, BatchService $batchService, MutationRepository $mutationRepository)
     {
-        $this->productRecivingRepository = $productRecivingRepository;
+        $this->productReceivingRepository = $productReceivingRepository;
         $this->batchRepository = $batchRepository;
         $this->mutationRepository = $mutationRepository;
         $this->batchService = $batchService;
@@ -42,12 +42,12 @@ class ProductReceivingService
 
     public function getStats()
     {
-        return $this->productRecivingRepository->getStats();
+        return $this->productReceivingRepository->getStats();
     }
 
     public function getAllReceives()
     {
-        return $this->productRecivingRepository->getAll();
+        return $this->productReceivingRepository->getAll();
     }
 
     public function getReceiveDetail(ProductReceiving $receive): ProductReceiving
@@ -64,7 +64,7 @@ class ProductReceivingService
             );
         }
 
-        return $this->productRecivingRepository->getById($receive);
+        return $this->productReceivingRepository->getById($receive);
     }
 
     public function createReceive(array $data, string $userId): ProductReceiving
@@ -83,13 +83,10 @@ class ProductReceivingService
             $totalQtyRejected = 0;
 
             $receiveItemsData = [];
+            $batchesData = [];
 
-            foreach ($data['items'] as $i) {
-                $productId = $i['product_id'];
-                $accepted = (int) $i['quantity_accepted'];
-                $rejected = (int) $i['quantity_rejected'];
-                $total = $accepted + $rejected;
-
+            $groupedItems = collect($data['items'])->groupBy('product_id');
+            foreach ($groupedItems as $productId => $batches) {
                 $sourceItem = $sourceItems[$productId] ?? null;
 
                 if (!$sourceItem) {
@@ -98,37 +95,50 @@ class ProductReceivingService
 
                 $qtyOrdered = (int) $sourceItem->expected_quantity;
 
-                if ($total !== $qtyOrdered) {
-                    throw new InvalidArgumentException("Total Quantity {$total} for {$sourceItem->product->name} cannot exceed order quantity {$qtyOrdered}.");
+                $totalAcceptedForProduct = $batches->sum('quantity_accepted');
+
+                if ($totalAcceptedForProduct > $qtyOrdered) {
+                    throw new InvalidArgumentException("Total Quantity {$totalAcceptedForProduct} for product cannot exceed order quantity {$qtyOrdered}.");
                 }
+
+                $qtyRejectedForProduct = $qtyOrdered - $totalAcceptedForProduct;
 
                 if ($data['receivable_type'] === 'purchase_order') {
                     $sourceItem->original_model->update([
-                        'quantity_received' => $accepted,
+                        'quantity_received' => $totalAcceptedForProduct,
                     ]);
                 }
 
                 $totalQtyOrdered += $qtyOrdered;
-                $totalQtyAccepted += $accepted;
-                $totalQtyRejected += $rejected;
+                $totalQtyAccepted += $totalAcceptedForProduct;
+                $totalQtyRejected += $qtyRejectedForProduct;
 
                 $receiveItemsData[] = [
-                    'product_id' => $productId,
-                    'quantity_accepted' => $accepted,
-                    'quantity_rejected' => $rejected,
-                    'notes' => $i['notes'],
-
-                    'production_date' => !empty($i['production_date'])
-                        ? Carbon::parse($i['production_date'])->format('Y-m-d H:i:s')
-                        : null,
-
-                    'expired_date' => !empty($i['expired_date'])
-                        ? Carbon::parse($i['expired_date'])->format('Y-m-d H:i:s')
-                        : null,
-                    'price' => $sourceItem->price,
-                    'condition' => $i['condition'] ?? null,
-                    'racks' => $i['racks'],
+                    'id' => (string) Str::ulid(),
+                    'product_id'        => $productId,
+                    'quantity_accepted' => $totalAcceptedForProduct,
+                    'quantity_rejected' => $qtyRejectedForProduct,
                 ];
+
+                foreach ($batches as $batchData) {
+                    $accepted = (int) $batchData['quantity_accepted'];
+
+                    if ($accepted <= 0) {
+                        continue;
+                    }
+
+                    $batchesData[] = [
+                        'product_id'        => $productId,
+                        'quantity_accepted' => $accepted,
+                        'production_date'   => !empty($batchData['production_date'])
+                            ? Carbon::parse($batchData['production_date'])->format('Y-m-d')
+                            : null,
+                        'expired_date'      => !empty($batchData['expired_date'])
+                            ? Carbon::parse($batchData['expired_date'])->format('Y-m-d')
+                            : null,
+                        'price'             => $sourceItem->price,
+                    ];
+                }
             }
 
             $calculatedStatus = ReceiveStatus::PARTIAL;
@@ -143,16 +153,17 @@ class ProductReceivingService
 
             $receiveCode = 'RCV-' . $warehouseCode . '-' . strtoupper(Str::random(6));
 
-            $receive = $this->productRecivingRepository->createReceive([
+            $receive = $this->productReceivingRepository->createReceive([
                 'receiving_code'  => $receiveCode,
                 'receivable_type' => $data['receivable_type'],
                 'receivable_id'   => $data['receivable_id'],
                 'receiving_date'  => now(),
                 'receiving_by'    => $userId,
+                'notes' => $data['notes'],
                 'status'          => $calculatedStatus,
             ]);
 
-            $this->productRecivingRepository->assignItems($receive, $receiveItemsData);
+            $this->productReceivingRepository->assignItems($receive, $receiveItemsData);
 
             if (in_array($calculatedStatus, [ReceiveStatus::FULL, ReceiveStatus::PARTIAL])) {
                 if ($data['receivable_type'] === 'transfer') {
@@ -161,7 +172,7 @@ class ProductReceivingService
                     $sourceModel->update(['status' => RestockStatus::COMPLETED]);
                 }
 
-                foreach ($receiveItemsData as $item) {
+                foreach ($batchesData as $item) {
                     if ((int) $item['quantity_accepted'] > 0) {
                         $batch = $this->batchRepository->create([
                             'id' => (string) Str::ulid(),
@@ -174,14 +185,13 @@ class ProductReceivingService
                             'production_date' => $item['production_date'],
                             'expired_date' => $item['expired_date'],
                             'price' => $item['price'],
-                            'condition' => $item['condition'],
                             'created_at' => now(),
                             'updated_at' => now(),
                         ]);
 
                         $this->batchService->generateBarcode($batch);
 
-                        $this->batchService->assignLocation($batch, $item['racks']);
+                        $this->batchService->assignLocation($batch);
 
                         $this->mutationRepository->create([
                             'id' => (string) Str::ulid(),
@@ -222,24 +232,24 @@ class ProductReceivingService
             throw new InvalidArgumentException("The deletion rejected. The product receive must have a PENDING status or FINAL Transition.");
         }
 
-        $this->productRecivingRepository->softDelete($receive);
+        $this->productReceivingRepository->softDelete($receive);
     }
 
     public function getTrashedReceive()
     {
-        return $this->productRecivingRepository->getTrashedPaginated();
+        return $this->productReceivingRepository->getTrashedPaginated();
     }
 
     public function restoreReceive(ProductReceiving $receive)
     {
-        $this->productRecivingRepository->restore($receive);
+        $this->productReceivingRepository->restore($receive);
 
         return $receive->fresh(['items.products', 'user', 'purchase.warehouse']);
     }
 
     public function forceDeleteReceive(ProductReceiving $receive)
     {
-        $this->productRecivingRepository->forceDelete($receive);
+        $this->productReceivingRepository->forceDelete($receive);
     }
 
     public function getAvailableDocuments(string $type)

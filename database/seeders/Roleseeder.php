@@ -67,25 +67,6 @@ class Roleseeder extends Seeder
             'edit_store',
             'delete_store',
 
-            // Permissions
-            'view_permission',
-            'create_permission',
-            'edit_permission',
-            'delete_permission',
-
-            // Roles
-            'view_role',
-            'create_role',
-            'edit_role',
-            'delete_role',
-            'assign_permissions',
-
-            // Users
-            'view_user',
-            'create_user',
-            'edit_user',
-            'delete_user',
-
             // Warehouses
             'view_warehouse',
             'create_warehouse',
