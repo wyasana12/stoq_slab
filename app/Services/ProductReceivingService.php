@@ -11,6 +11,8 @@ use App\Models\ProductReceiving;
 use App\Models\PurchaseOrder;
 use App\Models\Restock;
 use App\Models\StockTransfers;
+use App\Models\User;
+use App\Notifications\ReceivingNotification;
 use App\Repositories\BatchRepository;
 use App\Repositories\MutationRepository;
 use App\Repositories\ProductReceivingRepository;
@@ -18,6 +20,7 @@ use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use InvalidArgumentException;
 use Illuminate\Support\Str;
 
@@ -52,6 +55,7 @@ class ProductReceivingService
 
     public function getReceiveDetail(ProductReceiving $receive): ProductReceiving
     {
+        /** @var User $user */
         $user = Auth::user();
         $userId = $user->warehouse_id;
 
@@ -85,6 +89,7 @@ class ProductReceivingService
 
             $receiveItemsData = [];
             $batchesData = [];
+            $notificationBatchDetails = [];
 
             $groupedItems = collect($data['items'])->groupBy('product_id');
             foreach ($groupedItems as $productId => $batches) {
@@ -175,9 +180,11 @@ class ProductReceivingService
 
                 foreach ($batchesData as $item) {
                     if ((int) $item['quantity_accepted'] > 0) {
+                        $batchCode = 'BCH-' . $warehouseCode . '-' . strtoupper(Str::random(6));
+
                         $batch = $this->batchRepository->create([
                             'id' => (string) Str::ulid(),
-                            'batch_code' => 'BCH-' . $warehouseCode . '-' . strtoupper(Str::random(6)),
+                            'batch_code' => $batchCode,
                             'receiving_id' => $receive->id,
                             'product_id' => $item['product_id'],
                             'warehouse_id' => $warehouseId,
@@ -193,6 +200,10 @@ class ProductReceivingService
                         $this->batchService->generateBarcode($batch);
 
                         $this->batchService->assignLocation($batch);
+
+                        $notificationBatchDetails[] = [
+                            'code' => $batchCode,
+                        ];
 
                         $this->mutationRepository->create([
                             'id' => (string) Str::ulid(),
@@ -219,6 +230,8 @@ class ProductReceivingService
             } elseif ($data['receivable_type'] === 'restock') {
                 $sourceModel->update(['status' => RestockStatus::COMPLETED]);
             }
+
+            $this->sendReceivingNotification($receive, $notificationBatchDetails, $warehouseId, $calculatedStatus);
 
             return $receive;
         });
@@ -255,31 +268,76 @@ class ProductReceivingService
 
     public function getAvailableDocuments(string $type)
     {
+        /** @var User $user */
         $user = Auth::user();
         $warehouseId = $user->warehouse_id;
         $isSuperAdmin = $user->hasRole('super-admin');
 
         return match ($type) {
             'purchase_order' => PurchaseOrder::when(!$isSuperAdmin, function ($query) use ($warehouseId) {
-                    $query->where('warehouse_id', $warehouseId);
-                })
+                $query->where('warehouse_id', $warehouseId);
+            })
                 ->where('status', 'ordered')
                 ->get(['id', 'po_code as label']),
 
             'transfer' => StockTransfers::when(!$isSuperAdmin, function ($query) use ($warehouseId) {
-                    $query->where('to_warehouse_id', $warehouseId);
-                })
+                $query->where('to_warehouse_id', $warehouseId);
+            })
                 ->where('status', 'on_delivery')
                 ->get(['id', 'transfer_code as label']),
 
             'restock' => Restock::when(!$isSuperAdmin, function ($query) use ($warehouseId) {
-                    $query->where('warehouse_id', $warehouseId);
-                })
+                $query->where('warehouse_id', $warehouseId);
+            })
                 ->where('status', 'on_delivery')
                 ->get(['id', 'restock_code as label']),
 
             default => collect([]),
         };
+    }
+
+    protected function sendReceivingNotification(ProductReceiving $receive, array $batchDetails, string $warehouseId, ReceiveStatus $status): void
+    {
+        $staff = User::role('staff')->where('warehouse_id', $warehouseId)->get();
+
+        if ($staff->isNotEmpty() && count($batchDetails) > 0) {
+            $batchItemsString = collect($batchDetails)
+                ->map(fn($b) => "{$b['code']}")
+                ->implode(', ');
+
+            Notification::send(
+                $staff,
+                new ReceivingNotification(
+                    $receive,
+                    'Barang Masuk & Alokasi Rak',
+                    "Dokumen {$receive->receivable_type} selesai diproses. Segera letakkan item berikut ke rak: {$batchItemsString}.",
+                    'info'
+                )
+            );
+        }
+
+        $admin = User::role('admin')->where('warehouse_id', $warehouseId)->get();
+
+        if ($admin->isNotEmpty()) {
+            $statusLabel = strtoupper($status->value);
+            $docType = strtoupper(str_replace('_', ' ', $receive->receivable_type));
+
+            $typeColor = match($status) {
+                ReceiveStatus::FULL => 'success',
+                ReceiveStatus::PARTIAL => 'warning',
+                default => 'error'
+            };
+
+            Notification::send(
+                $admin,
+                new ReceivingNotification(
+                    $receive,
+                    "Penerimaan {$docType} Selesai",
+                    "Proses penerimaan untuk dokumen kode {$receive->receiving_code} telah diselesaikan dengan status akhir {$statusLabel}.",
+                    $typeColor
+                )
+            );
+        }
     }
 
     private function resolveReceivableContext(string $type, string $id): array

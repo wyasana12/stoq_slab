@@ -20,6 +20,7 @@ class NotificationController extends Controller
                 'po_code' => $notification->data['po_code'] ?? null,
                 'status' => $notification->data['status'] ?? null,
                 'type' => $notification->data['type'] ?? 'info',
+                'action_url' => $notification->data['action_url'] ?? null,
                 'created_at' => $notification->created_at->toDateTimeString(),
             ];
         });

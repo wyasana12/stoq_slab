@@ -2,15 +2,14 @@
 
 namespace App\Notifications;
 
-use App\Enums\PurchaseOrderStatus;
-use App\Models\PurchaseOrder;
+use App\Models\ProductReceiving;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class PurchaseOrderNotification extends Notification implements ShouldQueue
+class ReceivingNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -18,7 +17,7 @@ class PurchaseOrderNotification extends Notification implements ShouldQueue
      * Create a new notification instance.
      */
     public function __construct(
-        public PurchaseOrder $purchase,
+        public ProductReceiving $receiving,
         public string $title,
         public string $message,
         public string $type = 'info'
@@ -36,15 +35,15 @@ class PurchaseOrderNotification extends Notification implements ShouldQueue
         return ['mail', 'database', 'broadcast'];
     }
 
-    protected function getActionUrl(): string
+    protected function getActionUrl(object $notifiable): string
     {
         $frontendUrl = env('FRONTEND_URL', 'http://localhost:8080');
 
-        return match ($this->purchase->status) {
-            PurchaseOrderStatus::SUBMITTED => url("{$frontendUrl}/konfirmasipo?action=open&po={$this->purchase->id}"),
-            PurchaseOrderStatus::ORDERED => url("{$frontendUrl}/terima?action=open&doc_type=purchase_order&doc_id={$this->purchase->id}"),
-            default => url("{$frontendUrl}/purchaseorder?action=open&po={$this->purchase->id}")
-        };
+        if ($notifiable->hasRole(['admin'])) {
+            return url("{$frontendUrl}/purchaseorder?action=open_form");
+        }
+
+        return url("{$frontendUrl}/kondisilokasirak");
     }
 
     /**
@@ -56,36 +55,35 @@ class PurchaseOrderNotification extends Notification implements ShouldQueue
             ->subject($this->title)
             ->greeting('Halo, ')
             ->line($this->message)
-            ->line("Kode PO: **{$this->purchase->po_code}**")
-            ->line("Status saat ini: **" . strtoupper($this->purchase->status->value) . "**")
-            ->action('Notification Action', $this->getActionUrl())
+            ->line("Kode Receiving: **{$this->receiving->receiving_code}**")
+            ->action('Notification Action', $this->getActionUrl($notifiable))
             ->line('Notifikasi ini dikirim secara otomatis oleh sistem. Mohon tidak membalas email ini.');
     }
 
     public function toDatabase(object $notifiable): array
     {
         return [
-            'purchase_order_id' => $this->purchase->id,
-            'po_code'           => $this->purchase->po_code ?? null,
-            'title'             => $this->title,
-            'message'           => $this->message,
-            'status'            => $this->purchase->status->value ?? null,
-            'type'              => $this->type,
-            'action_url' => $this->getActionUrl(),
+            'receiving_id' => $this->receiving->id,
+            'receiving_code' => $this->receiving->receiving_code,
+            'title' => $this->title,
+            'message' => $this->message,
+            'status' => $this->receiving->status->value ?? null,
+            'type' => $this->type,
+                        'action_url' => $this->getActionUrl($notifiable),
         ];
     }
 
     public function toBroadcast(object $notifiable): BroadcastMessage
     {
         return new BroadcastMessage([
-            'purchase_order_id' => $this->purchase->id,
-            'po_code'           => $this->purchase->po_code ?? null,
-            'title'             => $this->title,
-            'message'           => $this->message,
-            'status'            => $this->purchase->status->value ?? null,
+            'receiving_id' => $this->receiving->id,
+            'receiving_code' => $this->receiving->receiving_code,
+            'title' => $this->title,
+            'message' => $this->message,
+            'status' => $this->receiving->status->value ?? null,
             'type' => $this->type,
-            'action_url' => $this->getActionUrl(),
-            'created_at'              => now()->toDateTimeString()
+                        'action_url' => $this->getActionUrl($notifiable),
+            'created_at' => now()->toDateTimeString()
         ]);
     }
 
