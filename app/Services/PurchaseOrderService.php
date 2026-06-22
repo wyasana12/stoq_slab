@@ -281,58 +281,58 @@ class PurchaseOrderService
         return $this->purchaseOrderRepository->getTrashedPaginated();
     }
 
-protected function sendPurchaseOrderNotification(PurchaseOrder $purchase, PurchaseOrderStatus $newStatus): void
-{
-    $notificationData = match ($newStatus) {
-        PurchaseOrderStatus::SUBMITTED => [
-            'recipients' => User::role('super-admin')->get(),
-            'title' => 'PO Baru Menunggu Approval',
-            'message' => "Pengajuan PO {$purchase->po_code} diterbitkan oleh {$purchase->user->name}. Butuh peninjauan segera.",
-            'type' => 'warning',
-        ],
-        PurchaseOrderStatus::APPROVED => [
-            'recipients' => collect([$purchase->user]),
-            'title' => 'Pengajuan PO Disetujui',
-            'message' => "Purchase Order {$purchase->po_code} telah disetujui dan dilanjutkan ke tahap pengadaan.",
-            'type' => 'success',
-        ],
-        PurchaseOrderStatus::ORDERED => [
-            'recipients' => $purchase->warehouse->users,
-            'title' => 'PO Dalam Pengiriman (Inbound)',
-            'message' => "Barang untuk PO {$purchase->po_code} sedang dikirim ke gudang {$purchase->warehouse->name}.",
-            'type' => 'info',
-        ],
-        PurchaseOrderStatus::REJECTED => [
-            'recipients' => collect([$purchase->user]),
-            'title' => 'Pengajuan PO Ditolak',
-            'message' => "PO {$purchase->po_code} ditolak. Alasan: " . ($purchase->notes ?? 'Tidak ada keterangan tambahan.'),
-            'type' => 'error',
-        ],
-        PurchaseOrderStatus::CANCELLED => [
-            'recipients' => collect([$purchase->user]),
-            'title' => 'Purchase Order Dibatalkan',
-            'message' => "Purchase Order {$purchase->po_code} telah dibatalkan di dalam sistem.",
-            'type' => 'error',
-        ],
-        PurchaseOrderStatus::CLOSED => [
-            'recipients' => $purchase->warehouse->users,
-            'title' => 'Purchase Order Selesai',
-            'message' => "Prosedur tuntas. Seluruh barang PO {$purchase->po_code} terkonfirmasi telah masuk ke gudang.",
-            'type' => 'success',
-        ],
-        default => null,
-    };
+    protected function sendPurchaseOrderNotification(PurchaseOrder $purchase, PurchaseOrderStatus $newStatus): void
+    {
+        $notificationData = match ($newStatus) {
+            PurchaseOrderStatus::SUBMITTED => [
+                'recipients' => User::role('super-admin')->get(),
+                'title' => 'PO Baru Menunggu Approval',
+                'message' => "Pengajuan {$purchase->po_code} diterbitkan oleh {$purchase->user->name}. Butuh peninjauan segera.",
+                'type' => 'warning',
+            ],
+            PurchaseOrderStatus::APPROVED => [
+                'recipients' => collect([$purchase->user]),
+                'title' => 'Pengajuan PO Disetujui',
+                'message' => "Pengajuan {$purchase->po_code} telah disetujui dan dilanjutkan ke tahap pengadaan.",
+                'type' => 'success',
+            ],
+            PurchaseOrderStatus::ORDERED => [
+                'recipients' => $purchase->warehouse->users,
+                'title' => 'PO Dalam Pengiriman (Inbound)',
+                'message' => "Barang untuk {$purchase->po_code} sedang dikirim ke gudang {$purchase->warehouse->name} ekspektasi datang {$purchase->expected_date->format('l, d F Y')}.",
+                'type' => 'info',
+            ],
+            PurchaseOrderStatus::REJECTED => [
+                'recipients' => collect([$purchase->user]),
+                'title' => 'Pengajuan PO Ditolak',
+                'message' => "Pengajuan {$purchase->po_code} ditolak. Alasan: " . ($purchase->notes ?? 'Tidak ada keterangan tambahan.'),
+                'type' => 'error',
+            ],
+            PurchaseOrderStatus::CANCELLED => [
+                'recipients' => collect([$purchase->user]),
+                'title' => 'Purchase Order Dibatalkan',
+                'message' => "Pengajuan {$purchase->po_code} telah dibatalkan di dalam sistem.",
+                'type' => 'error',
+            ],
+            PurchaseOrderStatus::CLOSED => [
+                'recipients' => $purchase->warehouse->users,
+                'title' => 'Purchase Order Selesai',
+                'message' => "Prosedur tuntas. Seluruh barang PO {$purchase->po_code} terkonfirmasi telah masuk ke gudang.",
+                'type' => 'success',
+            ],
+            default => null,
+        };
 
-    if ($notificationData && $notificationData['recipients'] && $notificationData['recipients']->isNotEmpty()) {
-        Notification::send(
-            $notificationData['recipients'],
-            new PurchaseOrderNotification(
-                $purchase,
-                $notificationData['title'],
-                $notificationData['message'],
-                $notificationData['type'] ?? 'info'
-            )
-        );
+        if ($notificationData && $notificationData['recipients'] && $notificationData['recipients']->isNotEmpty()) {
+            Notification::send(
+                $notificationData['recipients'],
+                new PurchaseOrderNotification(
+                    $purchase,
+                    $notificationData['title'],
+                    $notificationData['message'],
+                    $notificationData['type'] ?? 'info'
+                )
+            );
+        }
     }
-}
 }
