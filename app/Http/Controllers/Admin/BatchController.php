@@ -12,6 +12,7 @@ use App\Services\BatchService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use InvalidArgumentException;
 
 class BatchController extends Controller
 {
@@ -141,6 +142,29 @@ class BatchController extends Controller
         }
     }
 
+    public function destroy(Batch $batch): JsonResponse
+    {
+        try {
+            $this->batchService->destroy($batch);
+
+            return response()->json([
+                'success' => true,
+                'messages' => 'Batch deleted successful.'
+            ], 204);
+        } catch (InvalidArgumentException $err) {
+            return response()->json([
+                'success' => false,
+                'messages' => $err->getMessage(),
+            ], 400);
+        } catch (\Exception $err) {
+            return response()->json([
+                'success' => false,
+                'messages' => 'Failed deleted batch.',
+                'error' => $err->getMessage(),
+            ], 500);
+        }
+    }
+
     public function updateStatus(Request $request, Batch $batch): JsonResponse
     {
         try {
@@ -159,10 +183,9 @@ class BatchController extends Controller
             }
 
             if (array_key_exists('locations', $validated) && is_array($validated['locations']) && count($validated['locations']) > 0) {
-                // Validasi total qty dan kapasitas
                 $totalQty = 0;
                 $rackLocations = [];
-                
+
                 foreach ($validated['locations'] as $loc) {
                     $rackLocation = \App\Models\RackLocation::where('location_code', $loc['location_code'])->first();
                     if (!$rackLocation) {
@@ -171,35 +194,34 @@ class BatchController extends Controller
                             'message' => "Lokasi rak {$loc['location_code']} tidak ditemukan.",
                         ], 404);
                     }
-                    
+
                     if ($loc['qty'] > $rackLocation->capacity) {
                         return response()->json([
                             'success' => false,
                             'message' => "Kuantitas {$loc['qty']} melebihi kapasitas rak {$loc['location_code']} ({$rackLocation->capacity}).",
                         ], 422);
                     }
-                    
+
                     $totalQty += $loc['qty'];
                     $rackLocations[] = [
                         'model' => $rackLocation,
                         'qty' => $loc['qty']
                     ];
                 }
-                
+
                 if ($totalQty !== $batch->current_quantity) {
                     return response()->json([
                         'success' => false,
                         'message' => "Total kuantitas alokasi rak ($totalQty) tidak sesuai dengan sisa kuantitas batch ($batch->current_quantity).",
                     ], 422);
                 }
-                
-                // Kosongkan lokasi rak lama milik batch ini
+
                 \App\Models\RackLocation::where('batch_id', $batch->id)->update([
                     'batch_id' => null,
                     'used' => 0,
                     'status' => 'AVAILABLE'
                 ]);
-                
+
                 // Update lokasi rak yang baru
                 foreach ($rackLocations as $item) {
                     $rackLocation = $item['model'];
@@ -222,15 +244,13 @@ class BatchController extends Controller
                         'message' => 'Lokasi rak tidak ditemukan.',
                     ], 404);
                 }
-                
-                // Kosongkan lokasi rak lama milik batch ini
+
                 \App\Models\RackLocation::where('batch_id', $batch->id)->update([
                     'batch_id' => null,
                     'used' => 0,
                     'status' => 'AVAILABLE'
                 ]);
 
-                // Update lokasi rak yang baru
                 $rackLocation->batch_id = $batch->id;
                 $rackLocation->used = min($batch->current_quantity, $rackLocation->capacity);
                 if ($rackLocation->used >= $rackLocation->capacity) {

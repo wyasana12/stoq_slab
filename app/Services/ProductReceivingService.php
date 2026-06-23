@@ -143,6 +143,7 @@ class ProductReceivingService
                             ? Carbon::parse($batchData['expired_date'])->format('Y-m-d')
                             : null,
                         'price'             => $sourceItem->price,
+                        'location_id' => $batchData['location_id']
                     ];
                 }
             }
@@ -199,7 +200,9 @@ class ProductReceivingService
 
                         $this->batchService->generateBarcode($batch);
 
-                        $this->batchService->assignLocation($batch);
+                        $manualLocation = $item['location_id'] ?? [];
+
+                        $this->batchService->assignLocation($batch, $manualLocation);
 
                         $notificationBatchDetails[] = [
                             'code' => $batchCode,

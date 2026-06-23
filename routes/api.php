@@ -191,6 +191,7 @@ Route::prefix('/batches')->middleware('auth:sanctum')->name('batch.')->group(fun
     Route::get('/{batch}/qr/preview', [BatchController::class, 'preview'])->name('qr.preview');
     Route::get('/{batch}/qr/download', [BatchController::class, 'download'])->name('qr.download');
     Route::patch('/{batch}/status', [BatchController::class, 'updateStatus'])->name('status.update');
+    Route::delete('/{batch}/delete', [BatchController::class, 'destroy'])->name('delete');
 });
 
 Route::prefix('/dss')->middleware('auth:sanctum')->name('dss.')->group(function () {

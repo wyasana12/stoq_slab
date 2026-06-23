@@ -23,7 +23,7 @@ class ReceiveListResource extends JsonResource
                 'code' => $this->resolveSourceDocumentCode(),
                 'date' => $this->resolveSourceDocumentDate(),
             ],
-            'receiving_date' => $this->receiving_date?->format('l, d F Y') ?? 'N/A',
+            'receiving_date' => $this->receiving_date,
             'receiving' => [
                 'id' => $this->user->id ?? 'N/A',
                 'name' => $this->user->name ?? 'N/A',
