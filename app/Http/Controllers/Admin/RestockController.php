@@ -14,7 +14,8 @@ use Illuminate\Http\Request;
 class RestockController extends Controller
 {
     public function __construct(
-        protected RestockRepository $repository
+        protected RestockRepository $repository,
+        protected \App\Services\RestockNotificationService $notificationService
     ) {}
 
     public function index(): JsonResponse
@@ -33,6 +34,8 @@ class RestockController extends Controller
         $restock = $this->repository->create(array_merge($data, [
             'notes'  => $data['notes'] ?? null,
         ]));
+
+        $this->notificationService->sendRestockNotification($restock, \App\Enums\RestockStatus::REQUESTED);
 
         return response()->json([
             'success' => true,

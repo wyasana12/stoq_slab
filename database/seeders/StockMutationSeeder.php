@@ -499,7 +499,7 @@ class StockMutationSeeder extends Seeder
             'production_date' => now()->subMonths(2),
             'expired_date' => now()->addYear(),
             'price' => 15000,
-            'condition' => 'GOOD',
+            'condition' => 'BAIK',
         ]);
 
         for ($i = 1; $i <= 5; $i++) {
@@ -534,7 +534,7 @@ class StockMutationSeeder extends Seeder
             'production_date' => now()->subMonths(2),
             'expired_date' => now()->addYear(),
             'price' => 15000,
-            'condition' => 'GOOD',
+            'condition' => 'BAIK',
         ]);
 
         StockMutations::create([

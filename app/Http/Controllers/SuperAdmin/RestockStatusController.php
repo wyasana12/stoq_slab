@@ -11,7 +11,10 @@ use Illuminate\Http\JsonResponse;
 
 class RestockStatusController extends Controller
 {
-    public function __construct(protected RestockRepository $repository) {}
+    public function __construct(
+        protected RestockRepository $repository,
+        protected \App\Services\RestockNotificationService $notificationService
+    ) {}
     /**
      * Update the status of a restock
      *
@@ -47,6 +50,8 @@ class RestockStatusController extends Controller
 
         // Update the status and record mutation if restocked
         $restock = $this->repository->update($restock, $data);
+
+        $this->notificationService->sendRestockNotification($restock, $newStatus);
 
         return response()->json([
             'success' => true,
