@@ -12,7 +12,8 @@ use Illuminate\Http\Request;
 class TransferController extends Controller
 {
     public function __construct(
-        protected TransferRepository $repository
+        protected TransferRepository $repository,
+        protected \App\Services\TransferNotificationService $notificationService
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -33,6 +34,7 @@ class TransferController extends Controller
 
         try {
             $transfer = $this->repository->create($data);
+            $this->notificationService->sendTransferNotification($transfer, $transfer->status);
         } catch (\InvalidArgumentException $exception) {
             return response()->json([
                 'success' => false,
