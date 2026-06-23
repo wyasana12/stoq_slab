@@ -17,16 +17,17 @@ class ReceiveDetailResource extends JsonResource
         return [
             'id' => $this->id,
             'receiving_code' => $this->receiving_code,
-            
+
             'warehouse' => $this->resolveWarehouse(),
-            
+            'supplier' => $this->resolveSupplier(),
+
             'source' => [
                 'type' => $this->receivable_type,
                 'id' => $this->receivable_id ?? 'N/A',
                 'code' => $this->resolveSourceDocumentCode(),
                 'date' => $this->resolveSourceDocumentDate(),
             ],
-            
+
             'products' => $this->items->map(function ($i) {
                 return [
                     'item_id' => $i->id,
@@ -37,16 +38,16 @@ class ReceiveDetailResource extends JsonResource
                     'notes' => $i->notes,
                 ];
             }),
-            
+
             'receiving' => [
                 'id' => $this->user->id ?? 'N/A',
                 'name' => $this->user->name ?? 'N/A',
-                'date' => $this->receiving_date?->format('l, d F Y') ?? 'N/A',
+                'date' => $this->receiving_date,
             ],
-            
+
             'status' => $this->status,
-            'created_at' => $this->created_at?->format('l, d F Y') ?? 'N/A',
-            'updated_at' => $this->updated_at?->format('l, d F Y') ?? 'N/A',
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
         ];
     }
 
@@ -70,6 +71,28 @@ class ReceiveDetailResource extends JsonResource
         return [
             'id' => $warehouse->id ?? 'N/A',
             'name' => $warehouse->name ?? 'N/A',
+            'address' => $warehouse->street ? "{$warehouse->street}, {$warehouse->postal_code}" : null,
+        ];
+    }
+
+    private function resolveSupplier(): array
+    {
+        if (!$this->relationLoaded('receivable') || !$this->receivable) {
+            return [
+                'id' => 'N/A',
+                'name' => 'N/A',
+            ];
+        }
+
+        $supplier = match ($this->receivable_type) {
+            'transfer' => $this->receivable->fromWarehouse,
+            default    => $this->receivable->supplier,
+        };
+
+        return [
+            'id' => $supplier->id ?? 'N/A',
+            'name' => $supplier->name ?? 'N/A',
+            'address' => $supplier->street ? "{$supplier->street}, {$supplier->postal_code}" : null,
         ];
     }
 

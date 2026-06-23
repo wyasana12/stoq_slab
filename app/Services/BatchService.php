@@ -44,14 +44,14 @@ class BatchService
         return $this->batchRepository->getById($batch);
     }
 
-    public function assignLocation(Batch $batch): void
+    public function assignLocation(Batch $batch, array $manualLocation = []): void
     {
-        DB::transaction(function () use ($batch) {
+        DB::transaction(function () use ($batch, $manualLocation) {
             $remaining = $batch->current_quantity;
 
             if ($remaining <= 0) return;
 
-            $availableLocations = RackLocation::select('rack_locations.*')
+            $query = RackLocation::select('rack_locations.*')
                 ->join('rack_warehouses', 'rack_warehouses.id', '=', 'rack_locations.rack_id')
                 ->where('rack_warehouses.warehouse_id', $batch->warehouse_id)
                 ->where(function ($q) {
@@ -67,11 +67,22 @@ class BatchService
                         ->orWhere('rack_locations.batch_id', $batch->id);
                 })
                 ->whereRaw('rack_locations.capacity > rack_locations.used')
-                ->orderBy('rack_warehouses.rack_code', 'asc')
-                ->orderBy('rack_locations.level', 'asc')
-                ->orderBy('rack_locations.bin', 'asc')
-                ->lockForUpdate()
-                ->get();
+                ->lockForUpdate();
+
+            if (!empty($manualLocation)) {
+                $availableLocations = (clone $query)
+                    ->whereIn('rack_locations.id', $manualLocation)
+                    ->get();
+
+                $availableLocations = $availableLocations->sortBy(function ($loc) use ($manualLocation) {
+                    return array_search($loc->id, $manualLocation);
+                });
+            } else {
+                $availableLocations = (clone $query)->orderBy('rack_warehouses.rack_code', 'asc')
+                    ->orderBy('rack_locations.level', 'asc')
+                    ->orderBy('rack_locations.bin', 'asc')
+                    ->get();
+            }
 
             $totalCapacityAvailable = 0;
             foreach ($availableLocations as $loc) {
@@ -79,8 +90,9 @@ class BatchService
             }
 
             if ($totalCapacityAvailable < $remaining) {
+                $modeTxt = !empty($manualLocation) ? "yang Anda pilih" : "tersedia";
                 throw new InvalidArgumentException(
-                    "Kapasitas lokasi rak tidak mencukupi untuk Batch {$batch->batch_code}. Qty butuh: {$remaining}, Total kapasitas tersedia: {$totalCapacityAvailable}. Silakan tambah lokasi rak baru di gudang ini."
+                    "Kapasitas lokasi rak {$modeTxt} tidak mencukupi untuk Batch {$batch->batch_code}. Qty butuh: {$remaining}, Total kapasitas: {$totalCapacityAvailable}."
                 );
             }
 
@@ -134,7 +146,7 @@ class BatchService
                 }
 
                 $qtyDeducted = min($location->used, $remainingToRelease);
-                
+
                 $location->used -= $qtyDeducted;
                 $remainingToRelease -= $qtyDeducted;
 
@@ -190,10 +202,10 @@ class BatchService
 
     public function destroy(Batch $batch)
     {
-        $now = now();
-
-        if ($now < $batch->expired_date) {
-            throw new InvalidArgumentException("Batch tidak bisa dihapus jika kurang dari expired_date");
+        if (in_array($batch->condition, ['BAIK', 'MENDEKATI_KADALUARSA'])) {
+            throw new InvalidArgumentException("Batch tidak bisa dihapus jika kondisinya baik atau mendekati expired.");
         }
+
+        $this->batchRepository->destroy($batch);
     }
 }

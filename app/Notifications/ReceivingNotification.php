@@ -69,7 +69,7 @@ class ReceivingNotification extends Notification implements ShouldQueue
             'message' => $this->message,
             'status' => $this->receiving->status->value ?? null,
             'type' => $this->type,
-                        'action_url' => $this->getActionUrl($notifiable),
+            'action_url' => $this->getActionUrl($notifiable),
         ];
     }
 
@@ -82,7 +82,7 @@ class ReceivingNotification extends Notification implements ShouldQueue
             'message' => $this->message,
             'status' => $this->receiving->status->value ?? null,
             'type' => $this->type,
-                        'action_url' => $this->getActionUrl($notifiable),
+            'action_url' => $this->getActionUrl($notifiable),
             'created_at' => now()->toDateTimeString()
         ]);
     }

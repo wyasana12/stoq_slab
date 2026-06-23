@@ -36,13 +36,15 @@ class StoreandUpdateReceiveRequest extends FormRequest
                 'string',
                 $table ? Rule::exists($table, 'id') : '',
             ],
-            'notes' => ['required', 'string', 'min:5'],
+            'notes' => ['nullable', 'string', 'min:5'],
 
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'exists:products,id'],
             'items.*.quantity_accepted' => ['required', 'integer', 'min:0'],
             'items.*.production_date' => ['required', 'date', 'before_or_equal:today'],
             'items.*.expired_date' => ['required', 'date', 'after_or_equal:today'],
+            'items.*.location_id' => ['nullable', 'array'],
+            'items.*.location_id.*' => ['required_with:items.*.location_id', 'string', 'exists:rack_locations,id'],
         ];
     }
 
@@ -70,6 +72,10 @@ class StoreandUpdateReceiveRequest extends FormRequest
 
             'items.*.racks.required' => 'At least one rack is required.',
             'items.*.racks.array' => 'The items must be an array format.',
+
+            'items.*.location_id.array' => 'The selected location format must be an array.',
+            'items.*.location_id.*.required_with' => 'A valid location ID is required if you assign locations manually.',
+            'items.*.location_id.*.exists' => 'One or more selected rack locations are invalid or do not exist in the system.',
         ];
     }
 }
