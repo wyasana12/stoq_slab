@@ -24,6 +24,9 @@ return [
         ->filter(fn($s) => str_ends_with($s->value, '_COMPLETED'))
         ->map(fn($s) => $s->value)
         ->push('SUCCESS')
+        ->push(MutationStatus::EXPIRED_DISPOSAL->value)
+        ->push(MutationStatus::DAMAGED_DISPOSAL->value)
+        ->push(MutationStatus::PRODUCTION_DEFECT_DISPOSAL->value)
         ->values()
         ->all(),
 ];
