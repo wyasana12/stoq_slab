@@ -24,9 +24,11 @@ class ConfirmDistributionRequest extends FormRequest
             'confirmed_by' => ['required', 'exists:users,id'],
             'notes' => ['nullable', 'string', 'max:255'],
 
-            'items' => 'required_if:status,' . DistributionStatus::APPROVED->value . '|array|min:1',
+            'items' => 'required_if:status,' . DistributionStatus::APPROVED->value . ',' . DistributionStatus::COMPLETED->value . '|array|min:1',
             'items.*.id' => 'required_with:items|exists:stock_distribution_items,id',
             'items.*.approved_quantity' => 'required_if:status,' . DistributionStatus::APPROVED->value . '|integer|min:0',
+            'items.*.received_quantity' => 'required_if:status,' . DistributionStatus::COMPLETED->value . '|integer|min:0',
+            'items.*.damaged_quantity' => 'required_if:status,' . DistributionStatus::COMPLETED->value . '|integer|min:0',
 
             'completed_proof' => 'required_if:status,' . DistributionStatus::COMPLETED->value
                 . '|file|mimes:jpg,jpeg,png,pdf|max:2048',

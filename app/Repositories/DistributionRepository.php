@@ -17,9 +17,12 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use App\Services\BatchService;
 
 class DistributionRepository
 {
+    public function __construct(protected BatchService $batchService) {}
+
     public function getAllDistributions(?string $warehouseId = null): Collection
     {
         $query = StockDistributions::with(['items.batch', 'warehouse', 'request', 'confirmedBy'])
@@ -207,6 +210,95 @@ class DistributionRepository
                 $distribution->dispatched_at = now();
             }
 
+            if ($newStatus === DistributionStatus::COMPLETED) {
+                if (is_array($items) && count($items) > 0) {
+                    $distributionItems = $distribution->items()->get()->keyBy('id');
+                    foreach ($items as $item) {
+                        $distributionItem = $distributionItems[$item['id']] ?? null;
+                        if (! $distributionItem) {
+                            throw new InvalidArgumentException("Item distribusi tidak valid: {$item['id']}.");
+                        }
+
+                        $receivedQty = (int) ($item['received_quantity'] ?? 0);
+                        $damagedQty = (int) ($item['damaged_quantity'] ?? 0);
+
+                        if (($receivedQty + $damagedQty) !== $distributionItem->approved_quantity) {
+                            throw new InvalidArgumentException(
+                                "Total barang diterima ({$receivedQty}) dan rusak ({$damagedQty}) harus sama dengan jumlah yang dikirim ({$distributionItem->approved_quantity})."
+                            );
+                        }
+
+                        $distributionItem->update([
+                            'received_quantity' => $receivedQty,
+                            'damaged_quantity' => $damagedQty,
+                        ]);
+
+                        if ($damagedQty > 0) {
+                            $batch = $distributionItem->batch;
+                            StockMutations::record(
+                                $batch->warehouse_id,
+                                $batch->id,
+                                $batch->current_quantity,
+                                0, // Tidak mengurangi ulang karena stok fisik sudah berkurang saat SHIPPED
+                                MutationStatus::DAMAGED_IN_TRANSIT,
+                                'DISTRIBUTION',
+                                $distribution->id,
+                                "Barang rusak saat perjalanan sebanyak {$damagedQty}"
+                            );
+
+                            // Automatic Return / Disposal
+                            $isReturn = false;
+                            if ($batch->receiving_id) {
+                                $receiving = \App\Models\ProductReceiving::find($batch->receiving_id);
+                                if ($receiving && $receiving->receivable_type === \App\Models\PurchaseOrder::class) {
+                                    $po = \App\Models\PurchaseOrder::find($receiving->receivable_id);
+                                    if ($po && $po->supplier_id) {
+                                        $supplierItem = \App\Models\ProductSupplierItem::where('product_id', $batch->product_id)
+                                            ->where('supplier_id', $po->supplier_id)
+                                            ->first();
+                                        
+                                        if ($supplierItem && $supplierItem->return_limit_days > 0) {
+                                            $limitDate = \Carbon\Carbon::parse($receiving->receiving_date)->addDays($supplierItem->return_limit_days);
+                                            if (now()->lessThanOrEqualTo($limitDate)) {
+                                                $isReturn = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            if ($isReturn) {
+                                \App\Models\StockReturns::create([
+                                    'return_code' => 'RET-' . now()->format('Ymd') . '-' . rand(1000, 9999),
+                                    'receiving_id' => $batch->receiving_id,
+                                    'product_id' => $batch->product_id,
+                                    'warehouse_id' => $batch->warehouse_id,
+                                    'requested_quantity' => $damagedQty,
+                                    'approved_quantity' => 0,
+                                    'reason' => "Otomatis dari Distribusi {$distribution->distribution_code} karena rusak di jalan",
+                                    'requested_by' => $confirmedBy ?? \Illuminate\Support\Facades\Auth::id(),
+                                    'status' => 'requested',
+                                ]);
+                            } else {
+                                \App\Models\StockDisposal::create([
+                                    'disposal_code' => 'DSP-' . now()->format('Ymd') . '-' . rand(1000, 9999),
+                                    'batch_id' => $batch->id,
+                                    'product_id' => $batch->product_id,
+                                    'warehouse_id' => $batch->warehouse_id,
+                                    'requested_quantity' => $damagedQty,
+                                    'approved_quantity' => 0,
+                                    'reason' => "Otomatis dari Distribusi {$distribution->distribution_code} karena rusak di jalan",
+                                    'requested_by' => $confirmedBy ?? \Illuminate\Support\Facades\Auth::id(),
+                                    'status' => 'requested',
+                                ]);
+                            }
+                        }
+                    }
+                }
+                
+                $distribution->delivered_at = now();
+            }
+
             $distribution->status = $newStatus->value;
             $distribution->save();
 
@@ -260,12 +352,14 @@ class DistributionRepository
                 $batch->warehouse_id,
                 $batch->id,
                 $before,
-                $quantity,
+                -$quantity,
                 MutationStatus::DISTRIBUTION_COMPLETED,
                 'DISTRIBUTION',
                 $distribution->id,
                 'Distribusi selesai ke ' . ($distribution->store?->name ?? 'toko')
             );
+            
+            $this->batchService->releaseLocation($batch, $quantity);
         }
     }
 }
