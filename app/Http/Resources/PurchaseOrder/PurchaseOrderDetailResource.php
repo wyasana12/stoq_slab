@@ -42,9 +42,9 @@ class PurchaseOrderDetailResource extends JsonResource
                 'id' => $this->user?->id,
                 'name' => $this->user?->name,
             ],
-            'approved_at' => $this->approved_at?->format('l, d F Y') ?? 'N/A',
-            'order_date' =>  $this->order_date?->format('l, d F Y') ?? 'N/A',
-            'expected_date' => $this->expected_date?->format('l, d F Y') ?? 'N/A',
+            'approved_at' => $this->approved_at,
+            'order_date' =>  $this->order_date,
+            'expected_date' => $this->expected_date,
             'status' => $this->status,
             'notes' => $this->notes,
         ];
