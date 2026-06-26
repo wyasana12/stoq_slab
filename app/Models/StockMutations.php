@@ -30,6 +30,10 @@ class StockMutations extends Model
 
     protected $guarded = ['id'];
 
+    protected $casts = [
+        'is_dss_recommendation' => 'boolean',
+    ];
+
     public $incrementing = false;
     public $keyType = 'string';
 

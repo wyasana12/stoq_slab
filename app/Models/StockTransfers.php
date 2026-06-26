@@ -36,6 +36,7 @@ class StockTransfers extends Model
 
     protected $casts = [
         'status' => TransferStatusCast::class,
+        'is_dss_recommendation' => 'boolean',
     ];
 
     public $incrementing = false;

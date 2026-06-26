@@ -38,6 +38,10 @@ class StockDistributions extends Model
         'id'
     ];
 
+    protected $casts = [
+        'is_dss_recommendation' => 'boolean',
+    ];
+
     public $incrementing = false;
     public $keyType = 'string';
 

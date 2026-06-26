@@ -20,6 +20,7 @@ class RestockResource extends JsonResource
             'total_amount' => $this->total_amount,
             'status'       => $this->status instanceof \App\Enums\RestockStatus ? $this->status->value : $this->status,
             'notes'        => $this->notes,
+            'is_dss_recommendation' => $this->is_dss_recommendation,
             'products' => $this->item->map(function ($item) {
                 return [
                     'id'   => $item->product->id,

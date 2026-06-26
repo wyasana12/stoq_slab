@@ -193,7 +193,7 @@ class StockMutationSeeder extends Seeder
 
     $daySpread = $profile['day_spread'];
     $dates = $this->generateTransactionDates($profile, $numTransactions, $daySpread);
-    sort($dates);
+    rsort($dates); // Sort descending (e.g., 10 days ago, then 5 days ago, then 1 day ago) for chronological order
 
     foreach ($dates as $index => $daysAgo) {
         // ✅ Tambahkan guard di sini juga
@@ -502,22 +502,30 @@ class StockMutationSeeder extends Seeder
             'condition' => 'BAIK',
         ]);
 
+        $runningQty = 27; // We start at 27 and decrement by 5 each time to end up at 2
+
         for ($i = 1; $i <= 5; $i++) {
+            $qtyOut = 5;
+            $afterQty = $runningQty - $qtyOut;
+            $daysAgo = 12 - ($i * 2); // 10, 8, 6, 4, 2 days ago (chronological)
+
             // 5 mutasi x 5 qty = 25 unit dalam 30 hari (velocity tinggi)
             StockMutations::create([
                 'id' => (string) Str::ulid(),
                 'warehouse_id' => $warehouse->id,
                 'batch_id' => $batch->id,
-                'change_quantity' => -5,
-                'before_quantity' => 7,
-                'after_quantity' => 2,
+                'change_quantity' => -$qtyOut,
+                'before_quantity' => $runningQty,
+                'after_quantity' => $afterQty,
                 'reference_type' => 'DISTRIBUTION',
                 'reference_id' => (string) Str::ulid(),
                 'notes' => 'DSS SCENARIO: FAST MOVING',
                 'status' => 'SUCCESS',
-                'created_at' => now()->subDays(rand(1, 10)),
-                'updated_at' => now()->subDays(rand(1, 10)),
+                'created_at' => now()->subDays($daysAgo)->addHours(rand(8, 17)),
+                'updated_at' => now()->subDays($daysAgo)->addHours(rand(8, 17)),
             ]);
+            
+            $runningQty = $afterQty;
         }
         return $batch;
     }

@@ -250,7 +250,7 @@ class DistributionRepository
                             $isReturn = false;
                             if ($batch->receiving_id) {
                                 $receiving = \App\Models\ProductReceiving::find($batch->receiving_id);
-                                if ($receiving && $receiving->receivable_type === \App\Models\PurchaseOrder::class) {
+                                if ($receiving && in_array($receiving->receivable_type, [\App\Models\PurchaseOrder::class, 'purchase_order'])) {
                                     $po = \App\Models\PurchaseOrder::find($receiving->receivable_id);
                                     if ($po && $po->supplier_id) {
                                         $supplierItem = \App\Models\ProductSupplierItem::where('product_id', $batch->product_id)

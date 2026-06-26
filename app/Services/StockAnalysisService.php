@@ -64,6 +64,7 @@ class StockAnalysisService
                     'category'         => $category,
                     'price'            => $batch->price ?? 0,
                     'reference_days'   => $historyDays,
+                    'expired_date'     => $batch->expired_date ? $batch->expired_date->format('Y-m-d') : null,
                 ];
             })
             ->filter()
@@ -86,6 +87,7 @@ class StockAnalysisService
                     'category'         => $this->resolveCategory(null, $thresholdFast, $thresholdSlow),
                     'price'            => $batch->price ?? 0,
                     'reference_days'   => $historyDays,
+                    'expired_date'     => $batch->expired_date ? $batch->expired_date->format('Y-m-d') : null,
                 ];
             })
             ->values()

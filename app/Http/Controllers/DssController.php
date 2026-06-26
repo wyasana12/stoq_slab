@@ -101,4 +101,33 @@ class DssController extends Controller
             ? $days
             : config('dss.default_history_days');
     }
+
+    /**
+     * POST /api/dss/push-distribution/preview
+     */
+    public function pushDistributionPreview(Request $request, \App\Services\DssRecommendationService $dssService, \App\Repositories\StockMutationRepository $mutationRepo): JsonResponse
+    {
+        $validated = $request->validate([
+            'product_id' => 'required|string',
+            'warehouse_id' => 'required|string',
+            'store_ids' => 'required|array',
+            'store_ids.*' => 'string',
+            'total_available_stock' => 'required|integer|min:0',
+            'is_urgent' => 'required|boolean',
+        ]);
+
+        $result = $dssService->calculatePushDistributionAllocation(
+            $validated['product_id'],
+            $validated['warehouse_id'],
+            $validated['store_ids'],
+            $validated['total_available_stock'],
+            $validated['is_urgent'],
+            $mutationRepo
+        );
+
+        return response()->json([
+            'success' => true,
+            'data' => $result
+        ]);
+    }
 }

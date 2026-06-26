@@ -36,6 +36,7 @@ class Restock extends Model
 
     protected $casts = [
         'status' => RestockStatusCast::class,
+        'is_dss_recommendation' => 'boolean',
     ];
 
     public $incrementing = false;

@@ -22,6 +22,7 @@ class TransferResource extends JsonResource
             'status' => $this->status instanceof \App\Enums\TransferStatus ? $this->status->value : $this->status,
             'reason' => $this->reason,
             'notes' => $this->notes,
+            'is_dss_recommendation' => $this->is_dss_recommendation,
             'requested_quantity' => $this->requested_quantity,
             'approved_quantity' => $this->approved_quantity,
             'products' => $this->when(true, function () {

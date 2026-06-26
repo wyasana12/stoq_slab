@@ -38,6 +38,7 @@ class DistributionResource extends JsonResource
             'dispatched_at'     => $this->dispatched_at,
             'notes'             => $this->notes,
             'status'            => $this->status,
+            'is_dss_recommendation' => $this->is_dss_recommendation,
             'items'             => StockDistributionItemResource::collection($this->whenLoaded('items')),
 
             'shipped_proof_url'   => $shippedProofUrl,

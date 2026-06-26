@@ -76,6 +76,7 @@ class DssRecommendationService
                     'from_warehouse'     => $isTransfer ? $source['warehouse_name'] : null,
                     'from_warehouse_id'  => $isTransfer ? $source['warehouse_id'] : null,
                     'supplier_ids'       => $productSupplierIds,
+                    'expired_date'       => $row['expired_date'] ?? null,
                 ];
             }
 
@@ -112,6 +113,7 @@ class DssRecommendationService
                         'to_warehouse'       => $destination['warehouse_name'] ?? null,
                         'to_warehouse_id'    => $destination['warehouse_id'] ?? null,
                         'supplier_ids'       => $productSupplierIds,
+                        'expired_date'       => $row['expired_date'] ?? null,
                     ];
                 }
 
@@ -130,6 +132,7 @@ class DssRecommendationService
                     'to_warehouse'       => null,
                     'to_warehouse_id'    => null,
                     'supplier_ids'       => $productSupplierIds,
+                    'expired_date'       => $row['expired_date'] ?? null,
                 ];
             }
 
@@ -148,7 +151,65 @@ class DssRecommendationService
                 'from_warehouse'     => null,
                 'to_warehouse'       => null,
                 'supplier_ids'       => $productSupplierIds,
+                'expired_date'       => $row['expired_date'] ?? null,
             ];
         }, $this->analysisService->analyze($historyDays));
+    }
+
+    /**
+     * Calculate equal allocation for push distribution.
+     * @param string $productId
+     * @param string $warehouseId
+     * @param array $storeIds
+     * @param int $totalAvailableStock
+     * @param bool $isUrgent
+     * @param \App\Repositories\StockMutationRepository $mutationRepo
+     * @return array
+     */
+    public function calculatePushDistributionAllocation(
+        string $productId,
+        string $warehouseId,
+        array $storeIds,
+        int $totalAvailableStock,
+        bool $isUrgent,
+        \App\Repositories\StockMutationRepository $mutationRepo
+    ): array {
+        $pushStock = $totalAvailableStock;
+        $safetyStock = 0;
+
+        if (!$isUrgent) {
+            // Get last 30 days outward distribution for this product from this warehouse
+            $safetyStock = $mutationRepo->getProductWarehouseOutboundMovement($productId, $warehouseId, 30);
+            $pushStock = max(0, $totalAvailableStock - $safetyStock);
+        }
+
+        $allocation = [];
+        $storeCount = count($storeIds);
+
+        if ($storeCount > 0 && $pushStock > 0) {
+            $baseQty = (int) floor($pushStock / $storeCount);
+            $remainder = $pushStock % $storeCount;
+
+            foreach ($storeIds as $storeId) {
+                $qty = $baseQty;
+                if ($remainder > 0) {
+                    $qty++;
+                    $remainder--;
+                }
+                $allocation[$storeId] = $qty;
+            }
+        } else {
+            foreach ($storeIds as $storeId) {
+                $allocation[$storeId] = 0;
+            }
+        }
+
+        return [
+            'total_available_stock' => $totalAvailableStock,
+            'is_urgent'             => $isUrgent,
+            'safety_stock'          => $safetyStock,
+            'push_stock'            => $pushStock,
+            'allocation'            => $allocation,
+        ];
     }
 }
