@@ -93,6 +93,7 @@ class StoreAndUpdateDistributionRequest extends FormRequest
             'items.*.batch_id'      => 'required_with:items|exists:batches,id',
             'items.*.requested_quantity' => 'required_with:items|integer|min:1',
             'status' => 'nullable|string|in:draft,waiting-approval',
+            'is_dss_recommendation' => 'nullable|boolean',
         ];
     }
 

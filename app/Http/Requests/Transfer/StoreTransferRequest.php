@@ -31,6 +31,7 @@ class StoreTransferRequest extends FormRequest
             'status' => ['required', new Enum(TransferStatus::class)],
             'notes' => ['nullable', 'string'],
             'reason' => ['nullable', 'string'],
+            'is_dss_recommendation' => ['nullable', 'boolean'],
         ];
     }
 }

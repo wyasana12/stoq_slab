@@ -56,6 +56,24 @@ class StockMutationRepository
     }
 
     /**
+     * Total barang keluar untuk satu produk di satu gudang dalam beberapa hari terakhir.
+     */
+    public function getProductWarehouseOutboundMovement(string $productId, string $warehouseId, int $days): int
+    {
+        return (int) DB::table('stock_mutations')
+            ->join('batches', 'stock_mutations.batch_id', '=', 'batches.id')
+            ->where('batches.product_id', $productId)
+            ->where('stock_mutations.warehouse_id', $warehouseId)
+            ->whereIn('stock_mutations.reference_type', ['DISTRIBUTION', 'TRANSFER'])
+            ->whereIn('stock_mutations.status', $this->getCompletedStatuses())
+            ->whereBetween('stock_mutations.created_at', [
+                now()->subDays($days)->startOfDay(),
+                now()->subDays(1)->endOfDay(),
+            ])
+            ->sum(DB::raw('ABS(stock_mutations.change_quantity)'));
+    }
+
+    /**
      * Ambil semua batch produk selain gudang tertentu.
      */
     public function getBatchesByProductExcludingWarehouse(string $productId, string $excludedWarehouseId): Collection

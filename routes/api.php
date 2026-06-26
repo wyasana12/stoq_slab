@@ -197,6 +197,7 @@ Route::prefix('/batches')->middleware('auth:sanctum')->name('batch.')->group(fun
 Route::prefix('/dss')->middleware('auth:sanctum')->name('dss.')->group(function () {
     Route::get('/analysis', [DssController::class, 'analysis'])->name('analysis');
     Route::get('/recommendations', [DssController::class, 'recommendations'])->name('recommendations');
+    Route::post('/push-distribution/preview', [DssController::class, 'pushDistributionPreview'])->name('pushDistributionPreview');
 });
 
 Route::prefix('/notifications')->middleware('auth:sanctum')->name('notifications.')->group(function ()
