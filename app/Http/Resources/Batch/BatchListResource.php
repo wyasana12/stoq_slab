@@ -24,6 +24,7 @@ class BatchListResource extends JsonResource
                 'id' => $this->product?->id ?? 'N/A',
                 'name' => $this->product?->name ?? 'N/A',
                 'current_quantity' => $this->current_quantity,
+                'initial_quantity' => $this->initial_quantity,
                 'price' => $this->price,
                 'condition' => $this->condition,
                 'rack_location' => $this->locations && $this->locations->count() > 0 

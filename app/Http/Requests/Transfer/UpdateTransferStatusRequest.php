@@ -20,11 +20,13 @@ class UpdateTransferStatusRequest extends FormRequest
      */
     public function rules(): array
     {
+        $isRejected = $this->input('status') === 'rejected';
+
         return [
             'status' => ['required', new Enum(TransferStatus::class)],
-            'approved_quantity' => ['required', 'integer', 'min:1'],
-            'from_warehouse_id' => ['sometimes', 'exists:warehouses,id'],
-            'to_warehouse_id' => ['sometimes', 'exists:warehouses,id'],
+            'approved_quantity' => ['required', 'integer', $isRejected ? 'min:0' : 'min:1'],
+            'from_warehouse_id' => ['sometimes', $isRejected ? 'nullable' : 'required', 'exists:warehouses,id'],
+            'to_warehouse_id' => ['sometimes', $isRejected ? 'nullable' : 'required', 'exists:warehouses,id'],
             'notes' => ['nullable', 'string', 'max:255'],
         ];
     }

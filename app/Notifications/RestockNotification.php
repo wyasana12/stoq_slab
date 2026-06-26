@@ -33,6 +33,7 @@ class RestockNotification extends Notification implements ShouldQueue
             'message' => $this->message,
             'status' => $this->restock->status->value ?? null,
             'type' => $this->type,
+            'action_url' => $this->getActionUrl($notifiable),
         ];
     }
 
@@ -45,8 +46,20 @@ class RestockNotification extends Notification implements ShouldQueue
             'message' => $this->message,
             'status' => $this->restock->status->value ?? null,
             'type' => $this->type,
+            'action_url' => $this->getActionUrl($notifiable),
             'created_at' => now()->toDateTimeString()
         ]);
+    }
+
+    protected function getActionUrl(object $notifiable): string
+    {
+        $frontendUrl = env('FRONTEND_URL', 'http://localhost:8080');
+
+        if ($notifiable->hasRole('super-admin')) {
+            return url("{$frontendUrl}/konfirmasirestock");
+        }
+
+        return url("{$frontendUrl}/restocks");
     }
 
     public function toArray(object $notifiable): array

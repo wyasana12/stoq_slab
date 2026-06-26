@@ -7,6 +7,7 @@ use App\Http\Requests\Transfer\UpdateTransferStatusRequest;
 use App\Http\Resources\TransferResource;
 use App\Models\StockTransfers;
 use App\Repositories\TransferRepository;
+use App\Enums\TransferStatus;
 use Illuminate\Http\JsonResponse;
 use InvalidArgumentException;
 
@@ -27,7 +28,8 @@ class TransferStatusController extends Controller
     public function patch(UpdateTransferStatusRequest $request, StockTransfers $transfer): JsonResponse
     {
         $userId = request()->user()->id ?? null;
-        $newStatus = $request->getStatus();
+        $validated = $request->validated();
+        $newStatus = TransferStatus::tryFrom($validated['status']);
         $currentStatus = $transfer->status;
 
         // Validate transition is allowed
@@ -38,11 +40,9 @@ class TransferStatusController extends Controller
             ], 422);
         }
 
-        $data = [
-            'status' => $newStatus->value,
+        $data = array_merge($validated, [
             'confirmed_by' => $userId,
-            'batch' => $request->getBatch(),
-        ];
+        ]);
 
         // Update the status
         $transfer = $this->repository->update($transfer, $data);

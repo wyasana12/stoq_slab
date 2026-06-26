@@ -33,6 +33,7 @@ class TransferNotification extends Notification implements ShouldQueue
             'message' => $this->message,
             'status' => $this->transfer->status->value ?? null,
             'type' => $this->type,
+            'action_url' => $this->getActionUrl($notifiable),
         ];
     }
 
@@ -45,8 +46,20 @@ class TransferNotification extends Notification implements ShouldQueue
             'message' => $this->message,
             'status' => $this->transfer->status->value ?? null,
             'type' => $this->type,
+            'action_url' => $this->getActionUrl($notifiable),
             'created_at' => now()->toDateTimeString()
         ]);
+    }
+
+    protected function getActionUrl(object $notifiable): string
+    {
+        $frontendUrl = env('FRONTEND_URL', 'http://localhost:8080');
+
+        if ($notifiable->hasRole('super-admin')) {
+            return url("{$frontendUrl}/konfirmasitransfer");
+        }
+
+        return url("{$frontendUrl}/transferproduk");
     }
 
     public function toArray(object $notifiable): array

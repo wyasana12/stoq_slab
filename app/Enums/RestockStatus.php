@@ -8,8 +8,7 @@ enum RestockStatus: string
     case APPROVED = 'approved';
     case ON_DELIVERY = 'on_delivery';
     case COMPLETED = 'completed';
-    case FAILED = 'failed';
-    case CANCELLED = 'cancelled';
+    case REJECTED = 'rejected';
 
     public static function fromValue(string $value): self
     {
@@ -20,8 +19,7 @@ enum RestockStatus: string
             'approved' => self::APPROVED,
             'on_delivery', 'on-delivery', 'in-progress', 'in_progress' => self::ON_DELIVERY,
             'completed', 'restocked', 'success' => self::COMPLETED,
-            'failed' => self::FAILED,
-            'cancelled', 'canceled' => self::CANCELLED,
+            'rejected', 'ditolak' => self::REJECTED,
             default => throw new \ValueError("Invalid RestockStatus value: {$value}"),
         };
     }
@@ -35,8 +33,7 @@ enum RestockStatus: string
     {
         return in_array($this, [
             self::COMPLETED,
-            self::FAILED,
-            self::CANCELLED,
+            self::REJECTED,
         ], true);
     }
 
@@ -45,13 +42,12 @@ enum RestockStatus: string
         return match ($this) {
             self::REQUESTED => in_array($newStatus, [
                 self::APPROVED,
-                self::FAILED,
-                self::CANCELLED,
+                self::REJECTED,
             ], true),
             self::APPROVED => in_array($newStatus, [
                 self::ON_DELIVERY,
                 self::COMPLETED,
-                self::CANCELLED,
+                self::REJECTED,
             ], true),
             self::ON_DELIVERY => in_array($newStatus, [
                 self::COMPLETED,

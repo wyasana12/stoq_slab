@@ -349,14 +349,31 @@ class MonitoringRepository
     }
     public function getChartData($filters)
     {
-        // 1. Tentukan rentang waktu 7 hari terakhir
-        $startDate = isset($filters['start_date']) ? Carbon::parse($filters['start_date']) : Carbon::now()->subDays(7)->startOfDay();
-        $endDate = isset($filters['end_date']) ? Carbon::parse($filters['end_date']) : Carbon::now()->endOfDay();
+        $startDate = isset($filters['start_date']) ? \Carbon\Carbon::parse($filters['start_date']) : \Carbon\Carbon::now()->subDays(7)->startOfDay();
+        $endDate = isset($filters['end_date']) ? \Carbon\Carbon::parse($filters['end_date']) : \Carbon\Carbon::now()->endOfDay();
+        $userWarehouseId = $filters['warehouse_id'] ?? null;
 
-        // 2. Ambil data dari 4 tabel aktivitas. 
-        // Kita gunakan perwakilan kolom 'quantity' (ganti jika nama kolom aslimu berbeda, misal 'qty' atau 'total')
-        $restocks = Restock::with('item')
+        // 1. Stok Masuk: ProductReceiving
+        $receivings = \App\Models\ProductReceiving::query()
+            ->join('purchase_orders', function ($join) {
+                $join->on('product_receivings.receivable_id', '=', 'purchase_orders.id')
+                     ->where('product_receivings.receivable_type', '=', \App\Models\PurchaseOrder::class);
+            })
+            ->whereBetween('product_receivings.created_at', [$startDate, $endDate])
+            ->when($userWarehouseId, fn($q) => $q->where('purchase_orders.warehouse_id', $userWarehouseId))
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'activity_at' => $item->created_at->toIso8601String(),
+                    'type' => 'receiving',
+                    'quantity' => (int) $item->items->sum('quantity_accepted')
+                ];
+            });
+
+        // 2. Stok Masuk: Restock
+        $restocks = \App\Models\Restock::with('item')
             ->whereBetween('created_at', [$startDate, $endDate])
+            ->when($userWarehouseId, fn($q) => $q->where('warehouse_id', $userWarehouseId))
             ->get()
             ->map(function ($item) {
                 return [
@@ -366,42 +383,61 @@ class MonitoringRepository
                 ];
             });
 
-        $transfers = StockTransfers::whereBetween('created_at', [$startDate, $endDate])
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'activity_at' => $item->created_at->toIso8601String(),
-                    'type' => 'transfer',
-                    'quantity' => (int) ($item->quantity ?? 0)
-                ];
-            });
-
-        $distributions = StockDistributions::whereBetween('created_at', [$startDate, $endDate])
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'activity_at' => $item->created_at->toIso8601String(),
-                    'type' => 'distribution',
-                    'quantity' => (int) ($item->quantity ?? 0)
-                ];
-            });
-
-        $returns = StockReturns::whereBetween('created_at', [$startDate, $endDate])
+        // 3. Stok Masuk: StockReturns
+        $returns = \App\Models\StockReturns::whereBetween('created_at', [$startDate, $endDate])
+            ->when($userWarehouseId, fn($q) => $q->where('warehouse_id', $userWarehouseId))
             ->get()
             ->map(function ($item) {
                 return [
                     'activity_at' => $item->created_at->toIso8601String(),
                     'type' => 'return',
-                    'quantity' => (int) ($item->quantity ?? 0)
+                    'quantity' => (int) $item->approved_quantity
                 ];
             });
 
-        // 3. Gabungkan semua data aktivitas menjadi satu array tunggal
+        // 4. Stok Keluar: StockDistributions
+        $distributions = \App\Models\StockDistributions::whereBetween('created_at', [$startDate, $endDate])
+            ->when($userWarehouseId, fn($q) => $q->where('warehouse_id', $userWarehouseId))
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'activity_at' => $item->created_at->toIso8601String(),
+                    'type' => 'distribution',
+                    'quantity' => (int) $item->items->sum('approved_quantity')
+                ];
+            });
+
+        // 5. Transfer IN and OUT
+        $transfersIn = \App\Models\StockTransfers::whereBetween('created_at', [$startDate, $endDate])
+            ->when($userWarehouseId, fn($q) => $q->where('to_warehouse_id', $userWarehouseId))
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'activity_at' => $item->created_at->toIso8601String(),
+                    'type' => 'transfer_in',
+                    'quantity' => (int) $item->approved_quantity
+                ];
+            });
+
+        $transfersOut = \App\Models\StockTransfers::whereBetween('created_at', [$startDate, $endDate])
+            ->when($userWarehouseId, fn($q) => $q->where('from_warehouse_id', $userWarehouseId))
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'activity_at' => $item->created_at->toIso8601String(),
+                    'type' => 'transfer_out',
+                    'quantity' => (int) $item->approved_quantity
+                ];
+            });
+
+        // 6. Gabungkan semua data aktivitas menjadi satu array tunggal
         $activities = collect()
+            ->merge($receivings)
             ->merge($restocks)
-            ->merge($transfers)
-            ->merge($distributions)
             ->merge($returns)
+            ->merge($distributions)
+            ->merge($transfersIn)
+            ->merge($transfersOut)
             ->sortByDesc('activity_at')
             ->values()
             ->toArray();
@@ -660,7 +696,7 @@ class MonitoringRepository
                     'current_quantity' => (int) $batch->current_quantity,
                     'status' => $status,
                     'expired_date' => $batch->expired_date,
-                    'expired_in_days' => $batch->expired_date ? $batch->expired_date->diffInDays(now()) : null,
+                    'expired_in_days' => $batch->expired_date ? (int) now()->diffInDays(\Carbon\Carbon::parse($batch->expired_date), false) : null,
                     'warehouse_id' => $batch->warehouse_id,
                 ];
             }
@@ -752,7 +788,7 @@ class MonitoringRepository
             ->filter(fn($batch) => in_array($this->getStockStatus($batch), ['rendah', 'kritis']))
             ->map(function (Batch $batch) {
                 $status = $this->getStockStatus($batch);
-                $expiredInDays = $batch->expired_date ? $batch->expired_date->diffInDays(now()) : null;
+                $expiredInDays = $batch->expired_date ? (int) now()->diffInDays(\Carbon\Carbon::parse($batch->expired_date), false) : null;
 
                 return [
                     'id' => $batch->id,
@@ -785,7 +821,7 @@ class MonitoringRepository
     {
         // Check if expired or will expire soon
         if ($batch->expired_date) {
-            $daysUntilExpiry = $batch->expired_date->diffInDays(now());
+            $daysUntilExpiry = (int) now()->diffInDays(\Carbon\Carbon::parse($batch->expired_date), false);
             if ($daysUntilExpiry <= 0) {
                 return 'kritis';
             }
