@@ -12,7 +12,7 @@ class RestockNotificationService
 {
     public function sendRestockNotification(Restock $restock, RestockStatus $newStatus): void
     {
-        $restock->loadMissing(['warehouse.users', 'request']);
+        $restock->loadMissing(['warehouse.admins', 'request']);
 
         $notificationData = match ($newStatus) {
             RestockStatus::REQUESTED => [
@@ -28,25 +28,19 @@ class RestockNotificationService
                 'type' => 'success',
             ],
             RestockStatus::ON_DELIVERY => [
-                'recipients' => $restock->warehouse->users,
+                'recipients' => $restock->warehouse->admins,
                 'title' => 'Restock Dalam Pengiriman',
                 'message' => "Barang untuk Restock {$restock->restock_code} sedang dikirim ke gudang {$restock->warehouse->name}.",
                 'type' => 'info',
             ],
-            RestockStatus::FAILED => [
+            RestockStatus::REJECTED => [
                 'recipients' => collect([$restock->request]),
-                'title' => 'Pengajuan Restock Gagal',
-                'message' => "Restock {$restock->restock_code} ditandai gagal. Alasan: " . ($restock->notes ?? 'Tidak ada keterangan tambahan.'),
-                'type' => 'error',
-            ],
-            RestockStatus::CANCELLED => [
-                'recipients' => collect([$restock->request]),
-                'title' => 'Restock Dibatalkan',
-                'message' => "Restock {$restock->restock_code} telah dibatalkan.",
+                'title' => 'Restock Ditolak',
+                'message' => "Restock {$restock->restock_code} telah ditolak. Alasan: " . ($restock->notes ?? 'Tidak ada keterangan tambahan.'),
                 'type' => 'error',
             ],
             RestockStatus::COMPLETED => [
-                'recipients' => $restock->warehouse->users->merge([$restock->request])->unique('id'),
+                'recipients' => $restock->warehouse->admins->merge([$restock->request])->unique('id'),
                 'title' => 'Restock Selesai',
                 'message' => "Seluruh barang Restock {$restock->restock_code} terkonfirmasi telah masuk ke gudang.",
                 'type' => 'success',

@@ -101,8 +101,7 @@ class RestockStatusController extends Controller
             'approved' => 'Approved',
             'in-progress' => 'In Progress',
             'restocked' => 'Restocked',
-            'failed' => 'Failed',
-            'cancelled' => 'Cancelled',
+            'rejected' => 'Ditolak/Reject',
             default => ucfirst(str_replace('-', ' ', $status->value)),
         };
     }
