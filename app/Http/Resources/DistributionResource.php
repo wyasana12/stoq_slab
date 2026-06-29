@@ -9,17 +9,13 @@ class DistributionResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $shippedProofUrl = $this->when(
-            $this->shipped_proof_path,
-            asset('storage/' . $this->shipped_proof_path)
-        );
+        $shippedProofs = is_string($this->shipped_proofs) ? json_decode($this->shipped_proofs, true) : ($this->shipped_proofs ?? []);
+        $completedProofs = is_string($this->completed_proofs) ? json_decode($this->completed_proofs, true) : ($this->completed_proofs ?? []);
 
-        $completedProofUrl = $this->when(
-            $this->completed_proof_path,
-            asset('storage/' . $this->completed_proof_path)
-        );
+        $shippedProofUrls = array_map(fn($path) => asset('storage/' . $path), $shippedProofs);
+        $completedProofUrls = array_map(fn($path) => asset('storage/' . $path), $completedProofs);
 
-        $photoUrl = $completedProofUrl ?? $shippedProofUrl;
+        $photoUrl = $completedProofUrls[0] ?? $shippedProofUrls[0] ?? null;
 
         return [
             'id'                => $this->id,
@@ -41,21 +37,20 @@ class DistributionResource extends JsonResource
             'is_dss_recommendation' => $this->is_dss_recommendation,
             'items'             => StockDistributionItemResource::collection($this->whenLoaded('items')),
 
-            'shipped_proof_url'   => $shippedProofUrl,
-            'completed_proof_url' => $completedProofUrl,
+            'shipped_proof_url'   => $shippedProofUrls[0] ?? null,
+            'completed_proof_url' => $completedProofUrls[0] ?? null,
+            'shipped_proof_urls'   => $shippedProofUrls,
+            'completed_proof_urls' => $completedProofUrls,
 
             // Alias field yang dicari frontend
             'photo'    => $photoUrl,
             'photo_url' => $photoUrl,
             'image'    => $photoUrl,
-            'photos'   => array_values(array_filter([
-                $shippedProofUrl ? ['url' => $shippedProofUrl, 'type' => 'shipped'] : null,
-                $completedProofUrl ? ['url' => $completedProofUrl, 'type' => 'completed'] : null,
-            ])),
-            'images'   => array_values(array_filter([
-                $shippedProofUrl,
-                $completedProofUrl,
-            ])),
+            'photos'   => array_merge(
+                array_map(fn($url) => ['url' => $url, 'type' => 'shipped'], $shippedProofUrls),
+                array_map(fn($url) => ['url' => $url, 'type' => 'completed'], $completedProofUrls)
+            ),
+            'images'   => array_merge($shippedProofUrls, $completedProofUrls),
         ];
     }
 }

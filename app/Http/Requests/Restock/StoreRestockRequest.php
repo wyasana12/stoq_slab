@@ -27,6 +27,7 @@ class StoreRestockRequest extends FormRequest
 
             'status'       => ['nullable', new Enum(RestockStatus::class)],
             'notes'        => ['nullable', 'string'],
+            'reason'       => ['nullable', 'string'],
             'is_dss_recommendation' => ['nullable', 'boolean'],
         ];
     }

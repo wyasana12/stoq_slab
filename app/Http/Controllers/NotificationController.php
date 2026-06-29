@@ -22,6 +22,8 @@ class NotificationController extends Controller
                 'restock_code' => $notification->data['restock_code'] ?? null,
                 'transfer_id' => $notification->data['transfer_id'] ?? null,
                 'transfer_code' => $notification->data['transfer_code'] ?? null,
+                'distribution_id' => $notification->data['distribution_id'] ?? null,
+                'distribution_code' => $notification->data['distribution_code'] ?? null,
                 'status' => $notification->data['status'] ?? null,
                 'type' => $notification->data['type'] ?? 'info',
                 'action_url' => $notification->data['action_url'] ?? null,

@@ -84,7 +84,7 @@ class ReturnService
         }
 
         return DB::transaction(function () use ($data, $userId) {
-            return StockReturns::create([
+            $stockReturn = StockReturns::create([
                 'return_code' => 'RT-' . now()->format('Ymd') . '-' . Str::upper(Str::random(4)),
                 'receiving_id' => $data['receiving_id'],
                 'product_id' => $data['product_id'],
@@ -96,6 +96,22 @@ class ReturnService
                 'notes' => $data['notes'] ?? null,
                 'status' => ReturnStatus::REQUESTED->value,
             ]);
+
+            $superAdmins = \App\Models\User::whereHas('roles', function($q) {
+                $q->where('name', 'super-admin');
+            })->get();
+            if ($superAdmins->isNotEmpty()) {
+                \Illuminate\Support\Facades\Notification::send(
+                    $superAdmins,
+                    new \App\Notifications\ReturnNotification(
+                        $stockReturn,
+                        'Pengajuan Retur Baru',
+                        "Terdapat pengajuan retur baru yang membutuhkan persetujuan."
+                    )
+                );
+            }
+
+            return $stockReturn;
         });
     }
 

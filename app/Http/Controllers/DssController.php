@@ -127,7 +127,55 @@ class DssController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $result
+            'data'    => $result,
+        ]);
+    }
+
+    /**
+     * POST /api/dss/transfer-candidates
+     * Get transfer candidates (SLOW_MOVING) for specific products from other warehouses
+     */
+    public function getTransferCandidates(Request $request): JsonResponse
+    {
+        $request->validate([
+            'exclude_warehouse_id' => 'required|string',
+            'product_ids' => 'required|array',
+            'product_ids.*' => 'string'
+        ]);
+
+        $excludeWarehouseId = $request->input('exclude_warehouse_id');
+        $productIds = $request->input('product_ids');
+        $days = $this->resolveHistoryDays($request);
+        
+        $data = $this->cacheService->getAnalysis($days);
+
+        $candidates = array_values(array_filter($data, function ($item) use ($excludeWarehouseId, $productIds) {
+            return $item['category'] === 'SLOW_MOVING' 
+                && $item['warehouse_id'] !== $excludeWarehouseId 
+                && in_array($item['product_id'], $productIds);
+        }));
+
+        $candidates = array_slice($candidates, 0, 5);
+
+        // Hybrid Optimization: Override snapshot stock with Real-Time Stock
+        foreach ($candidates as &$candidate) {
+            $realTimeStock = \App\Models\Batch::where('warehouse_id', $candidate['warehouse_id'])
+                ->where('product_id', $candidate['product_id'])
+                ->sum('current_quantity');
+                
+            $candidate['current_quantity'] = (int) $realTimeStock;
+            $candidate['quantity'] = (int) $realTimeStock; // ensure fallback UI key is also updated
+        }
+        unset($candidate); // break reference
+
+        // Filter out candidates that have completely run out of stock in real-time
+        $candidates = array_values(array_filter($candidates, function($c) {
+            return $c['current_quantity'] > 0;
+        }));
+
+        return response()->json([
+            'success' => true,
+            'data' => $candidates
         ]);
     }
 }
