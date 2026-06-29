@@ -15,7 +15,8 @@ use InvalidArgumentException;
 class DistributionController extends Controller
 {
     public function __construct(
-        protected DistributionRepository $repository
+        protected DistributionRepository $repository,
+        protected \App\Services\DistributionNotificationService $notificationService
     ) {}
 
     public function index(): JsonResponse
@@ -33,6 +34,7 @@ class DistributionController extends Controller
     {
         try {
             $distribution = $this->repository->createDistribution($request->validated());
+            $this->notificationService->sendDistributionNotification($distribution, $distribution->status);
         } catch (InvalidArgumentException $exception) {
             return response()->json([
                 'success' => false,
@@ -91,6 +93,8 @@ class DistributionController extends Controller
                 $request->validated('notes'),
                 $request->validated('items')
             );
+            
+            $this->notificationService->sendDistributionNotification($distribution, $status);
         } catch (InvalidArgumentException $exception) {
             return response()->json([
                 'success' => false,

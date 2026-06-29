@@ -10,7 +10,12 @@ use App\Models\StockDistributions;
 use App\Models\StockDistributionItem;
 use App\Models\StockMutations;
 use App\Models\User;
+use App\Models\Role;
+use Illuminate\Support\Facades\Notification;
 use App\Notifications\DistributionCreatedNotification;
+use App\Notifications\ReturnNotification;
+use App\Notifications\DisposalNotification;
+use App\Notifications\DistributionReplacementNotification;
 use App\Enums\MutationStatus;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -40,12 +45,12 @@ class DistributionRepository
         return DB::transaction(function () use ($data) {
             $requestedBy = $data['requested_by'] ?? Auth::id();
 
-            $status = DistributionStatus::DRAFT->value;
+            $status = DistributionStatus::DRAFT;
 
             if (! empty($data['submit_for_approval'])) {
-                $status = DistributionStatus::WAITING_APPROVAL->value;
+                $status = DistributionStatus::WAITING_APPROVAL;
             } elseif (($data['status'] ?? null) === DistributionStatus::WAITING_APPROVAL->value) {
-                $status = DistributionStatus::WAITING_APPROVAL->value;
+                $status = DistributionStatus::WAITING_APPROVAL;
             }
 
             // If a store_id is provided, pull outlet data from the Store master table
@@ -91,24 +96,24 @@ class DistributionRepository
     {
         return DB::transaction(function () use ($distribution, $data) {
             if (! in_array($distribution->status, [
-                DistributionStatus::DRAFT->value,
-                DistributionStatus::WAITING_APPROVAL->value,
+                DistributionStatus::DRAFT,
+                DistributionStatus::WAITING_APPROVAL,
             ], true)) {
                 throw new InvalidArgumentException('Distribusi hanya dapat diubah saat draft atau waiting approval.');
             }
 
-            $currentStatus = DistributionStatus::tryFrom($distribution->status);
+            $currentStatus = $distribution->status;
 
-            if (isset($data['status']) && $data['status'] !== $distribution->status) {
+            if (isset($data['status']) && $data['status'] !== $distribution->status->value) {
                 $newStatus = DistributionStatus::from($data['status']);
 
                 if (! $currentStatus->canTransition($newStatus)) {
                     throw new InvalidArgumentException(
-                        "Transisi status {$distribution->status} ke {$data['status']} tidak diizinkan."
+                        "Transisi status {$distribution->status->value} ke {$data['status']} tidak diizinkan."
                     );
                 }
 
-                $distribution->status = $newStatus->value;
+                $distribution->status = $newStatus;
             }
 
 
@@ -145,7 +150,7 @@ class DistributionRepository
         ?array $items = null
     ): StockDistributions {
         return DB::transaction(function () use ($distribution, $newStatus, $confirmedBy, $notes, $items) {
-            $currentStatus = DistributionStatus::tryFrom($distribution->status);
+            $currentStatus = $distribution->status;
 
             if (! $currentStatus) {
                 throw new InvalidArgumentException('Status distribusi saat ini tidak valid.');
@@ -268,7 +273,7 @@ class DistributionRepository
                             }
 
                             if ($isReturn) {
-                                \App\Models\StockReturns::create([
+                                $stockReturn = \App\Models\StockReturns::create([
                                     'return_code' => 'RET-' . now()->format('Ymd') . '-' . rand(1000, 9999),
                                     'receiving_id' => $batch->receiving_id,
                                     'product_id' => $batch->product_id,
@@ -279,8 +284,22 @@ class DistributionRepository
                                     'requested_by' => $confirmedBy ?? \Illuminate\Support\Facades\Auth::id(),
                                     'status' => 'requested',
                                 ]);
+
+                                $superAdmins = User::whereHas('roles', function($q) {
+                                    $q->where('name', 'super-admin');
+                                })->get();
+                                if ($superAdmins->isNotEmpty()) {
+                                    Notification::send(
+                                        $superAdmins,
+                                        new ReturnNotification(
+                                            $stockReturn,
+                                            'Persetujuan Retur Baru',
+                                            "Terdapat retur baru secara otomatis akibat barang rusak dalam perjalanan."
+                                        )
+                                    );
+                                }
                             } else {
-                                \App\Models\StockDisposal::create([
+                                $stockDisposal = \App\Models\StockDisposal::create([
                                     'disposal_code' => 'DSP-' . now()->format('Ymd') . '-' . rand(1000, 9999),
                                     'batch_id' => $batch->id,
                                     'product_id' => $batch->product_id,
@@ -291,15 +310,45 @@ class DistributionRepository
                                     'requested_by' => $confirmedBy ?? \Illuminate\Support\Facades\Auth::id(),
                                     'status' => 'requested',
                                 ]);
+
+                                $superAdmins = User::whereHas('roles', function($q) {
+                                    $q->where('name', 'super-admin');
+                                })->get();
+                                if ($superAdmins->isNotEmpty()) {
+                                    Notification::send(
+                                        $superAdmins,
+                                        new DisposalNotification(
+                                            $stockDisposal,
+                                            'Persetujuan Pemusnahan Baru',
+                                            "Terdapat pemusnahan baru secara otomatis akibat barang rusak dalam perjalanan."
+                                        )
+                                    );
+                                }
                             }
                         }
+                    }
+
+                    $totalDamaged = collect($items)->sum(function($item) {
+                        return (int) ($item['damaged_quantity'] ?? 0);
+                    });
+
+                    if ($totalDamaged > 0 && $distribution->request) {
+                        Notification::send(
+                            [$distribution->request],
+                            new DistributionReplacementNotification(
+                                $distribution,
+                                $totalDamaged,
+                                'Barang Rusak dalam Pengiriman',
+                                "Beberapa barang rusak dalam proses Distribusi {$distribution->distribution_code}."
+                            )
+                        );
                     }
                 }
                 
                 $distribution->delivered_at = now();
             }
 
-            $distribution->status = $newStatus->value;
+            $distribution->status = $newStatus;
             $distribution->save();
 
             if ($newStatus === DistributionStatus::SHIPPED) {
@@ -314,10 +363,10 @@ class DistributionRepository
     {
         return DB::transaction(function () use ($distribution) {
             if (! in_array($distribution->status, [
-                DistributionStatus::DRAFT->value,
-                DistributionStatus::WAITING_APPROVAL->value,
-                DistributionStatus::REJECTED->value,
-                DistributionStatus::CANCELED->value,
+                DistributionStatus::DRAFT,
+                DistributionStatus::WAITING_APPROVAL,
+                DistributionStatus::REJECTED,
+                DistributionStatus::CANCELED,
             ], true)) {
                 return false;
             }

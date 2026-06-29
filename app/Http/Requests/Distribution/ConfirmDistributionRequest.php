@@ -30,8 +30,8 @@ class ConfirmDistributionRequest extends FormRequest
             'items.*.received_quantity' => 'required_if:status,' . DistributionStatus::COMPLETED->value . '|integer|min:0',
             'items.*.damaged_quantity' => 'required_if:status,' . DistributionStatus::COMPLETED->value . '|integer|min:0',
 
-            'completed_proof' => 'required_if:status,' . DistributionStatus::COMPLETED->value
-                . '|file|mimes:jpg,jpeg,png,pdf|max:2048',
+            'completed_proof' => 'required_if:status,' . DistributionStatus::COMPLETED->value . '|array',
+            'completed_proof.*' => 'file|mimes:jpg,jpeg,png,pdf|max:2048',
         ];
     }
 
@@ -63,9 +63,10 @@ class ConfirmDistributionRequest extends FormRequest
             'items.*.approved_quantity.required_if' => 'Jumlah persetujuan harus diisi.',
             'items.*.approved_quantity.min'         => 'Jumlah persetujuan minimal 0.',
             'completed_proof.required_if'           => 'Foto bukti completed wajib diupload.',
-            'completed_proof.file'                  => 'Bukti harus berupa file.',
-            'completed_proof.mimes'                 => 'Bukti harus berformat jpg, jpeg, png, atau pdf.',
-            'completed_proof.max'                   => 'Ukuran file maksimal 2MB.',
+            'completed_proof.array'                 => 'Format upload bukti tidak valid.',
+            'completed_proof.*.file'                => 'Bukti harus berupa file.',
+            'completed_proof.*.mimes'               => 'Bukti harus berformat jpg, jpeg, png, atau pdf.',
+            'completed_proof.*.max'                 => 'Ukuran file maksimal 2MB.',
         ];
     }
 }

@@ -40,6 +40,7 @@ class StockDistributions extends Model
 
     protected $casts = [
         'is_dss_recommendation' => 'boolean',
+        'status' => \App\Enums\DistributionStatus::class,
     ];
 
     public $incrementing = false;

@@ -43,6 +43,7 @@ class RestockRepository
                 ? RestockStatus::fromValue($data['status'])->value
                 : RestockStatus::REQUESTED->value,
             'notes'        => $data['notes'] ?? null,
+            'reason'       => $data['reason'] ?? null,
         ]);
 
         foreach ($data['products'] as $item) {

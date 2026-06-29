@@ -28,7 +28,7 @@ class DisposalService
         }
 
         return DB::transaction(function () use ($data, $userId) {
-            return StockDisposal::create([
+            $stockDisposal = StockDisposal::create([
                 'disposal_code' => 'DS-' . now()->format('Ymd') . '-' . Str::upper(Str::random(4)),
                 'batch_id' => $data['batch_id'],
                 'product_id' => $data['product_id'],
@@ -40,6 +40,22 @@ class DisposalService
                 'notes' => $data['notes'] ?? null,
                 'status' => 'requested',
             ]);
+
+            $superAdmins = \App\Models\User::whereHas('roles', function($q) {
+                $q->where('name', 'super-admin');
+            })->get();
+            if ($superAdmins->isNotEmpty()) {
+                \Illuminate\Support\Facades\Notification::send(
+                    $superAdmins,
+                    new \App\Notifications\DisposalNotification(
+                        $stockDisposal,
+                        'Pengajuan Pemusnahan Baru',
+                        "Terdapat pengajuan pemusnahan baru yang membutuhkan persetujuan."
+                    )
+                );
+            }
+
+            return $stockDisposal;
         });
     }
 

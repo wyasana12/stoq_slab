@@ -15,7 +15,8 @@ use InvalidArgumentException;
 class DistributionStatusController extends Controller
 {
     public function __construct(
-        protected DistributionRepository $repository
+        protected DistributionRepository $repository,
+        protected \App\Services\DistributionNotificationService $notificationService
     ) {}
 
     public function confirm(ConfirmDistributionRequest $request, StockDistributions $distribution): JsonResponse
@@ -24,11 +25,11 @@ class DistributionStatusController extends Controller
             $status = DistributionStatus::from($request->validated('status'));
 
             if ($status->name === 'SHIPPED' && $request->hasFile('shipped_proof')) {
-                $this->saveProof($distribution, $request->file('shipped_proof'), 'shipped');
+                $this->saveProofs($distribution, $request->file('shipped_proof'), 'shipped');
             }
 
             if ($status->name === 'COMPLETED' && $request->hasFile('completed_proof')) {
-                $this->saveProof($distribution, $request->file('completed_proof'), 'completed');
+                $this->saveProofs($distribution, $request->file('completed_proof'), 'completed');
             }
 
             $distribution = $this->repository->updateStatus(
@@ -38,6 +39,8 @@ class DistributionStatusController extends Controller
                 $request->validated('notes'),
                 $request->validated('items')
             );
+            
+            $this->notificationService->sendDistributionNotification($distribution, $status);
         } catch (InvalidArgumentException $exception) {
             return response()->json([
                 'success' => false,
@@ -52,9 +55,12 @@ class DistributionStatusController extends Controller
         ]);
     }
 
-    public function downloadShippedProof(StockDistributions $distribution)
+    public function downloadShippedProof(StockDistributions $distribution, Request $request)
     {
-        if (! $distribution->shipped_proof_path) {
+        $proofs = is_string($distribution->shipped_proofs) ? json_decode($distribution->shipped_proofs, true) : ($distribution->shipped_proofs ?? []);
+        $index = $request->query('index', 0);
+
+        if (empty($proofs) || !isset($proofs[$index])) {
             return response()->json([
                 'success' => false,
                 'message' => 'Bukti pengiriman shipped tidak ditemukan.',
@@ -62,14 +68,17 @@ class DistributionStatusController extends Controller
         }
 
         return response()->download(
-            Storage::disk('public')->path($distribution->shipped_proof_path),
-            $distribution->shipped_proof_name
+            Storage::disk('public')->path($proofs[$index]),
+            basename($proofs[$index])
         );
     }
 
-    public function downloadCompletedProof(StockDistributions $distribution)
+    public function downloadCompletedProof(StockDistributions $distribution, Request $request)
     {
-        if (! $distribution->completed_proof_path) {
+        $proofs = is_string($distribution->completed_proofs) ? json_decode($distribution->completed_proofs, true) : ($distribution->completed_proofs ?? []);
+        $index = $request->query('index', 0);
+
+        if (empty($proofs) || !isset($proofs[$index])) {
             return response()->json([
                 'success' => false,
                 'message' => 'Bukti pengiriman completed tidak ditemukan.',
@@ -77,27 +86,35 @@ class DistributionStatusController extends Controller
         }
 
         return response()->download(
-            Storage::disk('public')->path($distribution->completed_proof_path),
-            $distribution->completed_proof_name
+            Storage::disk('public')->path($proofs[$index]),
+            basename($proofs[$index])
         );
     }
 
-    private function saveProof(StockDistributions $distribution, $file, string $type): void
+    private function saveProofs(StockDistributions $distribution, $files, string $type): void
     {
-        $path = $file->store('distribution_proofs', 'public');
+        if (!is_array($files)) {
+            $files = [$files];
+        }
+
+        $existingProofs = $distribution->{"{$type}_proofs"} ?? [];
+        if (is_string($existingProofs)) {
+            $existingProofs = json_decode($existingProofs, true) ?? [];
+        }
+
+        foreach ($files as $file) {
+            $path = $file->store('distribution_proofs', 'public');
+            $existingProofs[] = $path;
+        }
 
         $distribution->update([
-            "{$type}_proof_path" => $path,
-            "{$type}_proof_name" => $file->getClientOriginalName(),
-            "{$type}_proof_mime" => $file->getClientMimeType(),
-            "{$type}_proof_size" => $file->getSize(),
-            "{$type}_proof_uploaded_at" => now(),
+            "{$type}_proofs" => $existingProofs,
         ]);
     }
 
     public function allowedTransitions(StockDistributions $distribution): JsonResponse
     {
-        $currentStatus = DistributionStatus::from($distribution->status);
+        $currentStatus = $distribution->status instanceof \BackedEnum ? $distribution->status : DistributionStatus::from($distribution->status);
         $allowedStatuses = [];
 
         foreach (DistributionStatus::cases() as $status) {
