@@ -16,13 +16,13 @@ class TransferNotificationService
 
         $notificationData = match ($newStatus) {
             TransferStatus::REQUESTED => [
-                'recipients' => collect([$transfer->request]),
-                'title' => 'Pengajuan Transfer (Requested)',
-                'message' => "Transfer {$transfer->transfer_code} telah dibuat sebagai Requested.",
+                'recipients' => $transfer->fromWarehouse->admins->merge($transfer->toWarehouse->admins)->merge([$transfer->request])->unique('id'),
+                'title' => 'Pengajuan Transfer Baru',
+                'message' => "Pengajuan Transfer {$transfer->transfer_code} baru telah dibuat dan menunggu konfirmasi.",
                 'type' => 'info',
             ],
             TransferStatus::APPROVED => [
-                'recipients' => collect([$transfer->request]),
+                'recipients' => $transfer->fromWarehouse->admins->merge($transfer->toWarehouse->admins)->merge([$transfer->request])->unique('id'),
                 'title' => 'Pengajuan Transfer Disetujui',
                 'message' => "Transfer {$transfer->transfer_code} telah disetujui. Siap untuk dikirim.",
                 'type' => 'success',

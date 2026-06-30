@@ -212,4 +212,70 @@ class DssRecommendationService
             'allocation'            => $allocation,
         ];
     }
+
+    /**
+     * Calculate equal allocation for multi-product push distribution.
+     * Groups allocations by store_id.
+     */
+    public function calculateMultiPushDistributionAllocation(
+        array $products,
+        string $warehouseId,
+        array $storeIds,
+        \App\Repositories\StockMutationRepository $mutationRepo
+    ): array {
+        $storeAllocations = [];
+        foreach ($storeIds as $storeId) {
+            $storeAllocations[$storeId] = [];
+        }
+
+        foreach ($products as $prod) {
+            $productId = $prod['product_id'];
+            $isUrgent = $prod['is_urgent'] ?? false;
+            $totalStock = $prod['total_available_stock'] ?? 0;
+            
+            $pushStock = $totalStock;
+            $safetyStock = 0;
+
+            if (!$isUrgent) {
+                $safetyStock = $mutationRepo->getProductWarehouseOutboundMovement($productId, $warehouseId, 30);
+                $pushStock = max(0, $totalStock - $safetyStock);
+            }
+
+            $storeCount = count($storeIds);
+            
+            if ($storeCount > 0 && $pushStock > 0) {
+                $baseQty = (int) floor($pushStock / $storeCount);
+                $remainder = $pushStock % $storeCount;
+
+                foreach ($storeIds as $storeId) {
+                    $qty = $baseQty;
+                    if ($remainder > 0) {
+                        $qty++;
+                        $remainder--;
+                    }
+                    $storeAllocations[$storeId][] = [
+                        'product_id' => $productId,
+                        'product_name' => $prod['product_name'] ?? '',
+                        'suggested_qty' => $qty,
+                        'total_available_stock' => $totalStock,
+                        'safety_stock' => $safetyStock,
+                        'is_urgent' => $isUrgent
+                    ];
+                }
+            } else {
+                foreach ($storeIds as $storeId) {
+                    $storeAllocations[$storeId][] = [
+                        'product_id' => $productId,
+                        'product_name' => $prod['product_name'] ?? '',
+                        'suggested_qty' => 0,
+                        'total_available_stock' => $totalStock,
+                        'safety_stock' => $safetyStock,
+                        'is_urgent' => $isUrgent
+                    ];
+                }
+            }
+        }
+
+        return $storeAllocations;
+    }
 }

@@ -108,26 +108,42 @@ class DssController extends Controller
     public function pushDistributionPreview(Request $request, \App\Services\DssRecommendationService $dssService, \App\Repositories\StockMutationRepository $mutationRepo): JsonResponse
     {
         $validated = $request->validate([
-            'product_id' => 'required|string',
+            'products' => 'required|array',
+            'products.*.product_id' => 'required|string',
+            'products.*.product_name' => 'nullable|string',
+            'products.*.total_available_stock' => 'required|numeric|min:0',
+            'products.*.is_urgent' => 'required|boolean',
             'warehouse_id' => 'required|string',
             'store_ids' => 'required|array',
             'store_ids.*' => 'string',
-            'total_available_stock' => 'required|integer|min:0',
-            'is_urgent' => 'required|boolean',
         ]);
 
-        $result = $dssService->calculatePushDistributionAllocation(
-            $validated['product_id'],
+        $result = $dssService->calculateMultiPushDistributionAllocation(
+            $validated['products'],
             $validated['warehouse_id'],
             $validated['store_ids'],
-            $validated['total_available_stock'],
-            $validated['is_urgent'],
             $mutationRepo
         );
 
+        // We want to return an array formatted nicely for frontend where each store has its info and products array
+        // In calculating MultiPush it returns an array of storeAllocations keyed by storeId. 
+        // We will transform it to include the store name here.
+        
+        $stores = \App\Models\Store::whereIn('id', $validated['store_ids'])->get()->keyBy('id');
+        
+        $formattedResult = [];
+        foreach ($result as $storeId => $productsAllocation) {
+            $storeName = $stores->get($storeId)?->name ?? 'Unknown Store';
+            $formattedResult[] = [
+                'store_id' => $storeId,
+                'store_name' => $storeName,
+                'products' => $productsAllocation
+            ];
+        }
+
         return response()->json([
             'success' => true,
-            'data'    => $result,
+            'data'    => $formattedResult,
         ]);
     }
 

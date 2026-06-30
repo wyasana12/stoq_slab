@@ -32,6 +32,9 @@ class StockAnalysisService
         $outboundMovements = $this->repository->getOutboundMovementByProductWarehouse($historyDays);
 
         $batches = Batch::with(['product', 'warehouse'])
+            ->whereHas('warehouse', function ($q) {
+                $q->where('status', true);
+            })
             ->where('current_quantity', '>', 0)
             ->get()
             ->keyBy('id');

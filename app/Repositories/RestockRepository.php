@@ -44,6 +44,7 @@ class RestockRepository
                 : RestockStatus::REQUESTED->value,
             'notes'        => $data['notes'] ?? null,
             'reason'       => $data['reason'] ?? null,
+            'is_dss_recommendation' => $data['is_dss_recommendation'] ?? false,
         ]);
 
         foreach ($data['products'] as $item) {

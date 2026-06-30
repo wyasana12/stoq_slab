@@ -54,12 +54,15 @@ class TransferNotification extends Notification implements ShouldQueue
     protected function getActionUrl(object $notifiable): string
     {
         $frontendUrl = env('FRONTEND_URL', 'http://localhost:8080');
+        $frontendUrl = rtrim($frontendUrl, '/');
+
+        $query = "?action=open&transfer_id={$this->transfer->id}";
 
         if ($notifiable->hasRole('super-admin')) {
-            return url("{$frontendUrl}/konfirmasitransfer");
+            return "{$frontendUrl}/konfirmasitransfer{$query}";
         }
 
-        return url("{$frontendUrl}/transferproduk");
+        return "{$frontendUrl}/transferproduk{$query}";
     }
 
     public function toArray(object $notifiable): array

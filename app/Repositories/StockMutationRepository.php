@@ -79,6 +79,9 @@ class StockMutationRepository
     public function getBatchesByProductExcludingWarehouse(string $productId, string $excludedWarehouseId): Collection
     {
         return \App\Models\Batch::with(['warehouse'])
+            ->whereHas('warehouse', function ($q) {
+                $q->where('status', true);
+            })
             ->where('product_id', $productId)
             ->where('warehouse_id', '!=', $excludedWarehouseId)
             ->where('current_quantity', '>', 0)
