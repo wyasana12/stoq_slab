@@ -12,7 +12,10 @@ class RestockResource extends JsonResource
         return [
             'id'           => $this->id,
             'restock_code' => $this->restock_code,
-            'warehouse'    => $this->warehouse->name ?? null,
+            'warehouse'    => [
+                'id' => $this->warehouse_id,
+                'name' => $this->warehouse->name ?? null,
+            ],
             'supplier_id'  => $this->supplier_id,
             'supplier'     => $this->supplier->name ?? null,
             'requested_by' => $this->request->name ?? null,

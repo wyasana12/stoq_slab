@@ -21,7 +21,19 @@ class RestockNotification extends Notification implements ShouldQueue
 
     public function via(object $notifiable): array
     {
-        return ['database', 'broadcast'];
+        return ['mail', 'database', 'broadcast'];
+    }
+
+    public function toMail(object $notifiable): \Illuminate\Notifications\Messages\MailMessage
+    {
+        return (new \Illuminate\Notifications\Messages\MailMessage)
+            ->subject($this->title)
+            ->greeting('Halo, ')
+            ->line($this->message)
+            ->line("Kode Restock: **{$this->restock->restock_code}**")
+            ->line("Status saat ini: **" . strtoupper($this->restock->status->value ?? 'N/A') . "**")
+            ->action('Lihat Detail', $this->getActionUrl($notifiable))
+            ->line('Notifikasi ini dikirim secara otomatis oleh sistem. Mohon tidak membalas email ini.');
     }
 
     public function toDatabase(object $notifiable): array
