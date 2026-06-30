@@ -205,5 +205,10 @@ Route::prefix('/notifications')->middleware('auth:sanctum')->name('notifications
 {
     Route::get('/unread', [NotificationController::class, 'getUnread'])->name('unread');  
     Route::post('/{id}/read', [NotificationController::class, 'markAsRead'])->name('markasread');
-    Route::post('/all-read', [NotificationController::class, 'markAllAsRead'])->name('markallread');  
+});
+
+use App\Http\Controllers\Api\V1\AdminDashboardController;
+Route::prefix('/admin/dashboard')->middleware('auth:sanctum')->name('admin.dashboard.')->group(function () {
+    Route::get('/summary', [AdminDashboardController::class, 'summary'])->name('summary');
+    Route::get('/analytics', [AdminDashboardController::class, 'analytics'])->name('analytics');
 });

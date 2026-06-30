@@ -33,7 +33,7 @@ class DisposalNotification extends Notification implements ShouldQueue
             ->line($this->message)
             ->line("Kode Pemusnahan: **{$this->stockDisposal->disposal_code}**")
             ->line("Status saat ini: **" . strtoupper($this->stockDisposal->status) . "**")
-            ->action('Lihat Pengajuan', $this->getActionUrl())
+            ->action('Lihat Pengajuan', $this->getActionUrl($notifiable))
             ->line('Notifikasi ini dikirim secara otomatis oleh sistem. Mohon tidak membalas email ini.');
     }
 
@@ -46,7 +46,7 @@ class DisposalNotification extends Notification implements ShouldQueue
             'message' => $this->message,
             'status' => $this->stockDisposal->status,
             'type' => $this->type,
-            'action_url' => $this->getActionUrl(),
+            'action_url' => $this->getActionUrl($notifiable),
         ];
     }
 
@@ -59,14 +59,19 @@ class DisposalNotification extends Notification implements ShouldQueue
             'message' => $this->message,
             'status' => $this->stockDisposal->status,
             'type' => $this->type,
-            'action_url' => $this->getActionUrl(),
+            'action_url' => $this->getActionUrl($notifiable),
             'created_at' => now()->toDateTimeString()
         ]);
     }
 
-    protected function getActionUrl(): string
+    protected function getActionUrl(?object $notifiable = null): string
     {
         $frontendUrl = env('FRONTEND_URL', 'http://localhost:8080');
-        return url("{$frontendUrl}/konfirmasipemusnahan");
+
+        if ($notifiable && method_exists($notifiable, 'hasRole') && $notifiable->hasRole('super-admin')) {
+            return url("{$frontendUrl}/konfirmasipemusnahan");
+        }
+
+        return url("{$frontendUrl}/pemusnahan");
     }
 }

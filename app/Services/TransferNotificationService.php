@@ -16,37 +16,37 @@ class TransferNotificationService
 
         $notificationData = match ($newStatus) {
             TransferStatus::REQUESTED => [
-                'recipients' => $transfer->fromWarehouse->admins->merge($transfer->toWarehouse->admins)->merge([$transfer->request])->unique('id'),
+                'recipients' => collect()->merge($transfer->fromWarehouse?->admins ?? [])->merge($transfer->toWarehouse?->admins ?? [])->push($transfer->request)->filter()->unique('id'),
                 'title' => 'Pengajuan Transfer Baru',
                 'message' => "Pengajuan Transfer {$transfer->transfer_code} baru telah dibuat dan menunggu konfirmasi.",
                 'type' => 'info',
             ],
             TransferStatus::APPROVED => [
-                'recipients' => $transfer->fromWarehouse->admins->merge($transfer->toWarehouse->admins)->merge([$transfer->request])->unique('id'),
+                'recipients' => collect()->merge($transfer->fromWarehouse?->admins ?? [])->merge($transfer->toWarehouse?->admins ?? [])->push($transfer->request)->filter()->unique('id'),
                 'title' => 'Pengajuan Transfer Disetujui',
                 'message' => "Transfer {$transfer->transfer_code} telah disetujui. Siap untuk dikirim.",
                 'type' => 'success',
             ],
             TransferStatus::ON_DELIVERY => [
-                'recipients' => $transfer->toWarehouse->admins->merge([$transfer->request])->unique('id'),
+                'recipients' => collect()->merge($transfer->toWarehouse?->admins ?? [])->push($transfer->request)->filter()->unique('id'),
                 'title' => 'Transfer Dalam Pengiriman',
                 'message' => "Barang untuk Transfer {$transfer->transfer_code} sedang dikirim ke gudang {$transfer->toWarehouse->name}.",
                 'type' => 'info',
             ],
             TransferStatus::RECEIVED => [
-                'recipients' => $transfer->fromWarehouse->admins->merge([$transfer->request])->unique('id'),
+                'recipients' => collect()->merge($transfer->fromWarehouse?->admins ?? [])->push($transfer->request)->filter()->unique('id'),
                 'title' => 'Transfer Diterima',
                 'message' => "Barang untuk Transfer {$transfer->transfer_code} telah tiba dan diterima di gudang tujuan.",
                 'type' => 'success',
             ],
             TransferStatus::COMPLETED => [
-                'recipients' => $transfer->toWarehouse->admins->merge($transfer->fromWarehouse->admins)->merge([$transfer->request])->unique('id'),
+                'recipients' => collect()->merge($transfer->toWarehouse?->admins ?? [])->merge($transfer->fromWarehouse?->admins ?? [])->push($transfer->request)->filter()->unique('id'),
                 'title' => 'Transfer Selesai',
                 'message' => "Proses Transfer {$transfer->transfer_code} telah selesai sepenuhnya.",
                 'type' => 'success',
             ],
             TransferStatus::REJECTED => [
-                'recipients' => collect([$transfer->request]),
+                'recipients' => collect([$transfer->request])->filter()->unique('id'),
                 'title' => 'Pengajuan Transfer Ditolak',
                 'message' => "Transfer {$transfer->transfer_code} telah ditolak.",
                 'type' => 'error',
@@ -54,16 +54,24 @@ class TransferNotificationService
             default => null,
         };
 
-        if ($notificationData && $notificationData['recipients'] && $notificationData['recipients']->isNotEmpty()) {
-            Notification::send(
-                $notificationData['recipients']->filter(),
-                new TransferNotification(
-                    $transfer,
-                    $notificationData['title'],
-                    $notificationData['message'],
-                    $notificationData['type'] ?? 'info'
-                )
-            );
+        if ($notificationData) {
+            $superAdmins = User::role('super-admin')->get();
+            $notificationData['recipients'] = collect($notificationData['recipients'] ?? [])
+                ->merge($superAdmins)
+                ->filter()
+                ->unique('id');
+
+            if ($notificationData['recipients']->isNotEmpty()) {
+                Notification::send(
+                    $notificationData['recipients'],
+                    new TransferNotification(
+                        $transfer,
+                        $notificationData['title'],
+                        $notificationData['message'],
+                        $notificationData['type']
+                    )
+                );
+            }
         }
     }
 }
