@@ -124,7 +124,22 @@ class DisposalService
                 ]);
             }
 
-            return $disposal->refresh();
+            $disposal->refresh();
+
+            // Kirim notifikasi balik ke user yang mengajukan
+            $requester = \App\Models\User::find($disposal->requested_by);
+            if ($requester) {
+                $statusLabel = $newStatus === 'approved' ? 'Disetujui' : 'Ditolak';
+                $notifType   = $newStatus === 'approved' ? 'success' : 'error';
+                $requester->notify(new \App\Notifications\DisposalNotification(
+                    $disposal,
+                    "Pemusnahan {$statusLabel}",
+                    "Pengajuan pemusnahan {$disposal->disposal_code} telah {$statusLabel} oleh Super Admin.",
+                    $notifType
+                ));
+            }
+
+            return $disposal;
         });
     }
 }
