@@ -54,6 +54,7 @@ class Roleseeder extends Seeder
             'menu_unit',
             'menu_product',
             'menu_analyst',
+            'menu_supplier_product',
             'menu_confirm_return',
             'menu_confirm_restock',
             'menu_confirm_transfer',
@@ -129,6 +130,7 @@ class Roleseeder extends Seeder
             'menu_distribution',
             'menu_transfer',
             'menu_analyst',
+            'menu_lokasi_rak',
 
             // Restocks
             'view_restock',
