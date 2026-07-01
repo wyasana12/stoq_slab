@@ -76,6 +76,7 @@ class LoginController extends Controller
                     'name' => $user->name,
                     'email' => $user->email,
                     'role' => $user->getRoleNames(),
+                    'permissions' => $user->getAllPermissions()->pluck('name')
                 ]
             ]
         ], 200);
