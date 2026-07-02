@@ -19,6 +19,8 @@ class Roleseeder extends Seeder
 
         $menu = [
             'menu_dashboard',
+            'menu_monitoring_gudang',
+            'menu_monitoring_all',
             'menu_permission',
             'menu_role',
             'menu_user',
@@ -34,7 +36,7 @@ class Roleseeder extends Seeder
             'menu_restock',
             'menu_distribution',
             'menu_transfer',
-            'menu_analyst',
+            'menu_analisis',
             'menu_barcode',
             'menu_confirm_return',
             'menu_confirm_restock',
@@ -45,6 +47,7 @@ class Roleseeder extends Seeder
 
         $superadmin = [
             'menu_dashboard',
+            'menu_monitoring_all',
             'menu_permission',
             'menu_role',
             'menu_user',
@@ -130,7 +133,8 @@ class Roleseeder extends Seeder
             'menu_restock',
             'menu_distribution',
             'menu_transfer',
-            'menu_analyst',
+            'menu_analisis',
+            'menu_monitoring_gudang',
             'menu_lokasi_rak',
             'menu_purchase',
 
@@ -178,7 +182,8 @@ class Roleseeder extends Seeder
         $user = [
             'menu_dashboard',
             'menu_distribution_staff',
-            'menu_kondisi',
+            'menu_kondisi_barang',
+            'menu_kondisi_rak',
             'menu_scan',
 
             'view_warehouse',
