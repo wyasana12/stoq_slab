@@ -61,6 +61,7 @@ class Roleseeder extends Seeder
             'menu_confirm_purchase',
             'menu_confirm_receive',
             'menu_store',
+            'menu_supplier_product',
 
             // Store
             'view_store',
@@ -131,6 +132,7 @@ class Roleseeder extends Seeder
             'menu_transfer',
             'menu_analyst',
             'menu_lokasi_rak',
+            'menu_purchase',
 
             // Restocks
             'view_restock',
@@ -175,9 +177,9 @@ class Roleseeder extends Seeder
 
         $user = [
             'menu_dashboard',
-            'menu_batch',
-            'menu_return',
-            'menu_distribution',
+            'menu_distribution_staff',
+            'menu_kondisi',
+            'menu_scan',
 
             'view_warehouse',
             'view_product',
