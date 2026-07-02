@@ -58,9 +58,13 @@ class BatchRepository
         ])
             ->select(['id', 'batch_code', 'product_id', 'receiving_id', 'current_quantity', 'initial_quantity', 'price', 'production_date', 'expired_date', 'condition']);
 
+        if (request()->has('condition')) {
+            $query->where('condition', request('condition'));
+        }
+
         return $query->where('warehouse_id', $userId)
             ->latest()
-            ->get();;
+            ->get();
     }
 
     public function getById(Batch $batch): Batch

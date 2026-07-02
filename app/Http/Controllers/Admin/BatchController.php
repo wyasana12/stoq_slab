@@ -202,6 +202,13 @@ class BatchController extends Controller
                         ], 422);
                     }
 
+                    if ($rackLocation->status === 'MAINTENANCE' || optional($rackLocation->rackWarehouse)->status === 'MAINTENANCE') {
+                        return response()->json([
+                            'success' => false,
+                            'message' => "Tidak dapat memindahkan barang ke lokasi {$loc['location_code']} karena sedang dalam status Maintenance.",
+                        ], 422);
+                    }
+
                     $totalQty += $loc['qty'];
                     $rackLocations[] = [
                         'model' => $rackLocation,
@@ -243,6 +250,13 @@ class BatchController extends Controller
                         'success' => false,
                         'message' => 'Lokasi rak tidak ditemukan.',
                     ], 404);
+                }
+
+                if ($rackLocation->status === 'MAINTENANCE' || optional($rackLocation->rackWarehouse)->status === 'MAINTENANCE') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Tidak dapat memindahkan barang ke lokasi {$validated['rack_location']} karena sedang dalam status Maintenance.",
+                    ], 422);
                 }
 
                 \App\Models\RackLocation::where('batch_id', $batch->id)->update([
