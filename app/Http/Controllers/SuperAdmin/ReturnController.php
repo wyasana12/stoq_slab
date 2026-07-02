@@ -48,6 +48,7 @@ class ReturnController extends Controller
                         'created_at' => $item->created_at,
                         'requested_by_name' => $item->request ? $item->request->name : null,
                         'notes' => $item->notes,
+                        'damage_proof_url' => $item->damage_proof_path ? asset('storage/' . $item->damage_proof_path) : null,
                     ];
                 }),
                 'meta' => [
