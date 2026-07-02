@@ -37,6 +37,12 @@ class ReportRepository
         'suggested_qty' => 'Saran Qty',
         'from_warehouse' => 'Dari Gudang',
         'to_warehouse' => 'Ke Gudang',
+        'total_in' => 'Total In',
+        'total_out' => 'Total Out',
+        'ratio' => 'Rasio',
+        'current_quantity' => 'Qty Saat Ini',
+        'avg_daily_out' => 'Rata-rata Keluar Harian',
+        'days_of_stock' => 'Sisa Hari Stok',
     ];
 
     protected array $defaultFields = [
@@ -80,16 +86,13 @@ class ReportRepository
             'qty',
             'from_warehouse',
         ],
-        'stock_batch_expiry' => [
-            'product_code',
+        'stock_slow_moving' => [
+            'warehouse_name',
             'product_name',
             'category',
-            'batch_code',
-            'warehouse_name',
-            'qty',
-            'satuan',
-            'production_date',
-            'expired_date',
+            'current_quantity',
+            'avg_daily_out',
+            'days_of_stock',
         ],
         'stock_value' => [
             'product_code',
@@ -118,7 +121,7 @@ class ReportRepository
             'stock_movement' => $this->getStockMovement($filters),
             'stock_minimum' => $this->getStockMinimum($filters),
             'stock_critical' => $this->getStockCritical($filters),
-            'stock_batch_expiry' => $this->getStockBatchExpiry($filters),
+            'stock_slow_moving' => $this->getStockSlowMoving($filters),
             'stock_value' => $this->getStockValue($filters),
             'warehouse_comparison' => $this->getWarehouseComparison($filters),
             default => collect(),
@@ -173,14 +176,14 @@ class ReportRepository
     protected function getStockMovement(array $filters): Collection
     {
         $receivingRows = ProductReceivingItem::query()
-            ->with(['products.unit', 'receiving.purchase.warehouse'])
+            ->with(['products.unit', 'receiving.receivable'])
             ->when($filters['product_id'] ?? null, fn($q, $productId) => $q->where('product_id', $productId))
             ->when($filters['date_from'] ?? null, fn($q, $dateFrom) => $q->whereHas('receiving', fn($rq) => $rq->whereDate('created_at', '>=', $dateFrom)))
             ->when($filters['date_to'] ?? null, fn($q, $dateTo) => $q->whereHas('receiving', fn($rq) => $rq->whereDate('created_at', '<=', $dateTo)))
             ->get()
             ->map(fn(ProductReceivingItem $item) => [
                 'movement_date' => $item->receiving?->created_at,
-                'warehouse_name' => $item->receiving?->purchase?->warehouse?->name,
+                'warehouse_name' => $item->receiving?->receivable?->warehouse?->name ?? $item->receiving?->receivable?->toWarehouse?->name,
                 'movement_type' => 'receiving',
                 'product_name' => $item->products?->name,
                 'qty' => (int) $item->quantity_accepted,
@@ -203,8 +206,8 @@ class ReportRepository
             ]);
 
         $transferRows = StockTransfers::query()
-            ->with(['batch.product.unit', 'fromWarehouse'])
-            ->when($filters['product_id'] ?? null, fn($q, $productId) => $q->whereHas('batch', fn($bq) => $bq->where('product_id', $productId)))
+            ->with(['products.unit', 'fromWarehouse'])
+            ->when($filters['product_id'] ?? null, fn($q, $productId) => $q->where('product_id', $productId))
             ->when($filters['date_from'] ?? null, fn($q, $dateFrom) => $q->whereDate('created_at', '>=', $dateFrom))
             ->when($filters['date_to'] ?? null, fn($q, $dateTo) => $q->whereDate('created_at', '<=', $dateTo))
             ->get()
@@ -213,8 +216,8 @@ class ReportRepository
                 'warehouse_name' => $transfer->fromWarehouse?->name,
                 'movement_type' => 'transfer',
                 'product_name' => $transfer->products?->name,
-                'qty' => 0,
-                'satuan' => $transfer->product?->unit?->symbol,
+                'qty' => (int) $transfer->approved_quantity,
+                'satuan' => $transfer->products?->unit?->symbol,
             ]);
 
         $restockRows = RestockItem::query()
@@ -297,6 +300,30 @@ class ReportRepository
                     'recommendation' => $item['recommendation'] ?? '-',
                     'qty' => $item['suggested_qty'] ?? 0,
                     'from_warehouse' => $item['from_warehouse'] ?? '-',
+                ];
+            })->values();
+    }
+
+    protected function getStockSlowMoving(array $filters): Collection
+    {
+        $dssCache = app(\App\Services\DssCacheService::class);
+        $days = (int) ($filters['days'] ?? config('dss.default_history_days', 30));
+        
+        $data = collect($dssCache->getAnalysis($days));
+
+        if (!empty($filters['warehouse_id'])) {
+            $data = $data->where('warehouse_id', $filters['warehouse_id']);
+        }
+
+        return $data->filter(fn($item) => $item['category'] === 'SLOW_MOVING')
+            ->map(function ($item) {
+                return [
+                    'warehouse_name' => $item['warehouse_name'] ?? '-',
+                    'product_name' => $item['product_name'] ?? '-',
+                    'category' => $item['category'] ?? '-',
+                    'current_quantity' => $item['current_quantity'] ?? 0,
+                    'avg_daily_out' => $item['avg_daily_out'] ?? 0,
+                    'days_of_stock' => $item['days_of_stock'] ?? '-',
                 ];
             })->values();
     }
