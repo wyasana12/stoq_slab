@@ -5,13 +5,15 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Reports\ReportExportRequest;
 use App\Http\Requests\Reports\ReportPreviewRequest;
+use App\Models\ExportHistory;
 use App\Repositories\ReportRepository;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithHeadings;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportExportController extends Controller
 {
@@ -63,14 +65,29 @@ class ReportExportController extends Controller
 
         $rows = $this->repository
             ->getReportRows($template, $filters)
-            ->map(fn(array $row) => Arr::only($row, $fields))
+            ->map(function (array $row) use ($fields) {
+                $orderedRow = [];
+                foreach ($fields as $field) {
+                    $orderedRow[$field] = $row[$field] ?? null;
+                }
+                return $orderedRow;
+            })
             ->all();
 
         $filename = sprintf('report-%s-%s.%s', $template, now()->format('Ymd-His'), $format);
+        $filePath = 'reports/' . $filename;
 
-        return $format === 'csv'
-            ? $this->streamCsv($filename, $headings, $rows)
-            : Excel::download(new class($headings, $rows) implements FromArray, WithHeadings {
+        if ($format === 'csv') {
+            $handle = fopen('php://temp', 'r+');
+            fputcsv($handle, $headings);
+            foreach ($rows as $row) {
+                fputcsv($handle, array_values($row));
+            }
+            rewind($handle);
+            Storage::disk('public')->put($filePath, stream_get_contents($handle));
+            fclose($handle);
+        } else {
+            Excel::store(new class($headings, $rows) implements FromArray, WithHeadings {
                 private array $headings;
                 private array $rows;
 
@@ -89,22 +106,57 @@ class ReportExportController extends Controller
                 {
                     return $this->headings;
                 }
-            }, $filename);
+            }, $filePath, 'public');
+        }
+
+        $templateNames = [
+            'stock_current' => 'Laporan Stok Saat Ini',
+            'stock_movement' => 'Laporan Pergerakan Stok',
+            'stock_slow_moving' => 'Laporan Produk Slow Moving',
+            'stock_critical' => 'Laporan Stok Kritis (DSS)',
+            'stock_value' => 'Laporan Nilai Stok',
+        ];
+
+        ExportHistory::create([
+            'user_id' => $request->user()->id ?? \App\Models\User::first()->id, // fallback for safety if no user
+            'warehouse_id' => $filters['warehouse_id'] ?? null,
+            'name' => $templateNames[$template] ?? 'Laporan Stok',
+            'format' => $format,
+            'file_path' => $filePath,
+            'status' => 'completed',
+        ]);
+
+        return Storage::disk('public')->download($filePath, $filename);
     }
 
-    protected function streamCsv(string $filename, array $headings, array $rows): StreamedResponse
+    public function history(Request $request): JsonResponse
     {
-        return response()->streamDownload(function () use ($headings, $rows) {
-            $handle = fopen('php://output', 'w');
-            fputcsv($handle, $headings);
+        $histories = ExportHistory::query()
+            ->with(['warehouse'])
+            ->latest()
+            ->take(20)
+            ->get();
 
-            foreach ($rows as $row) {
-                fputcsv($handle, array_values($row));
-            }
-
-            fclose($handle);
-        }, $filename, [
-            'Content-Type' => 'text/csv',
+        return response()->json([
+            'success' => true,
+            'data' => $histories->map(fn($history) => [
+                'id' => $history->id,
+                'name' => $history->name,
+                'date' => $history->created_at->toISOString(),
+                'format' => $history->format,
+                'warehouse' => $history->warehouse ? $history->warehouse->name : 'Semua Gudang',
+                'status' => 'Selesai',
+            ])
         ]);
+    }
+
+    public function downloadHistory($id)
+    {
+        $history = ExportHistory::findOrFail($id);
+        if (!$history->file_path || !Storage::disk('public')->exists($history->file_path)) {
+            abort(404, 'File not found.');
+        }
+
+        return Storage::disk('public')->download($history->file_path);
     }
 }

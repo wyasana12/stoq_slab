@@ -17,8 +17,10 @@ class ReportExportRequest extends FormRequest
         $templates = [
             'stock_current',
             'stock_movement',
+            'stock_slow_moving',
             'batch_expiry',
             'stock_minimum',
+            'stock_critical',
             'stock_value',
             'restock_history',
             'distribution_history',
