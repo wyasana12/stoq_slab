@@ -71,7 +71,7 @@ Route::prefix('/users')->middleware('auth:sanctum')->name('user.')->group(functi
         Route::post('/create', [UserController::class, 'store'])->name('create');
         Route::get('/{user}', [UserController::class, 'show']);
         Route::put('/{user}', [UserController::class, 'update'])->name('update');
-        Route::patch('/{user}', [UserController::class, 'status'])->name('status');
+        Route::post('/{user}', [UserController::class, 'status'])->name('status');
         Route::delete('/{user}', [UserController::class, 'destroy'])->name('delete');
     });
 });
