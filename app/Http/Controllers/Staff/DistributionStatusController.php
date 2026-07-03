@@ -11,6 +11,7 @@ use App\Repositories\DistributionRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
+use Illuminate\Http\Request;
 
 class DistributionStatusController extends Controller
 {
