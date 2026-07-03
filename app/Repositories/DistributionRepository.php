@@ -191,12 +191,7 @@ class DistributionRepository
                         throw new InvalidArgumentException('Batch tidak ditemukan.');
                     }
 
-                    $distributionItem = $distributionItems[$item['id']] ?? null;
-                    if (! $distributionItem) {
-                        throw new InvalidArgumentException("Item distribusi tidak valid: {$item['id']}.");
-                    }
 
-                    $approvedQuantity = (int) $item['approved_quantity'];
                     if ($approvedQuantity > $batch->current_quantity) {
                         throw new InvalidArgumentException(
                             "Stok batch {$batch->batch_code} tidak cukup. " .
@@ -393,6 +388,7 @@ class DistributionRepository
 
         foreach ($distribution->items as $item) {
             $batch = $item->batch;
+            $batch->refresh(); // reload latest quantity to avoid race condition
 
             if (! $batch) {
                 throw new ModelNotFoundException('Batch tidak ditemukan untuk item distribusi.');
