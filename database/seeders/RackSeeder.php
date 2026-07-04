@@ -30,14 +30,12 @@ class RackSeeder extends Seeder
         ];
 
         $warehouse = Warehouse::first()?->id;
-        $categories =  Category::all();
 
         foreach ($racks as $i) {
             $rack = RackWarehouse::create([
                 'id' => (string) Str::ulid(),
                 'rack_code' => $i['rack_code'],
                 'warehouse_id' => $warehouse,
-                'category_id' => $categories->random()->id,
                 'status' => 'AVAILABLE'
             ]);
 

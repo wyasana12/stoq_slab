@@ -65,6 +65,7 @@ class Roleseeder extends Seeder
             'menu_confirm_receive',
             'menu_store',
             'menu_supplier_product',
+            'menu_alert',
 
             // Store
             'view_store',
