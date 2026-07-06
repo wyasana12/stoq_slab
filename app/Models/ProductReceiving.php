@@ -27,9 +27,9 @@ class ProductReceiving extends Model
     public $incrementing = false;
     public $keyType = 'string';
 
-    public function batch(): BelongsTo
+    public function batch(): HasMany
     {
-        return $this->belongsTo(Batch::class, 'receiving_id');
+        return $this->hasMany(Batch::class, 'receiving_id');
     }
 
     public function receivable(): MorphTo

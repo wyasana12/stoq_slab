@@ -41,31 +41,26 @@ class DashboardController extends Controller
             ->whereIn('status', ['requested', 'approved']) // Sesuaikan
             ->count();
 
-        // 4. Alert Expired (Dummy data using real products)
-        // Fetches 3 batches from the current warehouse and pretends they are expiring soon
-        $expiredAlertsRaw = Batch::with(['product', 'warehouse'])
+        // 4. Alert Expired (Real data: expired or expiring within 30 days)
+        $expiredAlerts = Batch::with(['product', 'warehouse'])
             ->where('warehouse_id', $warehouseId)
             ->where('current_quantity', '>', 0)
-            ->inRandomOrder()
+            ->whereNotNull('expired_date')
+            ->where('expired_date', '<=', Carbon::now()->addDays(30))
+            ->orderBy('expired_date', 'asc')
             ->take(3)
             ->get();
 
-        // If not enough batches, maybe fallback to products
-        if ($expiredAlertsRaw->isEmpty()) {
-            $expiredAlertsRaw = collect([]);
-            // fallback dummy just in case
-        }
-        
-        // We will transform them to look like expired alerts
-        $expiredAlerts = $expiredAlertsRaw;
-        // In the map function below, we will hardcode the expired date to look like dummy
-
 
         // 5. Tugas Saya (Distribusi Perlu Tindakan)
-        // Misal distribusi yang approved/preparing
+        // Ambil distribusi dengan status waiting-approval, approved, atau preparing
         $tasks = StockDistributions::with(['store', 'items'])
             ->where('warehouse_id', $warehouseId)
-            ->whereIn('status', ['APPROVED', 'PREPARING'])
+            ->whereIn('status', [
+                \App\Enums\DistributionStatus::WAITING_APPROVAL,
+                \App\Enums\DistributionStatus::APPROVED,
+                \App\Enums\DistributionStatus::PREPARING,
+            ])
             ->orderBy('created_at', 'desc')
             ->take(5)
             ->get()
@@ -107,16 +102,15 @@ class DashboardController extends Controller
                     'return' => $return,
                     'alert_expired' => $expiredAlerts->count(),
                 ],
-                'expired_alerts' => $expiredAlerts->map(function($batch, $index) {
-                    // DUMMY DATA: Assign random small numbers for expired days
-                    $dummyDays = [0, 2, 5][$index % 3]; 
+                'expired_alerts' => $expiredAlerts->map(function($batch) {
+                    $days = (int) Carbon::now()->diffInDays(Carbon::parse($batch->expired_date), false);
                     
                     return [
                         'id' => $batch->id,
                         'product' => $batch->product->name ?? '-',
                         'batch' => $batch->batch_code,
                         'stock' => $batch->current_quantity . ' unit',
-                        'expired' => $dummyDays <= 0 ? 'Sudah Expired' : $dummyDays . ' hari',
+                        'expired' => $days <= 0 ? 'Sudah Expired' : $days . ' hari',
                         'location' => $batch->location ?? ($batch->warehouse->name ?? '-'),
                     ];
                 }),
