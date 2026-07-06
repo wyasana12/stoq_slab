@@ -32,5 +32,13 @@ class DatabaseSeeder extends Seeder
             DistributionSeeder::class,
             StockMutationSeeder::class,
         ]);
+
+        // Regenerate DSS cache immediately to match the newly seeded database IDs
+        $job = new \App\Jobs\GenerateDssCacheJob();
+        $job->handle(
+            app(\App\Services\StockAnalysisService::class),
+            app(\App\Services\DssRecommendationService::class),
+            app(\App\Services\DssCacheService::class)
+        );
     }
 }

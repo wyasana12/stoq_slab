@@ -10,6 +10,8 @@ use App\Models\StockTransfers;
 use App\Models\Warehouse;
 use App\Models\ProductReceiving;
 use App\Models\RackWarehouse;
+use App\Models\PurchaseOrder;
+use App\Models\StockDisposal;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -234,6 +236,8 @@ class MonitoringRepository
         $logs = $logs->merge($this->mapTransfers($filters));
         $logs = $logs->merge($this->mapRestocks($filters));
         $logs = $logs->merge($this->mapReturns($filters));
+        $logs = $logs->merge($this->mapPurchaseOrders($filters));
+        $logs = $logs->merge($this->mapDisposals($filters));
 
         return $logs
             ->filter(function (array $log) use ($filters) {
@@ -330,7 +334,7 @@ class MonitoringRepository
                     'batch_code' => null,
                     'product_id' => $product?->id,
                     'product_name' => $product?->name,
-                    'status' => $receive->status?->value ?? $receive->status,
+                    'status' => $this->normalizeActivityStatus($receive->status, 'receiving'),
                     'quantity' => (int) $receive->items->sum('quantity_accepted'),
                     'before_quantity' => null,
                     'after_quantity' => null,
@@ -497,7 +501,7 @@ class MonitoringRepository
                     'batch_code' => $items->first()?->batch?->batch_code,
                     'product_id' => $items->first()?->batch?->product_id,
                     'product_name' => $items->first()?->batch?->product?->name,
-                    'status' => $distribution->status?->value ?? $distribution->status,
+                    'status' => $this->normalizeActivityStatus($distribution->status, 'distribution'),
                     'quantity' => (int) $items->sum('approved_quantity'),
                     'before_quantity' => null,
                     'after_quantity' => null,
@@ -547,7 +551,7 @@ class MonitoringRepository
                     'batch_code'      => null,
                     'product_id'      => $transfer->product_id,
                     'product_name'    => $transfer->products?->name,
-                    'status'          => $transfer->status?->value ?? $transfer->status,
+                    'status'          => $this->normalizeActivityStatus($transfer->status, 'transfer'),
                     'quantity'        => (int) ($transfer->approved_quantity ?? $transfer->requested_quantity ?? 0),
                     'before_quantity' => null,
                     'after_quantity'  => null,
@@ -593,7 +597,7 @@ class MonitoringRepository
                     'batch_code' => null,
                     'product_id' => $item?->product_id,
                     'product_name' => $item?->product?->name,
-                    'status' => $restock->status?->value ?? $restock->status,
+                    'status' => $this->normalizeActivityStatus($restock->status, 'restock'),
                     'quantity' => (int) $restock->item->sum('requested_quantity'),
                     'before_quantity' => null,
                     'after_quantity' => null,
@@ -639,7 +643,7 @@ class MonitoringRepository
                     'batch_code' => null,
                     'product_id' => $return->product_id,
                     'product_name' => $return->product?->name,
-                    'status' => $return->status?->value ?? $return->status,
+                    'status' => $this->normalizeActivityStatus($return->status, 'return'),
                     'quantity' => (int) $return->approved_quantity,
                     'before_quantity' => null,
                     'after_quantity' => null,
@@ -861,6 +865,113 @@ class MonitoringRepository
                 ? "Akan expired dalam {$expiredInDays} hari."
                 : 'Stok mendekati batas minimum.',
             default => 'Status normal',
+        };
+    }
+
+    private function mapPurchaseOrders(array $filters = []): Collection
+    {
+        return PurchaseOrder::query()
+            ->with(['warehouse', 'supplier', 'items.product', 'user'])
+            ->when($filters['warehouse_id'] ?? null, function ($query, $warehouseId) {
+                $query->where('warehouse_id', $warehouseId);
+            })
+            ->when($filters['date_from'] ?? null, function ($query, $dateFrom) {
+                $query->whereDate('created_at', '>=', $dateFrom);
+            })
+            ->when($filters['date_to'] ?? null, function ($query, $dateTo) {
+                $query->whereDate('created_at', '<=', $dateTo);
+            })
+            ->latest()
+            ->get()
+            ->map(function (PurchaseOrder $po) {
+                $item = $po->items->first();
+                $product = $item?->product;
+
+                return [
+                    'id' => $po->id,
+                    'activity_type' => 'purchase_order',
+                    'title' => 'Purchase Order ' . $po->po_code,
+                    'warehouse_id' => $po->warehouse_id,
+                    'warehouse_name' => $po->warehouse?->name,
+                    'batch_id' => null,
+                    'batch_code' => null,
+                    'product_id' => $product?->id,
+                    'product_name' => $product?->name,
+                    'status' => $this->normalizeActivityStatus($po->status, 'purchase_order'),
+                    'quantity' => (int) $po->items->sum('quantity_ordered'),
+                    'before_quantity' => null,
+                    'after_quantity' => null,
+                    'reference_type' => 'purchase_order',
+                    'reference_id' => $po->po_code,
+                    'notes' => $po->notes ?? null,
+                    'activity_at' => $po->created_at,
+                    'payload' => [
+                        'po_code' => $po->po_code,
+                        'created_by' => $po->user?->name,
+                        'supplier_name' => $po->supplier?->name,
+                        'items_count' => $po->items->count(),
+                    ],
+                ];
+            });
+    }
+
+    private function mapDisposals(array $filters = []): Collection
+    {
+        return StockDisposal::query()
+            ->with(['warehouse', 'product', 'batch', 'request', 'confirm'])
+            ->when($filters['warehouse_id'] ?? null, function ($query, $warehouseId) {
+                $query->where('warehouse_id', $warehouseId);
+            })
+            ->when($filters['product_id'] ?? null, function ($query, $productId) {
+                $query->where('product_id', $productId);
+            })
+            ->when($filters['date_from'] ?? null, function ($query, $dateFrom) {
+                $query->whereDate('created_at', '>=', $dateFrom);
+            })
+            ->when($filters['date_to'] ?? null, function ($query, $dateTo) {
+                $query->whereDate('created_at', '<=', $dateTo);
+            })
+            ->latest()
+            ->get()
+            ->map(function (StockDisposal $disposal) {
+                return [
+                    'id' => $disposal->id,
+                    'activity_type' => 'disposal',
+                    'title' => 'Disposal ' . $disposal->disposal_code,
+                    'warehouse_id' => $disposal->warehouse_id,
+                    'warehouse_name' => $disposal->warehouse?->name,
+                    'batch_id' => $disposal->batch_id,
+                    'batch_code' => $disposal->batch?->batch_code,
+                    'product_id' => $disposal->product_id,
+                    'product_name' => $disposal->product?->name,
+                    'status' => $this->normalizeActivityStatus($disposal->status, 'disposal'),
+                    'quantity' => (int) $disposal->requested_quantity,
+                    'before_quantity' => null,
+                    'after_quantity' => null,
+                    'reference_type' => 'disposal',
+                    'reference_id' => $disposal->disposal_code,
+                    'notes' => $disposal->notes ?? null,
+                    'activity_at' => $disposal->created_at,
+                    'payload' => [
+                        'disposal_code' => $disposal->disposal_code,
+                        'requested_by' => $disposal->request?->name,
+                        'confirmed_by' => $disposal->confirm?->name,
+                    ],
+                ];
+            });
+    }
+
+    private function normalizeActivityStatus($status, string $activityType): string
+    {
+        $statusStr = is_string($status) ? $status : ($status?->value ?? '');
+        $statusLower = strtolower($statusStr);
+
+        return match ($activityType) {
+            'purchase_order' => $statusLower === 'submitted' ? 'PENDING' : strtoupper($statusStr),
+            'distribution' => $statusLower === 'waiting-approval' ? 'PENDING' : strtoupper($statusStr),
+            'transfer', 'restock', 'return', 'disposal' => $statusLower === 'requested' ? 'PENDING' : strtoupper($statusStr),
+            'receiving' => $statusLower === 'process' ? 'PENDING' : strtoupper($statusStr),
+            default => strtoupper($statusStr),
         };
     }
 }
