@@ -173,11 +173,6 @@ class ProductReceivingService
             $this->productReceivingRepository->assignItems($receive, $receiveItemsData);
 
             if (in_array($calculatedStatus, [ReceiveStatus::FULL, ReceiveStatus::PARTIAL])) {
-                if ($data['receivable_type'] === 'transfer') {
-                    $sourceModel->update(['status' => TransferStatus::COMPLETED]);
-                } elseif ($data['receivable_type'] === 'restock') {
-                    $sourceModel->update(['status' => RestockStatus::COMPLETED]);
-                }
 
                 foreach ($batchesData as $item) {
                     if ((int) $item['quantity_accepted'] > 0) {

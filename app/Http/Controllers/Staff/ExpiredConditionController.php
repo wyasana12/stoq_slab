@@ -43,6 +43,23 @@ class ExpiredConditionController extends Controller
             }
 
             if ($payload['action'] === 'return') {
+                // Validasi return limit berdasarkan konfigurasi supplier
+                $returnLimitDays = \App\Services\ReturnService::resolveReturnLimitDays(
+                    $batch->receiving_id,
+                    $batch->product_id
+                );
+
+                if ($batch->receiving_id) {
+                    $receiving = \App\Models\ProductReceiving::find($batch->receiving_id);
+                    $receivingDate = $receiving?->receiving_date ?? $receiving?->created_at;
+
+                    if ($receivingDate && now()->diffInDays(Carbon::parse($receivingDate)) > $returnLimitDays) {
+                        throw new InvalidArgumentException(
+                            "Batas waktu return ({$returnLimitDays} hari sejak tanggal penerimaan) sudah lewat. Silakan pilih opsi pemusnahan."
+                        );
+                    }
+                }
+
                 $stockReturn = $this->createReturnRequest($batch, $payload, $request->user()->id, $requestedQuantity);
 
                 return response()->json([
