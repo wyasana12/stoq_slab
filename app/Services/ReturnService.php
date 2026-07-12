@@ -7,6 +7,7 @@ use App\Enums\ReturnStatus;
 use App\Enums\MutationStatus;
 use App\Models\Batch;
 use App\Models\ProductReceiving;
+use App\Models\ProductSupplierItem;
 use App\Models\StockMutations;
 use App\Models\StockReturns;
 use App\Models\PurchaseOrder;
@@ -19,6 +20,44 @@ use InvalidArgumentException;
 
 class ReturnService
 {
+    /**
+     * Resolve the return limit days for a product based on supplier configuration.
+     * Looks up product_supplier_items via receiving → PO → supplier chain.
+     * Falls back to 3 days if no supplier config is found.
+     */
+    public static function resolveReturnLimitDays(?string $receivingId, string $productId): int
+    {
+        $defaultLimit = 3;
+
+        if (! $receivingId) {
+            return $defaultLimit;
+        }
+
+        $receiving = ProductReceiving::find($receivingId);
+        if (! $receiving) {
+            return $defaultLimit;
+        }
+
+        if (! in_array($receiving->receivable_type, [PurchaseOrder::class, 'purchase_order'])) {
+            return $defaultLimit;
+        }
+
+        $po = PurchaseOrder::find($receiving->receivable_id);
+        if (! $po || ! $po->supplier_id) {
+            return $defaultLimit;
+        }
+
+        $supplierItem = ProductSupplierItem::where('product_id', $productId)
+            ->where('supplier_id', $po->supplier_id)
+            ->first();
+
+        if ($supplierItem && $supplierItem->return_limit_days > 0) {
+            return $supplierItem->return_limit_days;
+        }
+
+        return $defaultLimit;
+    }
+
     public function storeReturn(array $data, string $userId): StockReturns
     {
         $receiving = ProductReceiving::findOrFail($data['receiving_id']);
@@ -31,8 +70,10 @@ class ReturnService
             ? Carbon::parse($receiving->receiving_date)
             : $receiving->created_at;
 
-        if (now()->diffInDays($receivingDate) > 3) {
-            throw new InvalidArgumentException('Pengajuan return ditolak. Batas waktu maksimal adalah 3 hari sejak barang diterima.');
+        $returnLimitDays = self::resolveReturnLimitDays($data['receiving_id'], $data['product_id']);
+
+        if (now()->diffInDays($receivingDate) > $returnLimitDays) {
+            throw new InvalidArgumentException("Pengajuan return ditolak. Batas waktu maksimal adalah {$returnLimitDays} hari sejak barang diterima.");
         }
 
         $receivingItem = DB::table('product_receiving_items')
@@ -250,8 +291,10 @@ class ReturnService
             ? Carbon::parse($receiving->receiving_date)
             : $receiving->created_at;
 
-        if (now()->diffInDays($receivingDate) > 3) {
-            throw new InvalidArgumentException('Gagal memperbarui. Batas waktu pengajuan maksimal adalah 3 hari sejak barang diterima.');
+        $returnLimitDays = self::resolveReturnLimitDays($stockReturns->receiving_id, $stockReturns->product_id);
+
+        if (now()->diffInDays($receivingDate) > $returnLimitDays) {
+            throw new InvalidArgumentException("Gagal memperbarui. Batas waktu pengajuan maksimal adalah {$returnLimitDays} hari sejak barang diterima.");
         }
 
         $receivingItem = DB::table('product_receiving_items')

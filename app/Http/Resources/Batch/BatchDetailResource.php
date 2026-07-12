@@ -23,7 +23,7 @@ class BatchDetailResource extends JsonResource
             'batch_code' => $this->batch_code,
             'receiving_id' => $this->receiving_id,
             'receiving_date' => $receivingDate ? \Carbon\Carbon::parse($receivingDate)->toIso8601String() : null,
-            'return_limit_days' => 3, // Backend ReturnService enforces 3 days hard limit
+            'return_limit_days' => \App\Services\ReturnService::resolveReturnLimitDays($this->receiving_id, $this->product_id),
             'product' => [
                 'id' => $this->product?->id ?? 'N/A',
                 'name' => $this->product?->name ?? 'N/A',
