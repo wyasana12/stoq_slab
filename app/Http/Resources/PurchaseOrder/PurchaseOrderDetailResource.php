@@ -35,6 +35,7 @@ class PurchaseOrderDetailResource extends JsonResource
                     'unit_price' => $item->unit_price,
                     'subtotal' => $item->subtotal,
                     'min_order_quantity' => $item->product?->min_order_quantity ?? 1,
+                    'lead_time_days' => $item->product?->lead_time_days ?? 0,
                 ];
             }),
             'total_amount' => $this->total_amount,

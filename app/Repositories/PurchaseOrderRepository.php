@@ -21,25 +21,25 @@ class PurchaseOrderRepository
         $query = PurchaseOrder::query()
             ->where('warehouse_id', $warehouseId);
 
-return [
-    'total_po' => (clone $query)->count(),
-    'approved' => (clone $query)
-        ->where('status', PurchaseOrderStatus::APPROVED)
-        ->count(),
-    'submitted_draft' => (clone $query)
-        ->whereIn('status', [
-            PurchaseOrderStatus::SUBMITTED,
-            PurchaseOrderStatus::DRAFT,
-        ])
-        ->count(),
-    'ordered_closed' => (clone $query)
-        ->whereIn('status', [
-            PurchaseOrderStatus::ORDERED,
-            PurchaseOrderStatus::CLOSED,
-        ])
-        ->count(),
-    'total_amount' => (clone $query)->sum('total_amount'),
-];
+        return [
+            'total_po' => (clone $query)->count(),
+            'approved' => (clone $query)
+                ->where('status', PurchaseOrderStatus::APPROVED)
+                ->count(),
+            'submitted_draft' => (clone $query)
+                ->whereIn('status', [
+                    PurchaseOrderStatus::SUBMITTED,
+                    PurchaseOrderStatus::DRAFT,
+                ])
+                ->count(),
+            'ordered_closed' => (clone $query)
+                ->whereIn('status', [
+                    PurchaseOrderStatus::ORDERED,
+                    PurchaseOrderStatus::CLOSED,
+                ])
+                ->count(),
+            'total_amount' => (clone $query)->sum('total_amount'),
+        ];
     }
     public function getAllPaginated()
     {
@@ -162,10 +162,11 @@ return [
             $moq = DB::table('product_supplier_items')
                 ->where('supplier_id', $purchase->supplier_id)
                 ->where('product_id', $item->product_id)
-                ->value('min_order_quantity');
+                ->first(['min_order_quantity', 'lead_time_days']);
 
             if ($item->product) {
-                $item->product->min_order_quantity = $moq ?? 1;
+                $item->product->min_order_quantity = $moq?->min_order_quantity ?? 1;
+                $item->product->lead_time_days = isset($moq->lead_time_days) ? (int)$moq->lead_time_days : 0;
             }
         }
 
@@ -201,7 +202,7 @@ return [
         $purchase->forceDelete();
     }
 
-protected function applyApproval(PurchaseOrder $purchase, array $data): void
+    protected function applyApproval(PurchaseOrder $purchase, array $data): void
     {
         if (!empty($data['rejected_item_ids'])) {
             PurchaseOrderItem::where('purchase_id', $purchase->id)
