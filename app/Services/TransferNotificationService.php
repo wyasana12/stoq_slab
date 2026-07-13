@@ -48,7 +48,7 @@ class TransferNotificationService
             TransferStatus::REJECTED => [
                 'recipients' => collect([$transfer->request])->filter()->unique('id'),
                 'title' => 'Pengajuan Transfer Ditolak',
-                'message' => "Transfer {$transfer->transfer_code} telah ditolak.",
+                'message' => "Transfer {$transfer->transfer_code} telah ditolak. Alasan: " . ($transfer->confirmation_note ?? 'Tidak ada keterangan tambahan.'),
                 'type' => 'error',
             ],
             default => null,

@@ -40,7 +40,7 @@ class RestockNotificationService
             RestockStatus::REJECTED => [
                 'recipients' => collect([$restock->request])->filter(),
                 'title'      => 'Restock Ditolak',
-                'message'    => "Restock {$restock->restock_code} ditolak oleh {$confirmedByName}. Alasan: " . ($restock->notes ?? 'Tidak ada keterangan tambahan.'),
+                'message'    => "Restock {$restock->restock_code} ditolak oleh {$confirmedByName}. Alasan: " . ($restock->reason ?? 'Tidak ada keterangan tambahan.'),
                 'type'       => 'error',
             ],
             RestockStatus::COMPLETED => [
