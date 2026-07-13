@@ -16,10 +16,14 @@ class BatchDetailResource extends JsonResource
     {
         $origin = $this->resolveOrigin();
 
+        $receivingDate = $this->receive?->receiving_date ?? $this->receive?->created_at;
+
         return [
             'id' => $this->id,
             'batch_code' => $this->batch_code,
             'receiving_id' => $this->receiving_id,
+            'receiving_date' => $receivingDate ? \Carbon\Carbon::parse($receivingDate)->toIso8601String() : null,
+            'return_limit_days' => \App\Services\ReturnService::resolveReturnLimitDays($this->receiving_id, $this->product_id),
             'product' => [
                 'id' => $this->product?->id ?? 'N/A',
                 'name' => $this->product?->name ?? 'N/A',

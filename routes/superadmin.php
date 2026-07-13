@@ -37,5 +37,7 @@ Route::prefix('/superadmin')->name('superadmin.')->middleware('auth:sanctum')->g
     Route::prefix('/reports')->name('reports.')->group(function () {
         Route::get('/preview', [ReportExportController::class, 'preview'])->name('preview');
         Route::get('/export', [ReportExportController::class, 'export'])->name('export');
+        Route::get('/history', [ReportExportController::class, 'history'])->name('history');
+        Route::get('/history/{id}/download', [ReportExportController::class, 'downloadHistory'])->name('history.download');
     });
 });

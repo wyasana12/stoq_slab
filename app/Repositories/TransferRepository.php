@@ -85,6 +85,15 @@ class TransferRepository
         ]);
 
         if (!empty($data['items'])) {
+            foreach ($data['items'] as $item) {
+                if (isset($item['batch_id'])) {
+                    $batch = Batch::find($item['batch_id']);
+                    if ($batch && $batch->condition !== 'BAIK' && $batch->condition !== 'MENDEKATI_KADALUARSA') {
+                        throw new InvalidArgumentException("Batch {$batch->batch_code} tidak dapat ditransfer karena kondisinya " . strtolower($batch->condition) . ".");
+                    }
+                }
+            }
+
             $transfer->item()->createMany(collect($data['items'])->map(function ($item) {
                 return [
                     'id' => (string) Str::ulid(),

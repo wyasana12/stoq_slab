@@ -78,6 +78,7 @@ Route::prefix('/admin')->middleware('auth:sanctum')->name('admin.')->group(funct
         Route::get('', [RackController::class, 'index'])->name('index');
         Route::post('/create', [RackController::class, 'store'])->name('create');
         Route::get('/{rack}', [RackController::class, 'show'])->name('show');
+        Route::put('/locations/{location}/status', [RackController::class, 'updateLocationStatus'])->name('location.status.update');
         Route::put('/{rack}', [RackController::class, 'update'])->name('update');
         Route::delete('/{rack}', [RackController::class, 'destroy'])->name('delete');
     });

@@ -102,6 +102,7 @@ Route::prefix('/racks')->middleware('auth:sanctum')->name('rack.')->group(functi
     Route::get('/preview', [RackController::class, 'getAvailableLocationsForPreview']);
     Route::post('/create', [RackController::class, 'store'])->name('create');
     Route::get('/{rack}', [RackController::class, 'show'])->name('show');
+    Route::put('/locations/{location}/status', [RackController::class, 'updateLocationStatus'])->name('location.status.update');
     Route::put('/{rack}', [RackController::class, 'update'])->name('update');
     Route::delete('/{rack}', [RackController::class, 'destroy'])->name('delete');
 });

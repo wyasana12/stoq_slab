@@ -80,6 +80,11 @@ class DistributionRepository
                 'status'            => $status,
             ]);
             foreach ($data['items'] as $item) {
+                $batch = Batch::find($item['batch_id']);
+                if ($batch && $batch->condition !== 'BAIK' && $batch->condition !== 'MENDEKATI_KADALUARSA') {
+                    throw new InvalidArgumentException("Batch {$batch->batch_code} tidak dapat didistribusikan karena kondisinya " . strtolower($batch->condition) . ".");
+                }
+
                 StockDistributionItem::create([
                     'distribution_id' => $distribution->id,
                     'batch_id' => $item['batch_id'],
@@ -129,6 +134,11 @@ class DistributionRepository
                 $distribution->items()->delete();
 
                 foreach ($data['items'] as $item) {
+                    $batch = Batch::find($item['batch_id']);
+                    if ($batch && $batch->condition !== 'BAIK' && $batch->condition !== 'MENDEKATI_KADALUARSA') {
+                        throw new InvalidArgumentException("Batch {$batch->batch_code} tidak dapat didistribusikan karena kondisinya " . strtolower($batch->condition) . ".");
+                    }
+
                     StockDistributionItem::create([
                         'distribution_id' => $distribution->id,
                         'batch_id' => $item['batch_id'],
@@ -181,12 +191,7 @@ class DistributionRepository
                         throw new InvalidArgumentException('Batch tidak ditemukan.');
                     }
 
-                    $distributionItem = $distributionItems[$item['id']] ?? null;
-                    if (! $distributionItem) {
-                        throw new InvalidArgumentException("Item distribusi tidak valid: {$item['id']}.");
-                    }
 
-                    $approvedQuantity = (int) $item['approved_quantity'];
                     if ($approvedQuantity > $batch->current_quantity) {
                         throw new InvalidArgumentException(
                             "Stok batch {$batch->batch_code} tidak cukup. " .
@@ -383,6 +388,7 @@ class DistributionRepository
 
         foreach ($distribution->items as $item) {
             $batch = $item->batch;
+            $batch->refresh(); // reload latest quantity to avoid race condition
 
             if (! $batch) {
                 throw new ModelNotFoundException('Batch tidak ditemukan untuk item distribusi.');

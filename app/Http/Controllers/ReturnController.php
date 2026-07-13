@@ -103,10 +103,12 @@ class ReturnController extends Controller
             ? \Carbon\Carbon::parse($batch->receive->receiving_date)
             : $batch->receive->created_at;
 
-        if (now()->diffInDays($receivingDate) > 3) {
+        $returnLimitDays = ReturnService::resolveReturnLimitDays($batch->receiving_id, $batch->product_id);
+
+        if (now()->diffInDays($receivingDate) > $returnLimitDays) {
             return response()->json([
                 'success' => false,
-                'message' => 'Batas waktu return sudah lewat.',
+                'message' => "Batas waktu return ({$returnLimitDays} hari) sudah lewat.",
             ], 422);
         }
 
@@ -119,6 +121,7 @@ class ReturnController extends Controller
                 'product_name' => $batch->product->name ?? null,
                 'current_quantity' => $batch->current_quantity,
                 'receiving_date' => $receivingDate->toIso8601String(),
+                'return_limit_days' => $returnLimitDays,
             ]
         ]);
     }

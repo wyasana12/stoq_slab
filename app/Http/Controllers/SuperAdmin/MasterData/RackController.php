@@ -127,9 +127,30 @@ class RackController extends Controller
                 'status' => 'required|in:AVAILABLE,FULL,MAINTENANCE'
             ]);
 
+            if ($validated['status'] === 'MAINTENANCE') {
+                $usedBinsCount = RackLocation::where('rack_id', $rack->id)
+                                             ->where('used', '>', 0)
+                                             ->count();
+                if ($usedBinsCount > 0) {
+                    return response()->json([
+                        'success' => false,
+                        'messages' => 'Tidak dapat mengubah status ke Maintenance karena ada bin yang masih berisi barang.'
+                    ], 422);
+                }
+            }
+
             $rack->update(['status' => $validated['status']]);
 
-            // Update rack location statuses as well if needed? For now just the warehouse status.
+            // Cascade status to all bins if rack status is MAINTENANCE or AVAILABLE
+            if ($validated['status'] === 'MAINTENANCE') {
+                RackLocation::where('rack_id', $rack->id)->update(['status' => 'MAINTENANCE']);
+            } elseif ($validated['status'] === 'AVAILABLE') {
+                // Since maintenance is only allowed when empty, restoring to available 
+                // means all bins are empty and should be available.
+                RackLocation::where('rack_id', $rack->id)
+                            ->where('status', 'MAINTENANCE')
+                            ->update(['status' => 'AVAILABLE']);
+            }
 
             return response()->json([
                 'success' => true,
@@ -151,6 +172,17 @@ class RackController extends Controller
     public function destroy(RackWarehouse $rack): JsonResponse
     {
         try {
+            // Ensure rack is completely empty before deletion
+            $usedBinsCount = RackLocation::where('rack_id', $rack->id)
+                                         ->where('used', '>', 0)
+                                         ->count();
+            if ($usedBinsCount > 0) {
+                return response()->json([
+                    'success' => false,
+                    'messages' => 'Tidak dapat menghapus rak karena masih ada bin yang berisi barang.'
+                ], 422);
+            }
+
             $this->rackService->deleteRack($rack);
 
             return response()->json([
@@ -170,7 +202,10 @@ class RackController extends Controller
     {
         $warehouseId = Auth::user()?->warehouse_id;
 
-        $racks = RackWarehouse::where('warehouse_id', $warehouseId)->select('id', 'rack_code')->get();
+        $racks = RackWarehouse::where('warehouse_id', $warehouseId)
+            ->where('status', '!=', 'MAINTENANCE')
+            ->select('id', 'rack_code')
+            ->get();
 
         return response()->json([
             'success' => true,
@@ -183,6 +218,7 @@ class RackController extends Controller
         $request->validate(['rack_id' => 'required|exists:rack_warehouses,id']);
 
         $levels = RackLocation::where('rack_id', $request->rack_id)
+            ->where('status', 'AVAILABLE')
             ->distinct()
             ->orderBy('level', 'asc')
             ->pluck('level')
@@ -247,5 +283,34 @@ class RackController extends Controller
             });
 
         return response()->json(['data' => $locations]);
+    }
+    public function updateLocationStatus(Request $request, RackLocation $location)
+    {
+        $request->validate([
+            'status' => 'required|in:AVAILABLE,MAINTENANCE'
+        ]);
+
+        if ($request->status === 'AVAILABLE' && $location->rack && $location->rack->status === 'MAINTENANCE') {
+            return response()->json([
+                'success' => false,
+                'messages' => 'Tidak dapat mengubah bin ke Available karena Rak Utama sedang dalam perbaikan (Maintenance).',
+            ], 422);
+        }
+
+        if ($request->status === 'MAINTENANCE' && $location->used > 0) {
+            return response()->json([
+                'success' => false,
+                'messages' => 'Tidak dapat mengubah status ke Maintenance karena bin ini masih berisi barang.',
+            ], 422);
+        }
+
+        $location->update([
+            'status' => $request->status
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'messages' => 'Status bin berhasil diperbarui.'
+        ]);
     }
 }

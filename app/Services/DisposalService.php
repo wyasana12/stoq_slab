@@ -39,6 +39,11 @@ class DisposalService
                 'requested_by' => $userId,
                 'notes' => $data['notes'] ?? null,
                 'status' => 'requested',
+                'damage_proof_path' => $data['damage_proof_path'] ?? null,
+                'damage_proof_name' => $data['damage_proof_name'] ?? null,
+                'damage_proof_mime' => $data['damage_proof_mime'] ?? null,
+                'damage_proof_size' => $data['damage_proof_size'] ?? null,
+                'damage_proof_uploaded_at' => $data['damage_proof_uploaded_at'] ?? null,
             ]);
 
             $superAdmins = \App\Models\User::whereHas('roles', function($q) {
