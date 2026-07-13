@@ -22,6 +22,7 @@ class UpdateRestockStatusRequest extends FormRequest
             'products.*.id' => ['required_with:products', 'exists:products,id'],
             'products.*.approved_quantity' => ['required_with:products', 'integer', 'min:0'],
             'products.*.unit_price' => ['sometimes', 'numeric', 'min:0'],
+            'reason' => ['nullable', 'string'],
         ];
     }
 
@@ -69,5 +70,17 @@ class UpdateRestockStatusRequest extends FormRequest
         $validated = $this->validated();
 
         return $validated['supplier_id'] ?? null;
+    }
+
+    /**
+     * Get validated reason for restock confirmation.
+     *
+     * @return string|null
+     */
+    public function getReason(): ?string
+    {
+        $validated = $this->validated();
+
+        return $validated['reason'] ?? null;
     }
 }

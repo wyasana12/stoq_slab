@@ -14,9 +14,11 @@ class ConfirmStockDisposalRequest extends FormRequest
 
     public function rules(): array
     {
+        $isRejected = $this->input('status') === 'rejected';
+
         return [
             'status' => ['required', Rule::in(['approved', 'rejected'])],
-            'approved_quantity' => ['required_if:status,approved', 'nullable', 'integer', 'min:1'],
+            'approved_quantity' => ['required_if:status,approved', 'nullable', 'integer', $isRejected ? 'min:0' : 'min:1'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
     }

@@ -135,6 +135,7 @@ class TransferRepository
                 'confirmed_by' => $data['confirmed_by'],
                 'reason' => array_key_exists('reason', $data) ? $data['reason'] : $transfer->reason,
                 'notes' => $data['notes'] ?? $transfer->notes,
+                'confirmation_note' => array_key_exists('confirmation_note', $data) ? $data['confirmation_note'] : $transfer->confirmation_note,
                 'status' => $data['status'],
             ]);
 

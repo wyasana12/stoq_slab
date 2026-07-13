@@ -27,7 +27,7 @@ class UpdateTransferStatusRequest extends FormRequest
             'approved_quantity' => ['required', 'integer', $isRejected ? 'min:0' : 'min:1'],
             'from_warehouse_id' => ['sometimes', $isRejected ? 'nullable' : 'required', 'exists:warehouses,id'],
             'to_warehouse_id'   => ['sometimes', $isRejected ? 'nullable' : 'required', 'exists:warehouses,id'],
-            'notes'             => ['nullable', 'string', 'max:255'],
+            'confirmation_note' => ['nullable', 'string', 'max:255'],
         ];
     }
 
@@ -43,7 +43,7 @@ class UpdateTransferStatusRequest extends FormRequest
             'from_warehouse_id.exists'      => 'Gudang asal tidak ditemukan di sistem.',
             'to_warehouse_id.required'      => 'Gudang tujuan wajib dipilih.',
             'to_warehouse_id.exists'        => 'Gudang tujuan tidak ditemukan di sistem.',
-            'notes.max'                     => 'Catatan maksimal 255 karakter.',
+            'confirmation_note.max'         => 'Alasan konfirmasi maksimal 255 karakter.',
         ];
     }
 }

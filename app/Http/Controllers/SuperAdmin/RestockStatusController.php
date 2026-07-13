@@ -48,6 +48,10 @@ class RestockStatusController extends Controller
             $data['supplier_id'] = $request->getSupplierId();
         }
 
+        if ($request->getReason() !== null) {
+            $data['reason'] = $request->getReason();
+        }
+
         // Update the status and record mutation if restocked
         $restock = $this->repository->update($restock, $data);
 
