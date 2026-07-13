@@ -18,7 +18,9 @@ class Roleseeder extends Seeder
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         $menu = [
-            'menu_dashboard',
+            'menu_dashboard_a',
+            'menu_dashboard_b',
+            'menu_dashboard_c',
             'menu_monitoring_gudang',
             'menu_monitoring_all',
             'menu_permission',
@@ -46,7 +48,7 @@ class Roleseeder extends Seeder
         ];
 
         $superadmin = [
-            'menu_dashboard',
+            'menu_dashboard_a',
             'menu_monitoring_all',
             'menu_permission',
             'menu_role',
@@ -127,7 +129,7 @@ class Roleseeder extends Seeder
         ];
 
         $admin = [
-            'menu_dashboard',
+            'menu_dashboard_b',
             'menu_receive',
             'menu_batch',
             'menu_return',
@@ -175,20 +177,18 @@ class Roleseeder extends Seeder
             'view_batch',
             'generate_barcode',
 
-            'view_product',
             'view_warehouse',
 
         ];
 
         $user = [
-            'menu_dashboard',
+            'menu_dashboard_c',
             'menu_distribution_staff',
             'menu_kondisi_barang',
             'menu_kondisi_rak',
             'menu_scan',
 
             'view_warehouse',
-            'view_product',
 
             // Batches
             'view_batch',

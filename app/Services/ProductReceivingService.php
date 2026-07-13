@@ -85,7 +85,6 @@ class ProductReceivingService
 
             $totalQtyOrdered = 0;
             $totalQtyAccepted = 0;
-            $totalQtyRejected = 0;
 
             $receiveItemsData = [];
             $batchesData = [];
@@ -96,7 +95,7 @@ class ProductReceivingService
                 $sourceItem = $sourceItems[$productId] ?? null;
 
                 if (!$sourceItem) {
-                    throw new InvalidArgumentException("Product {$sourceItem->product->name} not found in this purchase order.");
+                    throw new InvalidArgumentException("Product {$sourceItem->product->name} not found.");
                 }
 
                 $qtyOrdered = (int) $sourceItem->expected_quantity;
@@ -107,7 +106,7 @@ class ProductReceivingService
                     throw new InvalidArgumentException("Total Quantity {$totalAcceptedForProduct} for product cannot exceed order quantity {$qtyOrdered}.");
                 }
 
-                $qtyRejectedForProduct = $qtyOrdered - $totalAcceptedForProduct;
+                // $qtyRejectedForProduct = $qtyOrdered - $totalAcceptedForProduct;
 
                 if ($data['receivable_type'] === 'purchase_order') {
                     $sourceItem->original_model->update([
@@ -117,13 +116,13 @@ class ProductReceivingService
 
                 $totalQtyOrdered += $qtyOrdered;
                 $totalQtyAccepted += $totalAcceptedForProduct;
-                $totalQtyRejected += $qtyRejectedForProduct;
+                // $totalQtyRejected += $qtyRejectedForProduct;
 
                 $receiveItemsData[] = [
                     'id' => (string) Str::ulid(),
                     'product_id'        => $productId,
                     'quantity_accepted' => $totalAcceptedForProduct,
-                    'quantity_rejected' => $qtyRejectedForProduct,
+                    'quantity_rejected' => $qtyOrdered - $totalAcceptedForProduct,
                 ];
 
                 foreach ($batches as $batchData) {
@@ -148,15 +147,11 @@ class ProductReceivingService
                 }
             }
 
-            $calculatedStatus = ReceiveStatus::PARTIAL;
-
-            if ($totalQtyAccepted === $totalQtyOrdered) {
-                $calculatedStatus = ReceiveStatus::FULL;
-            }
-
-            if ($totalQtyRejected === $totalQtyOrdered) {
-                $calculatedStatus = ReceiveStatus::REJECT;
-            }
+            $calculatedStatus = match (true) {
+                $totalQtyAccepted === 0 => ReceiveStatus::REJECT,
+                $totalQtyAccepted === $totalQtyOrdered => ReceiveStatus::FULL,
+                default => ReceiveStatus::PARTIAL,
+            };
 
             $receiveCode = 'RCV-' . $warehouseCode . '-' . strtoupper(Str::random(6));
 
@@ -173,9 +168,7 @@ class ProductReceivingService
             $this->productReceivingRepository->assignItems($receive, $receiveItemsData);
 
             if (in_array($calculatedStatus, [ReceiveStatus::FULL, ReceiveStatus::PARTIAL])) {
-
                 foreach ($batchesData as $item) {
-                    if ((int) $item['quantity_accepted'] > 0) {
                         $batchCode = 'BCH-' . $warehouseCode . '-' . strtoupper(Str::random(6));
 
                         $batch = $this->batchRepository->create([
@@ -217,7 +210,6 @@ class ProductReceivingService
                             'created_at' => now(),
                             'updated_at' => now(),
                         ]);
-                    }
                 }
             }
 
@@ -320,7 +312,7 @@ class ProductReceivingService
             $statusLabel = strtoupper($status->value);
             $docType = strtoupper(str_replace('_', ' ', $receive->receivable_type));
 
-            $typeColor = match($status) {
+            $typeColor = match ($status) {
                 ReceiveStatus::FULL => 'success',
                 ReceiveStatus::PARTIAL => 'warning',
                 default => 'error'
