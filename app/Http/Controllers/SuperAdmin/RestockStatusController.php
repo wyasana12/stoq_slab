@@ -51,6 +51,9 @@ class RestockStatusController extends Controller
         // Update the status and record mutation if restocked
         $restock = $this->repository->update($restock, $data);
 
+        // Refresh agar relasi confirm (superadmin yang approve) sudah terisi
+        $restock->refresh();
+
         $this->notificationService->sendRestockNotification($restock, $newStatus);
 
         return response()->json([

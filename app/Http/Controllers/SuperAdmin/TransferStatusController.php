@@ -44,6 +44,28 @@ class TransferStatusController extends Controller
             'confirmed_by' => $userId,
         ]);
 
+        // Validasi stok: saat approve, cek stok di gudang asal mencukupi
+        if ($newStatus === TransferStatus::APPROVED) {
+            $fromWarehouseId = $data['from_warehouse_id'] ?? $transfer->from_warehouse_id;
+            $approvedQty     = (int) ($data['approved_quantity'] ?? 0);
+
+            if ($fromWarehouseId && $approvedQty > 0) {
+                $availableStock = \App\Models\Batch::where('warehouse_id', $fromWarehouseId)
+                    ->where('product_id', $transfer->product_id)
+                    ->whereIn('condition', ['BAIK', 'MENDEKATI_KADALUARSA'])
+                    ->sum('current_quantity');
+
+                if ($availableStock < $approvedQty) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Stok tidak mencukupi untuk transfer ini. "
+                            . "Stok tersedia di gudang asal: {$availableStock}, "
+                            . "jumlah yang disetujui: {$approvedQty}.",
+                    ], 422);
+                }
+            }
+        }
+
         // Update the status
         $transfer = $this->repository->update($transfer, $data);
 

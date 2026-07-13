@@ -23,11 +23,27 @@ class UpdateTransferStatusRequest extends FormRequest
         $isRejected = $this->input('status') === 'rejected';
 
         return [
-            'status' => ['required', new Enum(TransferStatus::class)],
+            'status'            => ['required', new Enum(TransferStatus::class)],
             'approved_quantity' => ['required', 'integer', $isRejected ? 'min:0' : 'min:1'],
             'from_warehouse_id' => ['sometimes', $isRejected ? 'nullable' : 'required', 'exists:warehouses,id'],
-            'to_warehouse_id' => ['sometimes', $isRejected ? 'nullable' : 'required', 'exists:warehouses,id'],
-            'notes' => ['nullable', 'string', 'max:255'],
+            'to_warehouse_id'   => ['sometimes', $isRejected ? 'nullable' : 'required', 'exists:warehouses,id'],
+            'notes'             => ['nullable', 'string', 'max:255'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'status.required'               => 'Status konfirmasi wajib dipilih.',
+            'status.Illuminate\Validation\Rules\Enum' => 'Status yang dipilih tidak valid.',
+            'approved_quantity.required'    => 'Jumlah yang disetujui wajib diisi.',
+            'approved_quantity.integer'     => 'Jumlah yang disetujui harus berupa angka bulat.',
+            'approved_quantity.min'         => 'Jumlah yang disetujui minimal harus 1 (tidak boleh 0).',
+            'from_warehouse_id.required'    => 'Gudang asal wajib dipilih.',
+            'from_warehouse_id.exists'      => 'Gudang asal tidak ditemukan di sistem.',
+            'to_warehouse_id.required'      => 'Gudang tujuan wajib dipilih.',
+            'to_warehouse_id.exists'        => 'Gudang tujuan tidak ditemukan di sistem.',
+            'notes.max'                     => 'Catatan maksimal 255 karakter.',
         ];
     }
 }

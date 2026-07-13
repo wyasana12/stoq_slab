@@ -178,6 +178,19 @@ class BatchController extends Controller
 
             $updateData = [];
 
+            // VALIDASI: Barang Expired tidak bisa dipindahkan raknya
+            if (!empty($validated['locations']) || !empty($validated['rack_location'])) {
+                $isExpired = $batch->condition === 'KADALUARSA' || 
+                             ($batch->expired_date && $batch->expired_date->startOfDay()->isPast());
+                
+                if ($isExpired) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Barang pada batch ini sudah kadaluarsa dan tidak bisa dipindahkan ke rak.',
+                    ], 422);
+                }
+            }
+
             if (isset($validated['condition'])) {
                 $updateData['condition'] = $validated['condition'];
             }

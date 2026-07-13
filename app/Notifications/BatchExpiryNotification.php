@@ -2,9 +2,10 @@
 
 namespace App\Notifications;
 
+use App\Models\Batch;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
 
 class BatchExpiryNotification extends Notification implements ShouldQueue
@@ -14,7 +15,12 @@ class BatchExpiryNotification extends Notification implements ShouldQueue
     /**
      * Create a new notification instance.
      */
-    public function __construct(public string $title, public string $message) {}
+    public function __construct(
+        public Batch $batch,
+        public string $title,
+        public string $message,
+        public string $type = 'warning'
+    ) {}
 
     /**
      * Get the notification's delivery channels.
@@ -23,20 +29,40 @@ class BatchExpiryNotification extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        return ['database', 'broadcast'];
     }
 
     /**
-     * Get the mail representation of the notification.
+     * Get the database representation of the notification.
      */
-    public function toMail(object $notifiable): MailMessage
+    public function toDatabase(object $notifiable): array
     {
-        return (new MailMessage)
-            ->subject($this->title)
-            ->greeting('Halo Tim Gudang.')
-            ->line($this->message)
-            ->action('Buka Halaman Kelola Kondisi Barang', config('app.frontend_url').'/kelolakondisibarang')
-            ->line('Notifikasi ini dikirim secara otomatis oleh sistem. Mohon tidak membalas email ini.');
+        return [
+            'batch_id'     => $this->batch->id,
+            'batch_code'   => $this->batch->batch_code ?? null,
+            'product_name' => $this->batch->product?->name ?? null,
+            'warehouse'    => $this->batch->warehouse?->name ?? null,
+            'title'        => $this->title,
+            'message'      => $this->message,
+            'type'         => $this->type,
+        ];
+    }
+
+    /**
+     * Get the broadcast representation of the notification.
+     */
+    public function toBroadcast(object $notifiable): BroadcastMessage
+    {
+        return new BroadcastMessage([
+            'batch_id'     => $this->batch->id,
+            'batch_code'   => $this->batch->batch_code ?? null,
+            'product_name' => $this->batch->product?->name ?? null,
+            'warehouse'    => $this->batch->warehouse?->name ?? null,
+            'title'        => $this->title,
+            'message'      => $this->message,
+            'type'         => $this->type,
+            'created_at'   => now()->toDateTimeString(),
+        ]);
     }
 
     /**
@@ -47,8 +73,9 @@ class BatchExpiryNotification extends Notification implements ShouldQueue
     public function toArray(object $notifiable): array
     {
         return [
-            'title' => $this->title,
+            'title'   => $this->title,
             'message' => $this->message,
         ];
     }
 }
+

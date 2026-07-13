@@ -20,7 +20,7 @@ class StoreRestockRequest extends FormRequest
             'requested_by' => ['required', 'exists:users,id'],
             'supplier_id'  => ['nullable', 'exists:suppliers,id'],
 
-            'products'     => ['required', 'array'],
+            'products'     => ['required', 'array', 'min:1'],
             'products.*.id' => ['required', 'exists:products,id'],
             'products.*.quantity_requested' => ['required', 'integer', 'min:1'],
             'products.*.unit_price' => ['nullable', 'numeric', 'min:0'],
@@ -29,6 +29,26 @@ class StoreRestockRequest extends FormRequest
             'notes'        => ['nullable', 'string'],
             'reason'       => ['nullable', 'string'],
             'is_dss_recommendation' => ['nullable', 'boolean'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'warehouse_id.required'                      => 'Gudang wajib diisi.',
+            'warehouse_id.exists'                        => 'Gudang tidak ditemukan.',
+            'requested_by.required'                      => 'Pengguna yang mengajukan wajib diisi.',
+            'supplier_id.exists'                         => 'Supplier tidak ditemukan.',
+            'products.required'                          => 'Minimal satu produk harus dipilih.',
+            'products.array'                             => 'Data produk tidak valid.',
+            'products.min'                               => 'Minimal satu produk harus ditambahkan.',
+            'products.*.id.required'                     => 'Produk wajib dipilih pada setiap baris.',
+            'products.*.id.exists'                       => 'Produk yang dipilih tidak ditemukan di sistem.',
+            'products.*.quantity_requested.required'     => 'Jumlah produk wajib diisi.',
+            'products.*.quantity_requested.integer'      => 'Jumlah produk harus berupa angka bulat.',
+            'products.*.quantity_requested.min'          => 'Jumlah produk minimal harus 1 (tidak boleh 0).',
+            'products.*.unit_price.numeric'              => 'Harga satuan harus berupa angka.',
+            'products.*.unit_price.min'                  => 'Harga satuan tidak boleh negatif.',
         ];
     }
 

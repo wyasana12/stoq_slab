@@ -47,6 +47,10 @@ Route::prefix('/configs')->middleware('auth:sanctum')->name('config.')->group(fu
     Route::post('/alerts/create', [AlertConfigController::class, 'store'])->name('alert.create');
     Route::put('/alerts/{alert}', [AlertConfigController::class, 'update'])->name('alert.update');
     Route::delete('/alerts/{alert}', [AlertConfigController::class, 'destroy'])->name('alert.delete');
+    // Endpoint baru: jalankan pengecekan alert stok mendekati habis/kadaluarsa
+    Route::post('/alerts/check', [AlertConfigController::class, 'checkAlerts'])->name('alert.check');
+    // Endpoint baru: lihat riwayat log alert yang sudah terkirim
+    Route::get('/alerts/logs', [AlertConfigController::class, 'logs'])->name('alert.logs');
 });
 
 Route::prefix('/permissions')->middleware(['auth:sanctum', 'role:super-admin'])->name('permission.')->group(function () {
