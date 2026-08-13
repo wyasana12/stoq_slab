@@ -5,7 +5,7 @@ namespace App\Enums;
 enum DistributionStatus: string
 {
     case DRAFT = 'draft';
-    case WAITTING_APPROVAL = 'waiting-approval';
+    case WAITING_APPROVAL = 'waiting-approval';
     case APPROVED = 'approved';
     case REJECTED = 'rejected';
     case PREPARING = 'preparing';
@@ -27,15 +27,28 @@ enum DistributionStatus: string
     {
         return match ($this) {
             self::DRAFT => in_array($newStatus, [
-                self::WAITTING_APPROVAL,
+                self::WAITING_APPROVAL,
+                self::CANCELED,
+            ], true),
+            self::WAITING_APPROVAL => in_array($newStatus, [
                 self::APPROVED,
                 self::REJECTED,
+                self::CANCELED,
+            ], true),
+            self::APPROVED => in_array($newStatus, [
                 self::PREPARING,
+                self::CANCELED,
+            ], true),
+            self::REJECTED => false,
+            self::PREPARING => in_array($newStatus, [
                 self::SHIPPED,
-                self::DELIVERED,
+                self::CANCELED,
+            ], true),
+            self::SHIPPED => in_array($newStatus, [
                 self::COMPLETED,
                 self::CANCELED,
-            ]),
-        }    ;
+            ], true),
+           
+        };
     }
 }

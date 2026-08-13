@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Region;
 use App\Models\Warehouse;
 use Illuminate\Database\Seeder;
 
@@ -14,24 +15,44 @@ class WarehouseSeeder extends Seeder
     {
         $warehouses = [
             [
-                'name' => 'Gudang A',
-                'location' => 'Lokasi A',
-                'phone_number' => '62857-1111-1111',
+                'warehouse_code' => 'Test1',
+                'name' => 'PT Warehouse A',
+                'contact_person' => 'Andi Pratama',
+                'phone_number' => '+628111111111',
+                'email' => 'warehouseA@gmail.com',
+                'street' => 'Jl. Teuku Umar No. 12',
+                'postal_code' => '23751',
+                'status' => true,
             ],
             [
-                'name' => 'Gudang B',
-                'location' => 'Lokasi B',
-                'phone_number' => '62878-2222-2222',
+                'warehouse_code' => 'Test2',
+                'name' => 'PT Warehouse B',
+                'contact_person' => 'Budi Santoso',
+                'phone_number' => '+628222222222',
+                'email' => 'warehouseB@gmail.com',
+                'street' => 'Jl. Sudirman No. 45',
+                'postal_code' => '23751',
+                'status' => true,
             ],
             [
-                'name' => 'Gudang C',
-                'location' => 'Lokasi C',
-                'phone_number' => '62876-3333-3333'
+                'warehouse_code' => 'Test3',
+                'name' => 'PT Warehouse C',
+                'contact_person' => 'Citra Lestari',
+                'phone_number' => '+628333333333',
+                'email' => 'warehouseC@gmail.com',
+                'street' => 'Jl. Diponegoro No. 8',
+                'postal_code' => '23751',
+                'status' => false,
             ],
         ];
 
         foreach ($warehouses as $w) {
-            Warehouse::create($w);
+            $region = Region::inRandomOrder()->first();
+
+            Warehouse::create([
+                ...$w,
+                'region_id' => $region->id,
+            ]);
         }
     }
 }

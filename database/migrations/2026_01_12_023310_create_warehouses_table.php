@@ -13,9 +13,15 @@ return new class extends Migration
     {
         Schema::create('warehouses', function (Blueprint $table) {
             $table->ulid('id')->primary();
+            $table->string('warehouse_code')->unique();
             $table->string('name')->unique();
-            $table->string('location');
+            $table->string('contact_person')->unique();
             $table->string('phone_number')->unique();
+            $table->string('email')->unique()->nullable();
+            $table->string('region_id');
+            $table->string('street');
+            $table->string('postal_code');  
+            $table->boolean('status');
             $table->timestamps();
         });
     }

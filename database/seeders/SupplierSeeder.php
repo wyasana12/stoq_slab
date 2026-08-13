@@ -2,39 +2,54 @@
 
 namespace Database\Seeders;
 
+use App\Models\Region;
 use App\Models\Supplier;
 use Illuminate\Database\Seeder;
 
 class SupplierSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $suppliers = [
             [
+                'supplier_code' => 'Test A',
                 'name' => 'PT Supplier A',
-                'location' => 'Jakarta Barat',
-                'phone_number' => '0271-1111-1111',
-                'email' => 'supplierA@gmail.com'
+                'contact_person' => 'Andi Pratama',
+                'phone_number' => '+628111111111',
+                'email' => 'supplierA@gmail.com',
+                'street' => 'Jl. Teuku Umar No. 12',
+                'postal_code' => '23751',
+                'status' => true,
             ],
             [
+                'supplier_code' => 'Test B',
                 'name' => 'PT Supplier B',
-                'location' => 'Jakarta Utara',
-                'phone_number' => '0271-2222-2222',
-                'email' => 'supplierB@gmail.com'
+                'contact_person' => 'Budi Santoso',
+                'phone_number' => '+628222222222',
+                'email' => 'supplierB@gmail.com',
+                'street' => 'Jl. Sudirman No. 45',
+                'postal_code' => '23751',
+                'status' => true,
             ],
             [
+                'supplier_code' => 'Test C',
                 'name' => 'PT Supplier C',
-                'location' => 'Jakarta Selatan',
-                'phone_number' => '0271-3333-3333',
-                'email' => 'supplierC@gmail.com'
+                'contact_person' => 'Citra Lestari',
+                'phone_number' => '+628333333333',
+                'email' => 'supplierC@gmail.com',
+                'street' => 'Jl. Diponegoro No. 8',
+                'postal_code' => '23751',
+                'status' => false,
             ],
         ];
 
         foreach ($suppliers as $s) {
-            Supplier::create($s);
+            $region = Region::inRandomOrder()->first();
+
+            Supplier::create([
+                ...$s,
+                'region_id' => $region->id,
+            ]);
         }
     }
 }

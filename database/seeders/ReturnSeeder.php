@@ -2,52 +2,66 @@
 
 namespace Database\Seeders;
 
-use App\Models\Batch;
-use App\Models\StockMutations;
+use App\Enums\ReturnStatus;
 use App\Models\StockReturns;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Database\Seeder;
-
-use function Illuminate\Support\now;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class ReturnSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        $batch = Batch::where('current_quantity', '>', 10)->first();
-        $user = User::whereNotNull('warehouse_id')->first();
+        $receivingItem = DB::table('product_receiving_items')
+            ->where('quantity_accepted', '>', 5)
+            ->first();
 
-        if ($batch) {
-            $quantityReturn = rand(1, 9);
-
-            $return = StockReturns::create([
-                'return_code' => 'RT-' . now()->format('Ymd') . '-' . rand(0001, 9999),
-                'warehouse_id' => $batch->warehouse_id,
-                'batch_id' => $batch->id,
-                'requested_quantity' => $quantityReturn,
-                'approved_quantity' => $quantityReturn,
-                'requested_by' => $user->id,
-                'confirmed_by' => $user->id,
-                'notes' => null,
-                'status' => 'SUCCESS',
-            ]);
-
-            $before = $batch->current_quantity;
-            $batch->decrement('current_quantity', $quantityReturn);
-
-            StockMutations::create([
-                'warehouse_id' => $batch->warehouse_id,
-                'batch_id' => $batch->id,
-                'change_quantity' => $quantityReturn,
-                'before_quantity' => $before,
-                'after_quantity' => $batch->current_quantity,
-                'reference_type' => 'RETURN',
-                'notes' => 'Return Barang Kode ' . $return->return_code,
-                'status' => 'SUCCESS',
-            ]);
+        if (! $receivingItem) {
+            $this->command?->warn('ReturnSeeder skip: data product_receiving_items dengan quantity_accepted > 5 tidak ditemukan.');
+            return;
         }
+
+        $receiving = DB::table('product_receivings')
+            ->where('id', $receivingItem->receiving_id)
+            ->first();
+
+        if (! $receiving) {
+            $this->command?->warn('ReturnSeeder skip: data induk product_receivings tidak ditemukan.');
+            return;
+        }
+
+        $warehouse = Warehouse::query()->first();
+
+        if (! $warehouse) {
+            $this->command?->warn('ReturnSeeder skip: Tidak ada data warehouse tersedia di database.');
+            return;
+        }
+
+        $user = User::query()->first();
+
+        if (! $user) {
+            $this->command?->warn('ReturnSeeder skip: Tidak ada data user tersedia untuk mengisi requested_by.');
+            return;
+        }
+
+        $requestedQty = rand(1, min(3, $receivingItem->quantity_accepted));
+
+        $stockReturn = StockReturns::create([
+            'return_code' => 'RT-' . now()->format('Ymd') . '-' . Str::upper(Str::random(4)),
+            'receiving_id' => $receiving->id,
+            'product_id' => $receivingItem->product_id,
+            'warehouse_id' => $warehouse->id,
+            'requested_quantity' => $requestedQty,
+            'approved_quantity' => 0,
+            'reason' => 'damaged',
+            'requested_by' => $user->id,
+            'confirmed_by' => null,
+            'notes' => 'Seeder sample return for CRUD test',
+            'status' => ReturnStatus::REQUESTED->value,
+        ]);
+
+        $this->command?->info('ReturnSeeder success. return_id=' . $stockReturn->id);
     }
 }

@@ -2,65 +2,136 @@
 
 namespace Database\Seeders;
 
+use App\Models\ProductReceivingItem;
+use App\Models\ProductReceiving;
 use App\Models\Batch;
 use App\Models\StockMutations;
-use Illuminate\Support\Facades\DB;
+use App\Services\BatchService;
 use Illuminate\Database\Seeder;
-
-use function Illuminate\Support\now;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class BatchSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
-    public function run(): void
+    public function run(BatchService $batchService): void
     {
-        $receivingItems = DB::table('product_receiving_items')
-            ->join('product_receivings', 'product_receiving_items.receiving_id', '=', 'product_receivings.id')
-            ->join('purchase_orders', 'product_receivings.purchase_id', '=', 'purchase_orders.id')
-            ->join('purchase_order_items', function ($join) {
-                $join->on('purchase_orders.id', '=', 'purchase_order_items.purchase_id')
-                    ->on('product_receiving_items.product_id', '=', 'purchase_order_items.product_id');
-            })
-            ->select(
-                'product_receiving_items.*',
-                'product_receivings.warehouse_id',
-                'purchase_orders.supplier_id',
-                'purchase_order_items.unit_price'
-            )
-            ->get();
-            
-        foreach ($receivingItems as $item) {
-            $receiving = $item->receiving;
-            $purchaseOrder = $receiving->purchaseOrder;
+        $receivingItems = ProductReceivingItem::with(['receiving.receivable'])->get();
 
-            if ($item->quantity_accepted > 0) {
+        foreach ($receivingItems as $item) {
+            if ($item->quantity_accepted <= 0) {
+                continue;
+            }
+
+            $receiving = $item->receiving;
+            $source    = $receiving->receivable;
+            
+            $warehouseId = null;
+            $warehouseCode = 'WH';
+
+            if ($receiving->receivable_type === 'transfer') {
+                $warehouseId = $source->to_warehouse_id;
+                $warehouseCode = $source->toWarehouse->warehouse_code ?? 'WH';
+            } else {
+                $warehouseId = $source->warehouse_id;
+                $warehouseCode = $source->warehouse->warehouse_code ?? 'WH';
+            }
+
+            $sourceItem = $source->items()->where('product_id', $item->product_id)->first();
+
+            $batch = Batch::create([
+                'id' => (string) Str::ulid(),
+                'batch_code' => 'BCH-' . $warehouseCode . '-' . strtoupper(Str::random(6)),
+                'receiving_id' => $receiving->id,
+                'product_id' => $item->product_id,
+                'warehouse_id' => $warehouseId,
+                'initial_quantity' => $item->quantity_accepted,
+                'current_quantity' => $item->quantity_accepted,
+                'production_date' => $item->production_date ?? now()->subMonth(),
+                'expired_date' => $item->expired_date ?? now()->addYear(),
+                'price' => $sourceItem?->unit_price ?? 0,
+                'condition' => 'BAIK', 
+                'barcode' => null,
+            ]);
+
+            $batchService->generateBarcode($batch);
+
+            StockMutations::create([
+                'id' => (string) Str::ulid(),
+                'warehouse_id' => $warehouseId,
+                'batch_id' => $batch->id,
+                'change_quantity' => $item->quantity_accepted,
+                'before_quantity' => 0,
+                'after_quantity' => $item->quantity_accepted,
+                'reference_type' => 'RECEIVE',
+                'reference_id' => $receiving->id,
+                'notes' => "Received product to Warehouse {$warehouseCode}", 
+                'status' => 'SUCCESS',
+            ]);
+        }
+
+        $this->seedExtraBatches($batchService);
+    }
+
+    private function seedExtraBatches(BatchService $batchService): void
+    {
+        $warehouses = \App\Models\Warehouse::all();
+        $products = \App\Models\Product::all();
+        $dummyReceiving = ProductReceiving::first();
+
+        if ($warehouses->isEmpty() || $products->isEmpty() || !$dummyReceiving) return;
+
+        $qtyVariants = [5, 10, 50, 100, 200, 300, 500];
+
+        foreach ($warehouses as $warehouse) {
+            foreach ($products as $product) {
+                if (Batch::where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->exists()) continue;
+
+                $qty = $qtyVariants[array_rand($qtyVariants)];
+
+                $existsInReceiving = DB::table('product_receiving_items')
+                    ->where('receiving_id', $dummyReceiving->id)
+                    ->where('product_id', $product->id)
+                    ->exists();
+
+                if (!$existsInReceiving) {
+                    DB::table('product_receiving_items')->insert([
+                        'id' => (string) Str::ulid(),
+                        'receiving_id' => $dummyReceiving->id,
+                        'product_id' => $product->id,
+                        'quantity_accepted' => $qty * 2,
+                        'quantity_rejected' => 0,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+
                 $batch = Batch::create([
-                    'batch_code' => "BTCH-" . now()->format("Ymd") . "-" . rand(0001, 9999),
-                    'product_id' => $item->product_id,
-                    'warehouse_id' => $receiving->warehouse_id,
-                    'supplier_id' => $purchaseOrder->supplier_id,
-                    'receiving_id' => $item->receiving_id,
-                    'rack_location' => (string) rand(00, 99),
-                    'production_date' => now()->subMonths(2),
-                    'expired_date' => now()->addYears(1),
-                    'initial_quantity' => $item->quantity_accepeted,
-                    'current_quantity' => $item->quantity_accepted,
-                    'price' => $item->unit_price + 1500,
-                    'condition' => null,
-                    'barcode' => rand(10000000, 999999999),
+                    'id' => (string) Str::ulid(),
+                    'batch_code' => 'BCH-' . $warehouse->warehouse_code . '-' . strtoupper(Str::random(6)),
+                    'receiving_id' => $dummyReceiving->id,
+                    'product_id' => $product->id,
+                    'warehouse_id' => $warehouse->id,
+                    'initial_quantity' => $qty,
+                    'current_quantity' => $qty,
+                    'production_date' => now()->subMonths(rand(1, 6)),
+                    'expired_date' => now()->addMonths(rand(6, 24)),
+                    'price' => rand(5000, 100000),
+                    'condition' => 'BAIK', 
+                    'barcode' => null,
                 ]);
 
+                $batchService->generateBarcode($batch);
+
                 StockMutations::create([
-                    'warehouse_id' => $batch->warehouse_id,
+                    'id' => (string) Str::ulid(),
+                    'warehouse_id' => $warehouse->id,
                     'batch_id' => $batch->id,
-                    'change_quantity' => $item->quantity_accepted,
+                    'change_quantity' => $qty,
                     'before_quantity' => 0,
-                    'after_quantity' => $item->quantity_accepted,
+                    'after_quantity' => $qty,
                     'reference_type' => 'RECEIVE',
-                    'reference_id' => $item->receiving_id,
-                    'notes' => 'Stock Masuk Dari ' . $purchaseOrder->supplier_id,
+                    'reference_id' => $dummyReceiving->id,
+                    'notes' => "Received dummy product to Warehouse {$warehouse->warehouse_code}", 
                     'status' => 'SUCCESS',
                 ]);
             }

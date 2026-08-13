@@ -15,8 +15,10 @@ return new class extends Migration
             $table->ulid('id')->primary();
             $table->string('restock_code')->unique();
             $table->foreignUlid('warehouse_id')->constrained('warehouses')->cascadeOnDelete();
+            $table->foreignUlid('supplier_id')->nullable()->constrained('suppliers')->cascadeOnDelete();
             $table->foreignUlid('requested_by')->constrained('users')->cascadeOnDelete();
             $table->foreignUlid('confirmed_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->decimal('total_amount', 12, 2)->default(0);
             $table->string('status');
             $table->string('notes')->nullable();
             $table->timestamps();

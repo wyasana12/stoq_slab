@@ -5,22 +5,74 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Enums\MutationStatus;
 
+/**
+ * @property string $id
+ * @property string|null $warehouse_id
+ * @property string|null $batch_id
+ * @property int|null $change_quantity
+ * @property int|null $before_quantity
+ * @property int|null $after_quantity
+ * @property string|null $reference_type
+ * @property string|null $reference_id
+ * @property string|null $notes
+ * @property string|null $status
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read Warehouse|null $warehouse
+ * @property-read Batch|null $batch
+ */
 class StockMutations extends Model
 {
     use HasFactory, HasUlids, SoftDeletes;
 
-    protected $guarded = [
-        'id'
+    protected $guarded = ['id'];
+
+    protected $casts = [
+        'is_dss_recommendation' => 'boolean',
     ];
 
     public $incrementing = false;
     public $keyType = 'string';
 
-    public function batch(): HasMany
+    public function batch()
     {
-        return $this->hasMany(Batch::class, 'batch_id');
+        return $this->belongsTo(Batch::class);
+    }
+
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
+
+    public static function record(
+        string $warehouseId,
+        string $batchId,
+        int $before,
+        int $change,
+        MutationStatus $status,
+        string $referenceType,
+        string $referenceId,
+        ?string $notes = null
+    ) {
+        $after = $before + $change;
+
+        if ($after < 0) {
+            throw new \Exception('Stock tidak mencukupi.');
+        }
+
+        return self::create([
+            'warehouse_id' => $warehouseId,
+            'batch_id' => $batchId,
+            'change_quantity' => $change,
+            'before_quantity' => $before,
+            'after_quantity' => $after,
+            'reference_type' => $referenceType,
+            'reference_id' => $referenceId,
+            'notes' => $notes,
+            'status' => $status->value,
+        ]);
     }
 }

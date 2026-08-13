@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Product extends Model
@@ -22,28 +23,44 @@ class Product extends Model
 
     protected $keyType = 'string';
 
+    public function preferredProductItem(): HasOne
+    {
+        return $this->hasOne(ProductSupplierItem::class, 'product_id')
+            ->where('is_preferred', true);
+    }
+
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class, 'category_id');
     }
 
-    public function unit(): BelongsTo {
+    public function unit(): BelongsTo
+    {
         return $this->belongsTo(Unit::class, 'unit_id');
     }
 
-    public function purchaseOrder(): BelongsToMany {
-        return $this->belongsToMany(PurchaseOrder::class, 'purchase_order_items', 'product_id', 'purchase_id');
+    public function productItems(): HasMany
+    {
+        return $this->hasMany(ProductSupplierItem::class, 'product_id');
     }
 
-    public function restock(): BelongsToMany {
+    public function purchaseItems(): HasMany
+    {
+        return $this->hasMany(PurchaseOrderItem::class, 'product_id');
+    }
+
+    public function restock(): BelongsToMany
+    {
         return $this->belongsToMany(Restock::class, 'stock_restock_items', 'product_id', 'restock_id');
     }
 
-    public function receiving(): BelongsToMany {
-        return $this->belongsToMany(ProductReceiving::class, 'product_receiving_items', 'product_id', 'receiving_id');
+    public function receivingItems(): HasMany
+    {
+        return $this->hasMany(ProductReceivingItem::class, 'product_id', 'receiving_id');
     }
 
-    public function batch() : HasMany {
+    public function batch(): HasMany
+    {
         return $this->hasMany(Batch::class, 'product_id');
     }
 }

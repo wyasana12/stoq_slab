@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('rack_warehouses', function (Blueprint $table) {
             $table->ulid('id')->primary();
-            $table->string('rack_code')->unique();
+            $table->string('rack_code');
             $table->foreignUlid('warehouse_id')->constrained('warehouses')->onDelete('cascade');
-            $table->string('capacity')->nullable();
+            // $table->foreignUlid('category_id')->constrained('categories')->cascadeOnDelete();
             $table->enum('status', ['AVAILABLE', 'FULL', 'INACTIVE', 'MAINTENANCE'])->nullable();
             $table->timestamps();
         });

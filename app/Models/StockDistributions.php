@@ -10,6 +10,26 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property string $id
+ * @property string|null $distribution_code
+ * @property string|null $warehouse_id
+ * @property string|null $location
+ * @property string|null $outlet_name
+ * @property string|null $outlet_address
+ * @property string|null $outlet_phone
+ * @property string|null $outlet_contact
+ * @property string|null $requested_by
+ * @property string|null $confirmed_by
+ * @property string|null $notes
+ * @property string|null $status
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read Warehouse|null $warehouse
+ * @property-read User|null $request
+ * @property-read User|null $confirmedBy
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, StockDistributionItem> $items
+ */
 class StockDistributions extends Model
 {
     use HasFactory, HasUlids, SoftDeletes;
@@ -18,17 +38,17 @@ class StockDistributions extends Model
         'id'
     ];
 
+    protected $casts = [
+        'is_dss_recommendation' => 'boolean',
+        'status' => \App\Enums\DistributionStatus::class,
+    ];
+
     public $incrementing = false;
     public $keyType = 'string';
 
-    public function warehouse(): HasMany
+    public function warehouse(): BelongsTo
     {
-        return $this->hasMany(Warehouse::class, 'warehouse_id');
-    }
-
-    public function confirm(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'confirmed_by');
+        return $this->belongsTo(Warehouse::class, 'warehouse_id');
     }
 
     public function request(): BelongsTo
@@ -36,8 +56,17 @@ class StockDistributions extends Model
         return $this->belongsTo(User::class, 'requested_by');
     }
 
-    public function batch(): BelongsToMany
+    public function confirmedBy(): BelongsTo
     {
-        return $this->belongsToMany(Batch::class, 'stock_distribution_items', 'batch_id', 'distribution_id');
+        return $this->belongsTo(User::class, 'confirmed_by');
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(StockDistributionItem::class, 'distribution_id');
+    }
+    public function store()
+    {
+        return $this->belongsTo(Store::class, 'store_id');
     }
 }

@@ -14,15 +14,23 @@ return new class extends Migration
         Schema::create('stock_returns', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->string('return_code')->unique();
+            $table->foreignUlid('receiving_id')->constrained('product_receivings')->cascadeOnDelete();
+            $table->foreignUlid('product_id')->constrained('products')->cascadeOnDelete();
             $table->foreignUlid('warehouse_id')->constrained('warehouses')->cascadeOnDelete();
-            $table->foreignUlid('batch_id')->constrained('batches')->cascadeOnDelete();
             $table->unsignedInteger('requested_quantity');
             $table->unsignedInteger('approved_quantity')->default(0);
+            $table->string('reason')->nullable();
             $table->foreignUlid('requested_by')->constrained('users')->cascadeOnDelete();
             $table->foreignUlid('confirmed_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('damage_proof_path')->nullable();
+            $table->string('damage_proof_name')->nullable();
+            $table->string('damage_proof_mime')->nullable();
+            $table->unsignedInteger('damage_proof_size')->nullable();
+            $table->timestamp('damage_proof_uploaded_at')->nullable();
             $table->string('notes')->nullable();
             $table->string('status');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

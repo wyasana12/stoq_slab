@@ -1,0 +1,37 @@
+<?php
+
+namespace App\Http\Requests\Transfer;
+
+use App\Enums\TransferStatus;
+use App\Models\Batch;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Enum;
+
+class StoreTransferRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'transfer_type' => ['required', 'in:in,out'],
+
+            'from_warehouse_id' => ['nullable', 'exists:warehouses,id'],
+            'to_warehouse_id' => ['nullable', 'exists:warehouses,id'],
+
+            'product_id' => ['required', 'exists:products,id'],
+            'requested_quantity' => ['required', 'integer', 'min:1'],
+
+            'requested_by' => ['required', 'exists:users,id'],
+            'confirmed_by' => ['sometimes', 'nullable', 'exists:users,id'],
+
+            'status' => ['required', new Enum(TransferStatus::class)],
+            'notes' => ['nullable', 'string'],
+            'reason' => ['nullable', 'string'],
+            'is_dss_recommendation' => ['nullable', 'boolean'],
+        ];
+    }
+}

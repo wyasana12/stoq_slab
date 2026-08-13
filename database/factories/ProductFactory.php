@@ -20,11 +20,9 @@ class ProductFactory extends Factory
     {
         return [
             'sku' => $this->faker->unique()->bothify('PROD-####'),
-            'name' => $this->faker->word(3, true),
+            'name' => $this->faker->words(3, true),
             'category_id' => Category::all()->random()->id,
             'unit_id' => Unit::all()->random()->id,
-            'min_quantity' => $this->faker->numberBetween(5, 20),
-            'return_limit_days' => $this->faker->randomElement([7, 14, 30, null]),
         ];
     }
 }

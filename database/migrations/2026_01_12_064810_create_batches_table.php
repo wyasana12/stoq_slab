@@ -15,10 +15,9 @@ return new class extends Migration
             $table->ulid('id')->primary();
             $table->string('batch_code')->unique();
 
+            $table->foreignUlid('receiving_id')->constrained('product_receivings')->onDelete('cascade');
             $table->foreignUlid('product_id')->constrained('products')->onDelete('cascade');
             $table->foreignUlid('warehouse_id')->constrained('warehouses')->onDelete('cascade');
-            $table->foreignUlid('supplier_id')->constrained('suppliers')->onDelete('cascade');
-            $table->string('rack_location')->nullable();
 
             $table->date('production_date');
             $table->date('expired_date');
@@ -27,11 +26,10 @@ return new class extends Migration
             $table->unsignedInteger('current_quantity');
 
             $table->decimal('price', 12, 2);
-            $table->string('condition')->nullable();
+            $table->enum('condition', ['BAIK', 'RUSAK', 'CACAT', 'KADALUARSA', 'MENDEKATI_KADALUARSA'])->default('BAIK');
             $table->string('barcode')->nullable();
                 
             $table->timestamps();
-            $table->softDeletes();
         });
     }
 
